@@ -6,5 +6,6 @@
 pub mod categorias;
 pub mod config;
 pub mod espera;
+pub mod negocio;
 pub mod productos;
 pub mod ventas;

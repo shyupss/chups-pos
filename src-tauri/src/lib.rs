@@ -19,6 +19,7 @@ pub fn run() {
     let inicio = Instant::now();
 
     tauri::Builder::default()
+        .plugin(tauri_plugin_dialog::init())
         .setup(move |app| {
             let carpeta = app.path().app_data_dir()?;
             std::fs::create_dir_all(&carpeta)?;
@@ -51,6 +52,10 @@ pub fn run() {
             comandos::espera::listar_en_espera,
             comandos::espera::recuperar_en_espera,
             comandos::espera::descartar_en_espera,
+            comandos::negocio::obtener_negocio,
+            comandos::negocio::guardar_negocio,
+            comandos::negocio::elegir_logo,
+            comandos::negocio::quitar_logo,
         ])
         .run(tauri::generate_context!())
         .expect("error al iniciar CHUPS POS");

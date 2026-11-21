@@ -9,7 +9,9 @@
 
 pub mod db;
 pub mod error;
+pub mod logo;
 pub mod repositorios;
+pub mod rut;
 pub mod servicios;
 
 pub use error::{Error, Resultado};

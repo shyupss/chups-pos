@@ -18,3 +18,5 @@ pos-core.workspace = true
 serde.workspace = true
 sqlx.workspace = true
 tauri = { version = "2", features = [] }
+# Elegir el logo y la carpeta de los PDF con el diálogo nativo (se usa desde Rust).
+tauri-plugin-dialog = "2.8"

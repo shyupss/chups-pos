@@ -109,8 +109,26 @@ export interface VentaRecuperada {
   intercambioId: number | null;
 }
 
+export interface Negocio {
+  nombre: string;
+  rut: string | null;
+  direccion: string | null;
+  telefono: string | null;
+  mensajePie: string;
+  /** PNG de 1 bit en base64 (para la vista previa). */
+  logoPng: string | null;
+}
+
+export type DatosNegocio = Omit<Negocio, "logoPng">;
+
 export const api = {
   estadoSistema: () => invoke<EstadoSistema>("estado_sistema"),
+
+  obtenerNegocio: () => invoke<Negocio>("obtener_negocio"),
+  guardarNegocio: (datos: DatosNegocio) => invoke<Negocio>("guardar_negocio", { datos }),
+  /** Abre el diálogo de archivos; null si el usuario cancela. */
+  elegirLogo: () => invoke<Negocio | null>("elegir_logo"),
+  quitarLogo: () => invoke<Negocio>("quitar_logo"),
 
   buscarProductoPorCodigo: (codigo: string) =>
     invoke<Producto | null>("buscar_producto_por_codigo", { codigo }),

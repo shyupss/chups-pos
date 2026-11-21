@@ -9,6 +9,10 @@ license.workspace = true
 serde.workspace = true
 sqlx.workspace = true
 thiserror.workspace = true
+# Logo del negocio: solo PNG y JPG.
+image = { version = "0.25", default-features = false, features = ["png", "jpeg"] }
+# El logo se guarda como PNG de 1 bit.
+png = "0.18"
 
 [dev-dependencies]
 tempfile = "3"

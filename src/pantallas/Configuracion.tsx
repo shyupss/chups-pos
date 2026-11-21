@@ -1,8 +1,10 @@
 import { Monitor, Moon, Sun } from "lucide-react";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState } from "react";
 import { api, textoError, type EstadoSistema } from "../api";
+import { Bloque, Fila } from "../componentes/Ajustes";
 import type { ModoBarra } from "../componentes/BarraLateral";
 import Opciones, { type Opcion } from "../componentes/Opciones";
+import NegocioConfig from "./configuracion/Negocio";
 import { useTema, type Tema } from "../hooks/useTema";
 
 interface Props {
@@ -56,8 +58,8 @@ export default function Configuracion({ modoBarra, onModoBarra }: Props) {
           <RedondeoEfectivo />
         </Bloque>
 
-        <Bloque titulo="Negocio" fase={3}>
-          Datos del negocio que aparecen en la boleta.
+        <Bloque titulo="Negocio">
+          <NegocioConfig />
         </Bloque>
         <Bloque titulo="Impresora y escáner" fase={3}>
           Impresora térmica o PDF y lector de códigos de barras.
@@ -76,33 +78,6 @@ export default function Configuracion({ modoBarra, onModoBarra }: Props) {
           <AcercaDe />
         </Bloque>
       </div>
-    </div>
-  );
-}
-
-function Bloque({ titulo, fase, children }: { titulo: string; fase?: number; children: ReactNode }) {
-  return (
-    <section className="rounded-lg border border-linea bg-superficie p-5">
-      <h2 className="font-semibold">{titulo}</h2>
-      {fase === undefined ? (
-        <div className="mt-3">{children}</div>
-      ) : (
-        <p className="mt-1 text-tenue">
-          {children} Llega en la fase {fase}.
-        </p>
-      )}
-    </section>
-  );
-}
-
-function Fila({ etiqueta, ayuda, children }: { etiqueta: string; ayuda: string; children: ReactNode }) {
-  return (
-    <div className="flex items-center justify-between gap-6">
-      <div className="min-w-0">
-        <div className="font-medium">{etiqueta}</div>
-        <div className="text-xs text-tenue">{ayuda}</div>
-      </div>
-      <div className="shrink-0">{children}</div>
     </div>
   );
 }
