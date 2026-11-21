@@ -1,6 +1,7 @@
 mod comun;
 
 use pos_core::servicios::config;
+use pos_core::servicios::seguridad::ControlPin;
 use pos_core::servicios::ventas::{self, ItemPedido, MedioPago, NuevaVenta, VentaConfirmada};
 use pos_core::{db, Error};
 use std::sync::atomic::{AtomicU32, Ordering};
@@ -169,5 +170,7 @@ async fn venta_por_peso_en_efectivo_se_redondea() {
 async fn cambiar_redondeo(pool: &SqlitePool, activo: bool) -> Result<(), Error> {
     let mut c = config::obtener(pool).await?;
     c.redondeo_efectivo = activo;
-    config::guardar(pool, &c).await.map(|_| ())
+    config::guardar(pool, &ControlPin::new(), None, &c)
+        .await
+        .map(|_| ())
 }

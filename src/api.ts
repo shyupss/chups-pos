@@ -164,6 +164,31 @@ export interface Negocio {
 
 export type DatosNegocio = Omit<Negocio, "logoPng">;
 
+/** Acciones que pueden pedir el PIN de administrador (sin PIN creado, ninguna lo pide). */
+export interface AccionesProtegidas {
+  anularVenta: boolean;
+  devolucion: boolean;
+  retiroEfectivo: boolean;
+  cerrarCaja: boolean;
+  cambiarConfiguracion: boolean;
+}
+
+export interface EstadoSeguridad {
+  tienePin: boolean;
+  protegidas: AccionesProtegidas;
+}
+
+/**
+ * Error de un comando protegido: falta el PIN, es incorrecto o está bloqueado.
+ * Los demás errores llegan como texto. Si el PIN es correcto lo decide siempre Rust.
+ */
+export interface ErrorPin {
+  pin: "requerido" | "incorrecto" | "bloqueado";
+  mensaje: string;
+  /** Segundos que faltan para volver a probar, si está bloqueado. */
+  segundos: number | null;
+}
+
 /** Etiqueta de balanza leída: producto por kg y los gramos de la etiqueta. */
 export interface LecturaBalanza {
   producto: Producto;
@@ -174,10 +199,11 @@ export const api = {
   estadoSistema: () => invoke<EstadoSistema>("estado_sistema"),
 
   obtenerNegocio: () => invoke<Negocio>("obtener_negocio"),
-  guardarNegocio: (datos: DatosNegocio) => invoke<Negocio>("guardar_negocio", { datos }),
+  // Los comandos que reciben `pin` están protegidos: sin PIN o con uno incorrecto fallan con ErrorPin.
+  guardarNegocio: (datos: DatosNegocio, pin: string | null) => invoke<Negocio>("guardar_negocio", { datos, pin }),
   /** Abre el diálogo de archivos; null si el usuario cancela. */
-  elegirLogo: () => invoke<Negocio | null>("elegir_logo"),
-  quitarLogo: () => invoke<Negocio>("quitar_logo"),
+  elegirLogo: (pin: string | null) => invoke<Negocio | null>("elegir_logo", { pin }),
+  quitarLogo: (pin: string | null) => invoke<Negocio>("quitar_logo", { pin }),
 
   /** Guarda el PDF de la boleta y, si `abrir`, lo abre. Devuelve la ruta. */
   guardarBoletaPdf: (ventaId: number, abrir: boolean) =>
@@ -230,7 +256,17 @@ export const api = {
   confirmarVenta: (venta: NuevaVenta) => invoke<VentaConfirmada>("confirmar_venta", { venta }),
 
   obtenerConfig: () => invoke<Config>("obtener_config"),
-  guardarConfig: (config: Config) => invoke<Config>("guardar_config", { config }),
+  guardarConfig: (config: Config, pin: string | null) => invoke<Config>("guardar_config", { config, pin }),
+
+  estadoSeguridad: () => invoke<EstadoSeguridad>("estado_seguridad"),
+  /** Devuelve el código de recuperación, que se muestra una sola vez. */
+  crearPin: (pin: string) => invoke<string>("crear_pin", { pin }),
+  cambiarPin: (actual: string, nuevo: string) => invoke<void>("cambiar_pin", { actual, nuevo }),
+  quitarPin: (pin: string | null) => invoke<void>("quitar_pin", { pin }),
+  /** PIN nuevo con el código de recuperación; devuelve el código nuevo. */
+  recuperarPin: (codigo: string, nuevo: string) => invoke<string>("recuperar_pin", { codigo, nuevo }),
+  guardarProtegidas: (protegidas: AccionesProtegidas, pin: string | null) =>
+    invoke<EstadoSeguridad>("guardar_protegidas", { protegidas, pin }),
 
   ponerEnEspera: (nombre: string | null, items: ItemPedido[]) =>
     invoke<number>("poner_en_espera", { nombre, items }),
@@ -241,5 +277,9 @@ export const api = {
   descartarEnEspera: (id: number) => invoke<void>("descartar_en_espera", { id }),
 };
 
-/** Los errores de Rust llegan como texto listo para mostrar. */
-export const textoError = (e: unknown) => (typeof e === "string" ? e : String(e));
+/** El error de PIN de un comando protegido, o null si el error es otro. */
+export const errorPin = (e: unknown): ErrorPin | null =>
+  typeof e === "object" && e !== null && "pin" in e && "mensaje" in e ? (e as ErrorPin) : null;
+
+/** Los errores de Rust llegan como texto listo para mostrar (los del PIN, con su mensaje). */
+export const textoError = (e: unknown) => (typeof e === "string" ? e : (errorPin(e)?.mensaje ?? String(e)));

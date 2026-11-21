@@ -3,6 +3,7 @@ mod comun;
 use pos_core::balanza::{self, CodigoBalanza, ReglasBalanza, ValorBalanza};
 use pos_core::servicios::balanza as srv;
 use pos_core::servicios::config::{self, FormatoBalanza};
+use pos_core::servicios::seguridad::ControlPin;
 use pos_core::{db, Error};
 
 fn reglas(formato: FormatoBalanza, largo_codigo: usize) -> ReglasBalanza {
@@ -103,13 +104,17 @@ async fn la_caja_lee_la_etiqueta_y_encuentra_el_producto() {
 
     let mut c = config::obtener(&pool).await.unwrap();
     c.balanza_activa = true;
-    config::guardar(&pool, &c).await.unwrap();
+    config::guardar(&pool, &ControlPin::new(), None, &c)
+        .await
+        .unwrap();
     let lectura = srv::leer(&pool, &codigo).await.unwrap().unwrap();
     assert_eq!((lectura.producto.id, lectura.cantidad_mil), (pan.id, 532));
 
     // Por precio: $1.224 a $2.300/kg = 532 g.
     c.balanza_formato = FormatoBalanza::Precio;
-    config::guardar(&pool, &c).await.unwrap();
+    config::guardar(&pool, &ControlPin::new(), None, &c)
+        .await
+        .unwrap();
     let por_precio = con_digito("200012301224");
     assert_eq!(
         srv::leer(&pool, &por_precio)
@@ -122,7 +127,9 @@ async fn la_caja_lee_la_etiqueta_y_encuentra_el_producto() {
 
     // Producto por unidad, producto que no existe y peso cero: errores claros.
     c.balanza_formato = FormatoBalanza::Peso;
-    config::guardar(&pool, &c).await.unwrap();
+    config::guardar(&pool, &ControlPin::new(), None, &c)
+        .await
+        .unwrap();
     let unidad = srv::leer(&pool, &con_digito("200045600100")).await;
     assert!(matches!(unidad, Err(Error::Validacion(_))), "{unidad:?}");
     let no_existe = srv::leer(&pool, &con_digito("209999900100")).await;

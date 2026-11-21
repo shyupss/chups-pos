@@ -5,6 +5,7 @@ use sqlx::SqlitePool;
 
 use crate::error::validacion;
 use crate::repositorios::negocio::{self as repo, Campos, FilaNegocio};
+use crate::servicios::seguridad::{self, Accion, ControlPin};
 use crate::{logo, rut, Resultado};
 
 /// Lo que ve la pantalla de Configuración.
@@ -58,7 +59,13 @@ pub async fn obtener(pool: &SqlitePool) -> Resultado<Negocio> {
 
 /// Guarda los datos. El nombre es obligatorio (sin él no se puede imprimir) y el RUT,
 /// si viene, debe tener el dígito verificador correcto; se guarda como 12.345.678-5.
-pub async fn guardar(pool: &SqlitePool, d: &DatosNegocio) -> Resultado<Negocio> {
+/// Pide el PIN si "cambiar configuración" está protegida.
+pub async fn guardar(
+    pool: &SqlitePool,
+    control: &ControlPin,
+    pin: Option<&str>,
+    d: &DatosNegocio,
+) -> Resultado<Negocio> {
     let nombre = d.nombre.trim();
     if nombre.is_empty() {
         return validacion("El nombre del negocio es obligatorio: sale arriba en cada boleta");
@@ -73,6 +80,7 @@ pub async fn guardar(pool: &SqlitePool, d: &DatosNegocio) -> Resultado<Negocio> 
     let direccion = opcional(d.direccion.as_deref(), 120, "La dirección")?;
     let telefono = opcional(d.telefono.as_deref(), 30, "El teléfono")?;
     let mensaje_pie = opcional(Some(&d.mensaje_pie), 200, "El mensaje al pie")?.unwrap_or_default();
+    seguridad::exigir(pool, control, Accion::CambiarConfiguracion, pin).await?;
     repo::guardar(
         pool,
         &Campos {
@@ -88,13 +96,24 @@ pub async fn guardar(pool: &SqlitePool, d: &DatosNegocio) -> Resultado<Negocio> 
 }
 
 /// Procesa la imagen elegida (escala y blanco y negro) y la deja como logo.
-pub async fn guardar_logo(pool: &SqlitePool, archivo: &[u8]) -> Resultado<Negocio> {
+pub async fn guardar_logo(
+    pool: &SqlitePool,
+    control: &ControlPin,
+    pin: Option<&str>,
+    archivo: &[u8],
+) -> Resultado<Negocio> {
     let png = logo::procesar(archivo)?;
+    seguridad::exigir(pool, control, Accion::CambiarConfiguracion, pin).await?;
     repo::guardar_logo(pool, Some(&png)).await?;
     obtener(pool).await
 }
 
-pub async fn quitar_logo(pool: &SqlitePool) -> Resultado<Negocio> {
+pub async fn quitar_logo(
+    pool: &SqlitePool,
+    control: &ControlPin,
+    pin: Option<&str>,
+) -> Resultado<Negocio> {
+    seguridad::exigir(pool, control, Accion::CambiarConfiguracion, pin).await?;
     repo::guardar_logo(pool, None).await?;
     obtener(pool).await
 }

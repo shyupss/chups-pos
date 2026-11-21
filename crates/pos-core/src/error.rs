@@ -20,6 +20,47 @@ pub enum Error {
 
     #[error("no se pudo actualizar el esquema de la base de datos: {0}")]
     Migracion(#[from] sqlx::migrate::MigrateError),
+
+    /// La acción está protegida y el PIN no vino, no coincide o está bloqueado.
+    /// La interfaz lo distingue de los demás errores para volver a pedir el PIN.
+    #[error("{0}")]
+    Pin(FalloPin),
+}
+
+/// Por qué no se aceptó el PIN de administrador (o el código de recuperación).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum FalloPin {
+    Requerido,
+    Incorrecto { quedan: u32 },
+    CodigoIncorrecto { quedan: u32 },
+    Bloqueado { segundos: u64 },
+}
+
+impl std::fmt::Display for FalloPin {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let intentos = |n: u32| {
+            if n == 1 {
+                "te queda 1 intento".to_owned()
+            } else {
+                format!("te quedan {n} intentos")
+            }
+        };
+        match self {
+            FalloPin::Requerido => write!(f, "Esta acción pide el PIN de administrador"),
+            FalloPin::Incorrecto { quedan } => write!(f, "PIN incorrecto: {}", intentos(*quedan)),
+            FalloPin::CodigoIncorrecto { quedan } => {
+                write!(
+                    f,
+                    "Código de recuperación incorrecto: {}",
+                    intentos(*quedan)
+                )
+            }
+            FalloPin::Bloqueado { segundos } => write!(
+                f,
+                "Demasiados intentos fallidos: espera {segundos} segundos para volver a probar"
+            ),
+        }
+    }
 }
 
 impl From<sqlx::Error> for Error {

@@ -42,6 +42,7 @@ pub fn run() {
                 ms_inicio: inicio.elapsed().as_millis() as u64,
                 carpeta_pdf,
                 hardware: pos_hardware::Hardware::new(&carpeta),
+                pin: pos_core::servicios::seguridad::ControlPin::new(),
             });
             Ok(())
         })
@@ -78,6 +79,12 @@ pub fn run() {
             comandos::impresion::imprimir_prueba,
             comandos::impresion::abrir_cajon,
             comandos::impresion::carpeta_impresora_pruebas,
+            comandos::seguridad::estado_seguridad,
+            comandos::seguridad::crear_pin,
+            comandos::seguridad::cambiar_pin,
+            comandos::seguridad::quitar_pin,
+            comandos::seguridad::recuperar_pin,
+            comandos::seguridad::guardar_protegidas,
         ])
         .run(tauri::generate_context!())
         .expect("error al iniciar CHUPS POS");

@@ -1,5 +1,6 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { api, textoError, type DatosNegocio, type Negocio } from "../../api";
+import { esCancelado, type ConPin } from "../../componentes/PedirPin";
 
 const claseCampo =
   "h-10 w-full rounded-lg border border-linea bg-fondo px-3 outline-none focus:border-texto";
@@ -7,7 +8,7 @@ const claseCampo =
 const VACIO: DatosNegocio = { nombre: "", rut: "", direccion: "", telefono: "", mensajePie: "" };
 
 /** Configuración > Negocio: los datos que encabezan cada boleta, más el logo. */
-export default function NegocioConfig() {
+export default function NegocioConfig({ conPin }: { conPin: ConPin }) {
   const [datos, setDatos] = useState<DatosNegocio>(VACIO);
   const [logo, setLogo] = useState<string | null>(null);
   const [cargado, setCargado] = useState(false);
@@ -44,7 +45,7 @@ export default function NegocioConfig() {
         setMensaje({ error: false, texto: exito });
       }
     } catch (e) {
-      setMensaje({ error: true, texto: textoError(e) });
+      if (!esCancelado(e)) setMensaje({ error: true, texto: textoError(e) });
     } finally {
       setOcupado(false);
     }
@@ -59,7 +60,10 @@ export default function NegocioConfig() {
     <form
       onSubmit={(e) => {
         e.preventDefault();
-        void ejecutar(() => api.guardarNegocio(datos), "Datos guardados.");
+        void ejecutar(
+          () => conPin((pin) => api.guardarNegocio(datos, pin), { accion: "Guardar los datos del negocio" }),
+          "Datos guardados.",
+        );
       }}
       className="space-y-4"
     >
@@ -107,7 +111,9 @@ export default function NegocioConfig() {
           <button
             type="button"
             disabled={ocupado}
-            onClick={() => void ejecutar(() => api.elegirLogo(), "Logo cargado.")}
+            onClick={() =>
+              void ejecutar(() => conPin((pin) => api.elegirLogo(pin), { accion: "Cambiar el logo" }), "Logo cargado.")
+            }
             className="h-10 rounded-lg border border-linea px-4 hover:bg-fondo disabled:opacity-50"
           >
             Elegir logo…
@@ -116,7 +122,9 @@ export default function NegocioConfig() {
             <button
               type="button"
               disabled={ocupado}
-              onClick={() => void ejecutar(() => api.quitarLogo(), "Logo quitado.")}
+              onClick={() =>
+                void ejecutar(() => conPin((pin) => api.quitarLogo(pin), { accion: "Quitar el logo" }), "Logo quitado.")
+              }
               className="h-10 rounded-lg px-4 text-tenue hover:bg-peligro/10 hover:text-peligro disabled:opacity-50"
             >
               Quitar logo

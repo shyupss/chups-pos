@@ -10,6 +10,7 @@ use sqlx::{SqliteConnection, SqlitePool};
 
 use crate::error::validacion;
 use crate::repositorios::config as repo;
+use crate::servicios::seguridad::{self, Accion, ControlPin};
 use crate::Resultado;
 
 /// Tabla de caracteres de la impresora térmica. Cada marca responde distinto, por eso se elige.
@@ -143,6 +144,40 @@ impl Config {
     }
 }
 
+/// Acciones que pueden pedir el PIN de administrador. Sin PIN creado, ninguna lo pide.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AccionesProtegidas {
+    pub anular_venta: bool,
+    pub devolucion: bool,
+    pub retiro_efectivo: bool,
+    pub cerrar_caja: bool,
+    pub cambiar_configuracion: bool,
+}
+
+impl Default for AccionesProtegidas {
+    fn default() -> Self {
+        AccionesProtegidas {
+            anular_venta: true,
+            devolucion: true,
+            retiro_efectivo: true,
+            cerrar_caja: false,
+            cambiar_configuracion: true,
+        }
+    }
+}
+
+/// PIN y acciones protegidas. Va aparte de [`Config`] porque los hashes nunca salen hacia la
+/// interfaz: `obtener_config` no los incluye y `guardar` no los toca.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct Seguridad {
+    /// Hash Argon2id del PIN (formato PHC, con su sal); `None` si no hay PIN.
+    pub pin_hash: Option<String>,
+    /// Hash del código de recuperación que se mostró una vez al crear el PIN.
+    pub recuperacion_hash: Option<String>,
+    pub protegidas: AccionesProtegidas,
+}
+
 /// "20-29" o "20, 21, 25" -> lista de prefijos de dos dígitos. `None` si el texto no sirve.
 fn leer_prefijos(texto: &str) -> Option<Vec<u8>> {
     let mut prefijos = Vec::new();
@@ -183,20 +218,66 @@ const BALANZA_ACTIVA: &str = "balanza_activa";
 const BALANZA_PREFIJOS: &str = "balanza_prefijos";
 const BALANZA_FORMATO: &str = "balanza_formato";
 const BALANZA_LARGO_CODIGO: &str = "balanza_largo_codigo";
+// Seguridad: fuera de `Config`.
+const PIN_HASH: &str = "pin_hash";
+const RECUPERACION_HASH: &str = "pin_recuperacion_hash";
+const PROTEGER_ANULAR: &str = "proteger_anular_venta";
+const PROTEGER_DEVOLUCION: &str = "proteger_devolucion";
+const PROTEGER_RETIRO: &str = "proteger_retiro_efectivo";
+const PROTEGER_CIERRE: &str = "proteger_cerrar_caja";
+const PROTEGER_CONFIG: &str = "proteger_cambiar_configuracion";
 
 fn si_no(valor: bool) -> String {
     if valor { "1" } else { "0" }.into()
+}
+
+fn bool_de(claves: &HashMap<String, String>, clave: &str, defecto: bool) -> bool {
+    match claves.get(clave).map(String::as_str) {
+        Some("1") => true,
+        Some("0") => false,
+        _ => defecto,
+    }
+}
+
+impl Seguridad {
+    fn desde_claves(claves: &HashMap<String, String>) -> Seguridad {
+        let d = AccionesProtegidas::default();
+        let hash = |k: &str| claves.get(k).filter(|v| !v.is_empty()).cloned();
+        Seguridad {
+            pin_hash: hash(PIN_HASH),
+            recuperacion_hash: hash(RECUPERACION_HASH),
+            protegidas: AccionesProtegidas {
+                anular_venta: bool_de(claves, PROTEGER_ANULAR, d.anular_venta),
+                devolucion: bool_de(claves, PROTEGER_DEVOLUCION, d.devolucion),
+                retiro_efectivo: bool_de(claves, PROTEGER_RETIRO, d.retiro_efectivo),
+                cerrar_caja: bool_de(claves, PROTEGER_CIERRE, d.cerrar_caja),
+                cambiar_configuracion: bool_de(claves, PROTEGER_CONFIG, d.cambiar_configuracion),
+            },
+        }
+    }
+
+    fn a_claves(&self) -> [(&'static str, String); 7] {
+        let p = &self.protegidas;
+        [
+            (PIN_HASH, self.pin_hash.clone().unwrap_or_default()),
+            (
+                RECUPERACION_HASH,
+                self.recuperacion_hash.clone().unwrap_or_default(),
+            ),
+            (PROTEGER_ANULAR, si_no(p.anular_venta)),
+            (PROTEGER_DEVOLUCION, si_no(p.devolucion)),
+            (PROTEGER_RETIRO, si_no(p.retiro_efectivo)),
+            (PROTEGER_CIERRE, si_no(p.cerrar_caja)),
+            (PROTEGER_CONFIG, si_no(p.cambiar_configuracion)),
+        ]
+    }
 }
 
 impl Config {
     fn desde_claves(claves: &HashMap<String, String>) -> Config {
         let d = Config::default();
         let texto = |k: &str| claves.get(k).map(String::as_str);
-        let bool_de = |k: &str, defecto: bool| match texto(k) {
-            Some("1") => true,
-            Some("0") => false,
-            _ => defecto,
-        };
+        let bool_de = |k: &str, defecto: bool| bool_de(claves, k, defecto);
         Config {
             redondeo_efectivo: bool_de(REDONDEO_EFECTIVO, d.redondeo_efectivo),
             boleta_leyenda: bool_de(BOLETA_LEYENDA, d.boleta_leyenda),
@@ -326,14 +407,36 @@ pub async fn obtener(pool: &SqlitePool) -> Resultado<Config> {
 }
 
 /// Guarda toda la configuración en una transacción y devuelve lo que quedó.
-pub async fn guardar(pool: &SqlitePool, nueva: &Config) -> Resultado<Config> {
+/// Pide el PIN si "cambiar configuración" está protegida.
+pub async fn guardar(
+    pool: &SqlitePool,
+    control: &ControlPin,
+    pin: Option<&str>,
+    nueva: &Config,
+) -> Resultado<Config> {
     let limpia = nueva.clone().validar()?;
+    seguridad::exigir(pool, control, Accion::CambiarConfiguracion, pin).await?;
     let mut tx = pool.begin().await?;
     for (clave, valor) in limpia.a_claves() {
         repo::guardar(&mut tx, clave, &valor).await?;
     }
     tx.commit().await?;
     obtener(pool).await
+}
+
+pub async fn seguridad(pool: &SqlitePool) -> Resultado<Seguridad> {
+    let mut conn = pool.acquire().await?;
+    Ok(Seguridad::desde_claves(&repo::leer_todo(&mut conn).await?))
+}
+
+/// Guarda PIN, código de recuperación y acciones protegidas. Quien llama ya validó el PIN.
+pub(crate) async fn guardar_seguridad(pool: &SqlitePool, s: &Seguridad) -> Resultado<()> {
+    let mut tx = pool.begin().await?;
+    for (clave, valor) in s.a_claves() {
+        repo::guardar(&mut tx, clave, &valor).await?;
+    }
+    tx.commit().await?;
+    Ok(())
 }
 
 /// Lo que necesita el servicio de ventas al cobrar, dentro de su transacción.

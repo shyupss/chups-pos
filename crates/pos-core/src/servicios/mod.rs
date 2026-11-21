@@ -8,5 +8,6 @@ pub mod espera;
 pub mod impresion;
 pub mod negocio;
 pub mod productos;
+pub mod seguridad;
 pub mod sistema;
 pub mod ventas;

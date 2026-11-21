@@ -1,4 +1,5 @@
 use pos_core::servicios::negocio::{self, DatosNegocio};
+use pos_core::servicios::seguridad::ControlPin;
 use pos_core::{db, rut, Error};
 
 #[test]
@@ -52,17 +53,28 @@ async fn guarda_los_datos_normalizados() {
     assert_eq!(inicial.nombre, "");
     assert_eq!(inicial.mensaje_pie, "Gracias por su compra");
 
-    let n = negocio::guardar(&pool, &datos("  Almacén Don Pepe ", Some("123456785")))
-        .await
-        .unwrap();
+    let n = negocio::guardar(
+        &pool,
+        &ControlPin::new(),
+        None,
+        &datos("  Almacén Don Pepe ", Some("123456785")),
+    )
+    .await
+    .unwrap();
     assert_eq!(n.nombre, "Almacén Don Pepe");
     assert_eq!(n.rut.as_deref(), Some("12.345.678-5"));
     assert_eq!(n.direccion.as_deref(), Some("Av. Siempre Viva 742, Talca"));
     assert_eq!(n.telefono, None, "vacío queda como sin teléfono");
 
-    let sin_nombre = negocio::guardar(&pool, &datos("   ", None)).await;
+    let sin_nombre = negocio::guardar(&pool, &ControlPin::new(), None, &datos("   ", None)).await;
     assert!(matches!(sin_nombre, Err(Error::Validacion(_))));
-    let rut_malo = negocio::guardar(&pool, &datos("Otro", Some("12.345.678-0"))).await;
+    let rut_malo = negocio::guardar(
+        &pool,
+        &ControlPin::new(),
+        None,
+        &datos("Otro", Some("12.345.678-0")),
+    )
+    .await;
     assert!(matches!(rut_malo, Err(Error::Validacion(_))));
     assert_eq!(
         negocio::obtener(&pool).await.unwrap().nombre,
@@ -84,7 +96,9 @@ async fn carga_y_quita_el_logo() {
     let mut jpg = std::io::Cursor::new(Vec::new());
     imagen.write_to(&mut jpg, image::ImageFormat::Jpeg).unwrap();
 
-    let n = negocio::guardar_logo(&pool, jpg.get_ref()).await.unwrap();
+    let n = negocio::guardar_logo(&pool, &ControlPin::new(), None, jpg.get_ref())
+        .await
+        .unwrap();
     let png = n.logo_png.expect("hay logo");
     assert!(png.starts_with("iVBORw0KGgo"), "es un PNG en base64");
 
@@ -95,12 +109,14 @@ async fn carga_y_quita_el_logo() {
     let logo = pos_core::logo::decodificar(&guardado).unwrap();
     assert_eq!((logo.ancho, logo.alto), (384, 144));
 
-    assert!(negocio::quitar_logo(&pool)
+    assert!(negocio::quitar_logo(&pool, &ControlPin::new(), None)
         .await
         .unwrap()
         .logo_png
         .is_none());
-    assert!(negocio::guardar_logo(&pool, b"esto no es una imagen")
-        .await
-        .is_err());
+    assert!(
+        negocio::guardar_logo(&pool, &ControlPin::new(), None, b"esto no es una imagen")
+            .await
+            .is_err()
+    );
 }
