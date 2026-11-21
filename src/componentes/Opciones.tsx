@@ -25,7 +25,7 @@ export default function Opciones<T extends string>({
       {opciones.map(({ id, nombre: texto, Icono }) => (
         <label
           key={id}
-          className="flex h-8 cursor-pointer items-center gap-2 rounded-md px-3 text-tenue hover:text-texto has-checked:bg-texto has-checked:font-medium has-checked:text-superficie has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-texto"
+          className="relative flex h-8 cursor-pointer items-center gap-2 rounded-md px-3 text-tenue hover:text-texto has-checked:bg-texto has-checked:font-medium has-checked:text-superficie has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-texto"
         >
           <input
             type="radio"

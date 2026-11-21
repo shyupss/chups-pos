@@ -39,7 +39,7 @@ export default function AbrirCaja({ sugerido, enEspera, onAbierta }: Props) {
           e.preventDefault();
           void abrir();
         }}
-        className="w-[30rem] max-w-full rounded-lg border border-linea bg-superficie p-8"
+        className="w-[32rem] max-w-full rounded-lg border border-linea bg-superficie p-8"
       >
         <div className="flex items-center gap-3">
           <span className="flex size-10 items-center justify-center rounded-lg bg-acento/12 text-acento">
@@ -51,19 +51,25 @@ export default function AbrirCaja({ sugerido, enEspera, onAbierta }: Props) {
           </div>
         </div>
 
-        <label className="mt-6 block">
-          <span className="text-tenue">Monto inicial</span>
-          <input
-            autoFocus
-            onFocus={(e) => e.currentTarget.select()}
-            value={texto ? pesos(monto) : ""}
-            onChange={(e) => setTexto(e.target.value)}
-            placeholder="$0"
-            inputMode="numeric"
-            aria-describedby="sugerido-caja"
-            className="mt-1 h-14 w-full rounded-lg border border-linea bg-fondo px-4 text-3xl font-semibold tabular-nums outline-none focus:border-texto"
-          />
-        </label>
+        <div className="mt-6 flex items-baseline justify-between">
+          <label htmlFor="monto-inicial" className="text-tenue">
+            Monto inicial
+          </label>
+          <button type="button" onClick={() => setTexto("")} className="text-xs text-tenue hover:text-texto">
+            Limpiar
+          </button>
+        </div>
+        <input
+          id="monto-inicial"
+          autoFocus
+          onFocus={(e) => e.currentTarget.select()}
+          value={texto ? pesos(monto) : ""}
+          onChange={(e) => setTexto(e.target.value)}
+          placeholder="$0"
+          inputMode="numeric"
+          aria-describedby="sugerido-caja"
+          className="mt-1 h-14 w-full rounded-lg border border-linea bg-fondo px-4 text-3xl font-semibold tabular-nums outline-none focus:border-texto"
+        />
         <div className="mt-2 flex flex-wrap gap-2">
           {BILLETES.map((b) => (
             <button
@@ -76,13 +82,6 @@ export default function AbrirCaja({ sugerido, enEspera, onAbierta }: Props) {
               +{pesos(b)}
             </button>
           ))}
-          <button
-            type="button"
-            onClick={() => setTexto("")}
-            className="h-8 rounded-lg px-2 text-tenue hover:bg-fondo hover:text-texto"
-          >
-            Limpiar
-          </button>
         </div>
         <p id="sugerido-caja" className="mt-3 text-xs text-tenue">
           {sugerido !== null

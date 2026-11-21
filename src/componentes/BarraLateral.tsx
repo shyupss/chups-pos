@@ -138,7 +138,7 @@ function IndicadorCaja({
       type="button"
       onClick={() => onIr("caja")}
       title={detalle}
-      className={`flex h-8 items-center gap-2 rounded-lg text-xs font-medium ${
+      className={`relative flex h-8 items-center gap-2 rounded-lg text-xs font-medium ${
         turno ? "bg-exito-fondo text-exito" : "bg-fondo text-tenue"
       } ${expandida ? "px-3" : "justify-center"}`}
     >
@@ -175,7 +175,7 @@ function IndicadorImpresora({
       type="button"
       onClick={() => onIr("configuracion")}
       title={detalle}
-      className={`flex h-8 items-center gap-2 rounded-lg text-xs font-medium ${clase} ${expandida ? "px-3" : "justify-center"}`}
+      className={`relative flex h-8 items-center gap-2 rounded-lg text-xs font-medium ${clase} ${expandida ? "px-3" : "justify-center"}`}
     >
       <Printer size={14} className="shrink-0" aria-hidden />
       <span className={expandida ? "truncate" : "sr-only"}>{texto}</span>
