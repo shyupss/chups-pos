@@ -289,7 +289,7 @@ pub async fn abrir(pool: &SqlitePool, monto_inicial: i64) -> Resultado<Turno> {
 }
 
 /// Error para lo que necesita la caja abierta.
-fn sin_caja(que: &str) -> Error {
+pub(crate) fn sin_caja(que: &str) -> Error {
     Error::Validacion(format!("Abre la caja para {que}"))
 }
 
@@ -321,12 +321,32 @@ pub async fn registrar_movimiento(
     }
 
     let mut tx = pool.begin().await?;
-    let fila = repo::abierto(&mut tx)
-        .await?
-        .ok_or_else(|| sin_caja("registrar ingresos o retiros"))?;
+    let m = movimiento_en(
+        &mut tx,
+        tipo,
+        monto,
+        &motivo,
+        "registrar ingresos o retiros",
+    )
+    .await?;
+    tx.commit().await?;
+    Ok(m)
+}
+
+/// Ingreso o retiro en el turno abierto, dentro de la transacción de quien llama (una compra
+/// pagada con la caja, su anulación). Un retiro no puede superar el efectivo esperado. El PIN lo
+/// revisa quien llama, antes de abrir la transacción.
+pub(crate) async fn movimiento_en(
+    conn: &mut SqliteConnection,
+    tipo: TipoMovimiento,
+    monto: i64,
+    motivo: &str,
+    para: &str,
+) -> Resultado<MovimientoCaja> {
+    let fila = repo::abierto(conn).await?.ok_or_else(|| sin_caja(para))?;
     let turno_id = fila.id;
     if tipo == TipoMovimiento::Retiro {
-        let esperado = armar_resumen(&mut tx, fila).await?.efectivo.esperado;
+        let esperado = armar_resumen(conn, fila).await?.efectivo.esperado;
         if monto > esperado {
             return validacion(format!(
                 "En la caja debería haber {}: no se puede retirar más que eso",
@@ -334,9 +354,11 @@ pub async fn registrar_movimiento(
             ));
         }
     }
-    let m = repo::insertar_movimiento(&mut tx, turno_id, tipo.como_texto(), monto, &motivo).await?;
-    tx.commit().await?;
-    Ok(m.into())
+    Ok(
+        repo::insertar_movimiento(conn, turno_id, tipo.como_texto(), monto, motivo)
+            .await?
+            .into(),
+    )
 }
 
 pub async fn resumen(pool: &SqlitePool, turno_id: i64) -> Resultado<ResumenTurno> {

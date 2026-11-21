@@ -254,3 +254,17 @@ pub async fn registrar_movimiento(
     .await?;
     Ok(stock_mil)
 }
+
+/// El último costo unitario (por unidad o por kg), al registrar una compra.
+pub async fn actualizar_costo(
+    conn: &mut SqliteConnection,
+    producto_id: i64,
+    costo: i64,
+) -> Resultado<()> {
+    sqlx::query("UPDATE productos SET costo = ? WHERE id = ?")
+        .bind(costo)
+        .bind(producto_id)
+        .execute(conn)
+        .await?;
+    Ok(())
+}

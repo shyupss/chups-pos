@@ -5,6 +5,7 @@
 
 pub mod boletas;
 pub mod categorias;
+pub mod compras;
 pub mod config;
 pub mod espera;
 pub mod impresion;

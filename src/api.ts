@@ -473,6 +473,75 @@ export interface Diferencia {
 
 export type MotivoMerma = "vencido" | "danado" | "robo" | "consumoInterno" | "otro";
 
+export interface Proveedor {
+  id: number;
+  nombre: string;
+  rut: string | null;
+  telefono: string | null;
+  contacto: string | null;
+  nota: string | null;
+  activo: boolean;
+  /** Compras vigentes (sin las anuladas) y la fecha de la última. */
+  compras: number;
+  ultimaCompra: string | null;
+}
+
+export type DatosProveedor = Pick<Proveedor, "nombre" | "rut" | "telefono" | "contacto" | "nota">;
+
+/** Costo por unidad o, en productos por kg, por kilo. */
+export interface LineaCompra {
+  productoId: number;
+  cantidadMil: number;
+  costoUnitario: number;
+}
+
+export interface NuevaCompra {
+  proveedorId: number | null;
+  documento: string | null;
+  nota: string | null;
+  lineas: LineaCompra[];
+  /** Se pagó con efectivo de la caja: un retiro en el turno abierto. */
+  pagadaConCaja: boolean;
+}
+
+export interface Compra {
+  id: number;
+  fecha: string;
+  proveedorId: number | null;
+  proveedor: string | null;
+  documento: string | null;
+  total: number;
+  nota: string | null;
+  pagadaConCaja: boolean;
+  anuladaEn: string | null;
+  motivoAnulacion: string | null;
+  lineas: number;
+}
+
+export interface ItemCompra {
+  productoId: number;
+  nombre: string;
+  unidad: Unidad;
+  cantidadMil: number;
+  costoUnitario: number;
+  subtotal: number;
+  stockMil: number;
+}
+
+export interface DetalleCompra {
+  compra: Compra;
+  items: ItemCompra[];
+  /** Productos que quedarían con stock negativo si se anulara ahora. */
+  quedarianNegativos: string[];
+}
+
+/** Fechas como días locales "aaaa-mm-dd" (hasta incluido). */
+export interface FiltrosCompras {
+  proveedorId: number | null;
+  desde: string | null;
+  hasta: string | null;
+}
+
 /** Etiqueta de balanza leída: producto por kg y los gramos de la etiqueta. */
 export interface LecturaBalanza {
   producto: Producto;
@@ -578,6 +647,22 @@ export const api = {
     detalle: string | null,
     pin: string | null,
   ) => invoke<number>("registrar_merma", { productoId, cantidadMil, motivo, detalle, pin }),
+
+  listarProveedores: (texto: string, incluirInactivos: boolean, limite: number, desplazamiento: number) =>
+    invoke<Proveedor[]>("listar_proveedores", { texto, incluirInactivos, limite, desplazamiento }),
+  crearProveedor: (datos: DatosProveedor) => invoke<Proveedor>("crear_proveedor", { datos }),
+  editarProveedor: (id: number, datos: DatosProveedor) => invoke<Proveedor>("editar_proveedor", { id, datos }),
+  cambiarEstadoProveedor: (id: number, activo: boolean) =>
+    invoke<Proveedor>("cambiar_estado_proveedor", { id, activo }),
+  /** Si se paga con la caja, pide el PIN de los retiros cuando está protegido. */
+  registrarCompra: (compra: NuevaCompra, pin: string | null) =>
+    invoke<DetalleCompra>("registrar_compra", { compra, pin }),
+  detalleCompra: (id: number) => invoke<DetalleCompra>("detalle_compra", { id }),
+  listarCompras: (filtros: FiltrosCompras, limite: number, desplazamiento: number) =>
+    invoke<Compra[]>("listar_compras", { filtros, limite, desplazamiento }),
+  /** Compensa stock y caja. Protegido con el PIN de ajustar inventario. */
+  anularCompra: (id: number, motivo: string, pin: string | null) =>
+    invoke<DetalleCompra>("anular_compra", { id, motivo, pin }),
 
   estadoCaja: () => invoke<EstadoCaja>("estado_caja"),
   abrirTurno: (montoInicial: number) => invoke<Turno>("abrir_turno", { montoInicial }),
