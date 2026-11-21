@@ -46,6 +46,8 @@ pub async fn registrar_movimiento_caja(
     )
     .await?;
     super::avisar_cambios(&app);
+    // Respaldo al cerrar el turno, en segundo plano: el cierre no espera.
+    super::respaldos::automatico(&app, true);
     Ok(r)
 }
 

@@ -118,6 +118,9 @@ export interface Config {
   balanzaLargoCodigo: number;
   /** Días desde la fiada pendiente más antigua a partir de los que la deuda se resalta. */
   fiadoDiasAlerta: number;
+  /** null = Respaldos junto a los datos de la app. */
+  respaldosCarpeta: string | null;
+  respaldosConservar: number;
 }
 
 /** Una venta en espera en la lista. El total usa los precios actuales de los productos activos. */
@@ -866,6 +869,55 @@ export interface ResultadoImportacion {
   categoriasCreadas: number;
 }
 
+// --- Respaldos ---------------------------------------------------------------------------
+
+export interface Respaldo {
+  nombre: string;
+  ruta: string;
+  bytes: number;
+  /** Cuándo se escribió (UTC). */
+  fecha: string;
+}
+
+export interface EstadoRespaldos {
+  rutaBase: string;
+  bytesBase: number;
+  carpeta: string;
+  carpetaPredeterminada: string;
+  conservar: number;
+  /** Del más nuevo al más antiguo. */
+  respaldos: Respaldo[];
+  /** El último respaldo automático que falló. */
+  error: string | null;
+}
+
+/** Lo que se muestra antes de restaurar. */
+export interface InfoRespaldo {
+  ruta: string;
+  bytes: number;
+  fecha: string;
+  versionEsquema: number;
+  versionApp: number;
+  negocio: string | null;
+  productos: number;
+  ventas: number;
+  ultimaVenta: string | null;
+}
+
+/** Rust avisa si un respaldo automático falló (con el mensaje). */
+export function escucharRespaldoFallido(alFallar: (mensaje: string) => void): () => void {
+  let dejar: (() => void) | null = null;
+  let cancelado = false;
+  void listen<string>("respaldo-fallido", (e) => alFallar(e.payload)).then((f) => {
+    if (cancelado) f();
+    else dejar = f;
+  });
+  return () => {
+    cancelado = true;
+    dejar?.();
+  };
+}
+
 /** Rust avisa cuando cambia algo de la pantalla Hoy (ventas, caja, fiados, stock). */
 export function escucharCambiosDelDia(alCambiar: () => void): () => void {
   let dejar: (() => void) | null = null;
@@ -960,6 +1012,16 @@ export const api = {
   exportarReporte: (tipo: TipoReporte, desde: string, hasta: string, categoria: number | null, formato: FormatoExportacion) =>
     invoke<string | null>("exportar_reporte", { tipo, desde, hasta, categoria, formato }),
   abrirArchivo: (ruta: string) => invoke<void>("abrir_archivo", { ruta }),
+  estadoRespaldos: () => invoke<EstadoRespaldos>("estado_respaldos"),
+  respaldarAhora: () => invoke<Respaldo>("respaldar_ahora"),
+  /** Otra carpeta (un pendrive); null si se cancela. */
+  respaldarEn: () => invoke<Respaldo | null>("respaldar_en"),
+  elegirCarpetaRespaldos: () => invoke<string | null>("elegir_carpeta_respaldos"),
+  abrirCarpetaRespaldos: () => invoke<void>("abrir_carpeta_respaldos"),
+  /** Elige y revisa el archivo; null si se cancela. */
+  elegirRespaldo: () => invoke<InfoRespaldo | null>("elegir_respaldo"),
+  /** Siempre pide el PIN (si hay uno). Si sale bien, la app se reinicia. */
+  restaurarRespaldo: (ruta: string, pin: string | null) => invoke<void>("restaurar_respaldo", { ruta, pin }),
   elegirPlanilla: () => invoke<string | null>("elegir_planilla"),
   abrirPlanilla: (ruta: string) => invoke<Apertura>("abrir_planilla", { ruta }),
   previsualizarProductos: (ruta: string, mapeo: (CampoProducto | null)[]) =>

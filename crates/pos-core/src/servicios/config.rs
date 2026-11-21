@@ -105,6 +105,12 @@ pub struct Config {
     // Fiados
     /// Días desde la venta fiada más antigua a partir de los que la deuda se resalta.
     pub fiado_dias_alerta: u16,
+
+    // Respaldos
+    /// Carpeta de los respaldos automáticos; `None` usa Respaldos junto a los datos de la app.
+    pub respaldos_carpeta: Option<String>,
+    /// Cuántos respaldos automáticos se conservan (los más antiguos se borran).
+    pub respaldos_conservar: u16,
 }
 
 impl Default for Config {
@@ -129,6 +135,8 @@ impl Default for Config {
             balanza_formato: FormatoBalanza::Peso,
             balanza_largo_codigo: 5,
             fiado_dias_alerta: 30,
+            respaldos_carpeta: None,
+            respaldos_conservar: 14,
         }
     }
 }
@@ -233,6 +241,8 @@ const BALANZA_PREFIJOS: &str = "balanza_prefijos";
 const BALANZA_FORMATO: &str = "balanza_formato";
 const BALANZA_LARGO_CODIGO: &str = "balanza_largo_codigo";
 const FIADO_DIAS_ALERTA: &str = "fiado_dias_alerta";
+const RESPALDOS_CARPETA: &str = "respaldos_carpeta";
+const RESPALDOS_CONSERVAR: &str = "respaldos_conservar";
 // Seguridad: fuera de `Config`.
 const PIN_HASH: &str = "pin_hash";
 const RECUPERACION_HASH: &str = "pin_recuperacion_hash";
@@ -353,6 +363,13 @@ impl Config {
                 .and_then(|v| v.parse().ok())
                 .filter(|n| (1..=365).contains(n))
                 .unwrap_or(d.fiado_dias_alerta),
+            respaldos_carpeta: texto(RESPALDOS_CARPETA)
+                .filter(|v| !v.is_empty())
+                .map(str::to_owned),
+            respaldos_conservar: texto(RESPALDOS_CONSERVAR)
+                .and_then(|v| v.parse().ok())
+                .filter(|n| (1..=365).contains(n))
+                .unwrap_or(d.respaldos_conservar),
         }
     }
 
@@ -377,6 +394,11 @@ impl Config {
             (BALANZA_FORMATO, self.balanza_formato.como_texto().into()),
             (BALANZA_LARGO_CODIGO, self.balanza_largo_codigo.to_string()),
             (FIADO_DIAS_ALERTA, self.fiado_dias_alerta.to_string()),
+            (
+                RESPALDOS_CARPETA,
+                self.respaldos_carpeta.clone().unwrap_or_default(),
+            ),
+            (RESPALDOS_CONSERVAR, self.respaldos_conservar.to_string()),
         ]
     }
 
@@ -393,6 +415,9 @@ impl Config {
         }
         if !(10..=500).contains(&self.cajon_pulso_ms) {
             return validacion("El pulso del cajón debe durar entre 10 y 500 ms");
+        }
+        if !(1..=365).contains(&self.respaldos_conservar) {
+            return validacion("Se conservan entre 1 y 365 respaldos");
         }
         if !(1..=365).contains(&self.fiado_dias_alerta) {
             return validacion("La alerta de fiados debe estar entre 1 y 365 días");
@@ -423,6 +448,10 @@ impl Config {
             .filter(|i| !i.is_empty());
         self.pdf_carpeta = self
             .pdf_carpeta
+            .map(|c| c.trim().to_owned())
+            .filter(|c| !c.is_empty());
+        self.respaldos_carpeta = self
+            .respaldos_carpeta
             .map(|c| c.trim().to_owned())
             .filter(|c| !c.is_empty());
         Ok(self)
