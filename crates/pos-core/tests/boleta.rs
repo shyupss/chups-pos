@@ -6,7 +6,7 @@ use pos_core::servicios::config::{self, Config, FormatoBalanza, TablaCaracteres}
 use pos_core::servicios::negocio::{self, DatosNegocio};
 use pos_core::servicios::seguridad::ControlPin;
 use pos_core::servicios::ventas::{self, ItemPedido, MedioPago, NuevaVenta};
-use pos_core::{db, Error};
+use pos_core::Error;
 
 async fn negocio_listo(pool: &sqlx::SqlitePool) {
     negocio::guardar(
@@ -27,7 +27,7 @@ async fn negocio_listo(pool: &sqlx::SqlitePool) {
 
 #[tokio::test]
 async fn arma_la_boleta_desde_la_venta_guardada() {
-    let pool = db::abrir_en_memoria().await.unwrap();
+    let pool = comun::con_caja().await;
     negocio_listo(&pool).await;
     let pan = comun::crear_kg(&pool, "P", "Pan corriente", 2300, 10_000).await;
     let bebida = comun::crear(&pool, "B", "Bebida", 1500, 10).await;
@@ -98,7 +98,7 @@ async fn arma_la_boleta_desde_la_venta_guardada() {
 
 #[tokio::test]
 async fn sin_nombre_de_negocio_no_se_arma() {
-    let pool = db::abrir_en_memoria().await.unwrap();
+    let pool = comun::con_caja().await;
     let p = comun::crear(&pool, "B", "Bebida", 1500, 10).await;
     let v = ventas::confirmar(
         &pool,
@@ -128,7 +128,7 @@ async fn sin_nombre_de_negocio_no_se_arma() {
 
 #[tokio::test]
 async fn configuracion_tipada_con_valores_por_defecto() {
-    let pool = db::abrir_en_memoria().await.unwrap();
+    let pool = comun::con_caja().await;
     let c = config::obtener(&pool).await.unwrap();
     assert_eq!(c, Config::default());
     assert_eq!(c.columnas(), 48);
@@ -206,7 +206,7 @@ async fn trabajos_de_impresion_segun_la_configuracion() {
     use pos_core::boleta::escpos;
     use pos_core::servicios::impresion;
 
-    let pool = db::abrir_en_memoria().await.unwrap();
+    let pool = comun::con_caja().await;
     negocio_listo(&pool).await;
     let p = comun::crear(&pool, "B", "Bebida", 1500, 10).await;
     let v = ventas::confirmar(

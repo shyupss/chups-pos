@@ -1,7 +1,7 @@
 mod comun;
 
 use pos_core::servicios::ventas::{self, ItemPedido, MedioPago, NuevaVenta};
-use pos_core::{db, Error};
+use pos_core::Error;
 
 fn venta_mil(items: &[(i64, i64)], medio: MedioPago) -> NuevaVenta {
     NuevaVenta {
@@ -21,7 +21,7 @@ fn venta_mil(items: &[(i64, i64)], medio: MedioPago) -> NuevaVenta {
 
 #[tokio::test]
 async fn venta_por_peso_redondea_el_subtotal_y_descuenta_gramos() {
-    let pool = db::abrir_en_memoria().await.unwrap();
+    let pool = comun::con_caja().await;
     // $2.300 el kilo, 10 kg en stock.
     let queso = comun::crear_kg(&pool, "Q1", "Queso gauda", 2300, 10_000).await;
 
@@ -48,7 +48,7 @@ async fn venta_por_peso_redondea_el_subtotal_y_descuenta_gramos() {
 
 #[tokio::test]
 async fn mezcla_productos_por_unidad_y_por_peso() {
-    let pool = db::abrir_en_memoria().await.unwrap();
+    let pool = comun::con_caja().await;
     let pan = comun::crear_kg(&pool, "P1", "Pan amasado", 2490, 0).await;
     let bebida = comun::crear(&pool, "B1", "Bebida", 1500, 10).await;
 
@@ -73,7 +73,7 @@ async fn mezcla_productos_por_unidad_y_por_peso() {
 
 #[tokio::test]
 async fn rechaza_cantidades_que_no_calzan_con_la_unidad() {
-    let pool = db::abrir_en_memoria().await.unwrap();
+    let pool = comun::con_caja().await;
     let bebida = comun::crear(&pool, "B1", "Bebida", 1500, 10).await;
     let queso = comun::crear_kg(&pool, "Q1", "Queso", 9990, 5000).await;
 
@@ -108,7 +108,7 @@ async fn rechaza_cantidades_que_no_calzan_con_la_unidad() {
 
 #[tokio::test]
 async fn producto_por_unidad_exige_stock_entero() {
-    let pool = db::abrir_en_memoria().await.unwrap();
+    let pool = comun::con_caja().await;
     let mut d = comun::datos(Some("X"), "Huevos", 300, 0);
     d.stock_inicial_mil = 1500;
     let r = pos_core::servicios::productos::crear(&pool, &d).await;

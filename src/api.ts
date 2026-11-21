@@ -189,6 +189,84 @@ export interface ErrorPin {
   segundos: number | null;
 }
 
+/** Billetes o monedas de una denominación contados al cerrar la caja. */
+export interface Conteo {
+  denominacion: number;
+  cantidad: number;
+}
+
+/** Turno de caja: desde que se abre con un monto inicial hasta que se cierra contando el efectivo. */
+export interface Turno {
+  id: number;
+  abiertoEn: string;
+  cerradoEn: string | null;
+  abierto: boolean;
+  montoInicial: number;
+  efectivoEsperado: number | null;
+  efectivoContado: number | null;
+  /** Contado − esperado: positivo sobra, negativo falta. */
+  diferencia: number | null;
+  detalleConteo: Conteo[] | null;
+  notaCierre: string | null;
+}
+
+export interface EstadoCaja {
+  /** null si la caja está cerrada. */
+  turno: Turno | null;
+  /** Monto inicial del último turno, para sugerirlo al abrir. */
+  ultimoMontoInicial: number | null;
+}
+
+export type TipoMovimiento = "ingreso" | "retiro";
+
+export interface MovimientoCaja {
+  id: number;
+  tipo: TipoMovimiento;
+  monto: number;
+  motivo: string;
+  fecha: string;
+}
+
+/** Cantidad y monto de un medio de pago o de reembolso ("fiado" = sin reembolso). */
+export interface TotalMedio {
+  medio: MedioPago;
+  cantidad: number;
+  monto: number;
+  redondeo: number;
+}
+
+export interface CuadreEfectivo {
+  montoInicial: number;
+  ventas: number;
+  abonos: number;
+  ingresos: number;
+  retiros: number;
+  reembolsos: number;
+  esperado: number;
+}
+
+/** Resumen del turno; el efectivo esperado lo calcula Rust. */
+export interface ResumenTurno {
+  turno: Turno;
+  cantidadVentas: number;
+  totalVentas: number;
+  ventas: TotalMedio[];
+  redondeoVentas: number;
+  abonos: TotalMedio[];
+  anulaciones: TotalMedio[];
+  devoluciones: TotalMedio[];
+  redondeoReembolsos: number;
+  movimientos: MovimientoCaja[];
+  efectivo: CuadreEfectivo;
+}
+
+export interface TurnoBreve {
+  id: number;
+  abiertoEn: string;
+  cerradoEn: string | null;
+  abierto: boolean;
+}
+
 /** Etiqueta de balanza leída: producto por kg y los gramos de la etiqueta. */
 export interface LecturaBalanza {
   producto: Producto;
@@ -257,6 +335,19 @@ export const api = {
 
   obtenerConfig: () => invoke<Config>("obtener_config"),
   guardarConfig: (config: Config, pin: string | null) => invoke<Config>("guardar_config", { config, pin }),
+
+  estadoCaja: () => invoke<EstadoCaja>("estado_caja"),
+  abrirTurno: (montoInicial: number) => invoke<Turno>("abrir_turno", { montoInicial }),
+  registrarMovimientoCaja: (tipo: TipoMovimiento, monto: number, motivo: string, pin: string | null) =>
+    invoke<MovimientoCaja>("registrar_movimiento_caja", { tipo, monto, motivo, pin }),
+  resumenTurno: (turnoId: number) => invoke<ResumenTurno>("resumen_turno", { turnoId }),
+  cerrarTurno: (efectivoContado: number, detalleConteo: Conteo[] | null, nota: string | null, pin: string | null) =>
+    invoke<ResumenTurno>("cerrar_turno", { efectivoContado, detalleConteo, nota, pin }),
+  listarTurnos: (limite: number, desplazamiento: number) =>
+    invoke<TurnoBreve[]>("listar_turnos", { limite, desplazamiento }),
+  imprimirCierre: (turnoId: number) => invoke<void>("imprimir_cierre", { turnoId }),
+  /** Guarda el PDF del cierre y, si `abrir`, lo abre. Devuelve la ruta. */
+  guardarCierrePdf: (turnoId: number, abrir: boolean) => invoke<string>("guardar_cierre_pdf", { turnoId, abrir }),
 
   estadoSeguridad: () => invoke<EstadoSeguridad>("estado_seguridad"),
   /** Devuelve el código de recuperación, que se muestra una sola vez. */

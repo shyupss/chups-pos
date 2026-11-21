@@ -4,6 +4,8 @@ use crate::repositorios::productos::Unidad;
 use crate::Resultado;
 
 pub struct NuevaCabecera<'a> {
+    /// Turno abierto en que se cobra.
+    pub turno_id: i64,
     pub subtotal: i64,
     pub descuento: i64,
     /// Ajuste del efectivo a la decena; puede ser negativo.
@@ -30,11 +32,12 @@ pub async fn insertar_cabecera(
 ) -> Resultado<CabeceraGuardada> {
     let (id, folio, fecha_hora): (i64, i64, String) = sqlx::query_as(
         "INSERT INTO ventas
-            (folio, subtotal, descuento, redondeo, total, medio_pago, monto_recibido, vuelto,
-             estado, cliente_id)
-         VALUES ((SELECT COALESCE(MAX(folio), 0) + 1 FROM ventas), ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            (folio, turno_id, subtotal, descuento, redondeo, total, medio_pago, monto_recibido,
+             vuelto, estado, cliente_id)
+         VALUES ((SELECT COALESCE(MAX(folio), 0) + 1 FROM ventas), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
          RETURNING id, folio, fecha_hora",
     )
+    .bind(v.turno_id)
     .bind(v.subtotal)
     .bind(v.descuento)
     .bind(v.redondeo)

@@ -10,4 +10,5 @@ pub mod negocio;
 pub mod productos;
 pub mod seguridad;
 pub mod sistema;
+pub mod turnos;
 pub mod ventas;

@@ -12,8 +12,8 @@ use printpdf::{
 };
 
 use super::escpos::reemplazo;
-use super::texto::{self, Alineacion, Estilo, LineaTexto, COLUMNAS_80MM};
-use super::Boleta;
+use super::texto::{Alineacion, Estilo, LineaTexto, COLUMNAS_80MM};
+use super::{Boleta, Documento};
 use crate::logo::LogoBn;
 use crate::servicios::config::FormatoPdf;
 use crate::{Error, Resultado};
@@ -269,8 +269,13 @@ pub fn nombre_archivo(folio: i64) -> String {
 
 /// Genera el PDF de la boleta.
 pub fn boleta(b: &Boleta, formato: FormatoPdf) -> Resultado<Vec<u8>> {
-    let lineas = texto::renderizar(b, COLUMNAS_80MM);
-    let logo = b.negocio.logo.as_ref();
+    documento(b, formato)
+}
+
+/// Genera el PDF de cualquier comprobante con las líneas de 48 columnas.
+pub fn documento(d: &dyn Documento, formato: FormatoPdf) -> Resultado<Vec<u8>> {
+    let lineas = d.lineas(COLUMNAS_80MM);
+    let logo = d.logo();
     let medidas = Medidas::new()?;
     let alto_contenido: f32 = lineas.iter().map(|l| alto(l, logo)).sum();
 
@@ -284,9 +289,8 @@ pub fn boleta(b: &Boleta, formato: FormatoPdf) -> Resultado<Vec<u8>> {
             MARGEN_CARTA,
         ),
     };
-    let titulo = format!("Comprobante de venta N° {}", super::formato::folio(b.folio));
     let (doc, pagina, capa) =
-        PdfDocument::new(&titulo, Mm(ancho_pagina), Mm(alto_pagina), "Boleta");
+        PdfDocument::new(d.titulo(), Mm(ancho_pagina), Mm(alto_pagina), "Boleta");
     let regular = doc.add_external_font(FUENTE_REGULAR).map_err(error_pdf)?;
     let negrita = doc.add_external_font(FUENTE_NEGRITA).map_err(error_pdf)?;
 

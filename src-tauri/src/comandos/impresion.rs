@@ -46,7 +46,7 @@ where
         .map_err(|e| e.to_string())
 }
 
-async fn enviar(estado: &EstadoApp, trabajo: srv::Trabajo) -> ResultadoComando<()> {
+pub(crate) async fn enviar(estado: &EstadoApp, trabajo: srv::Trabajo) -> ResultadoComando<()> {
     con_hardware(estado, move |hw| {
         hw.enviar(&trabajo.impresora, &trabajo.documento, &trabajo.bytes)
     })

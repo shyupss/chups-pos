@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { api, type EstadoConfigurada } from "./api";
+import { api, type EstadoCaja, type EstadoConfigurada } from "./api";
 import BarraLateral, { type ModoBarra } from "./componentes/BarraLateral";
 import Caja from "./pantallas/Caja";
 import { ProveedorPin } from "./componentes/PedirPin";
@@ -30,6 +30,20 @@ export default function App() {
     const intervalo = setInterval(refrescarImpresora, 60_000);
     return () => clearInterval(intervalo);
   }, [refrescarImpresora]);
+  // Turno de caja: la Caja muestra "Abrir caja" sin turno y la barra lateral dice desde cuándo está abierta.
+  const [caja, setCaja] = useState<EstadoCaja | null>(null);
+  const refrescarCaja = useCallback(() => {
+    api
+      .estadoCaja()
+      .then(setCaja)
+      .catch(() => {});
+  }, []);
+  useEffect(() => {
+    refrescarCaja();
+    // También pasa la medianoche: "desde 09:12" debe pasar a decir el día.
+    const intervalo = setInterval(refrescarCaja, 60_000);
+    return () => clearInterval(intervalo);
+  }, [refrescarCaja]);
   const [modoBarra, setModoBarra] = useState<ModoBarra>(() =>
     leerPreferencia<ModoBarra>(CLAVE_BARRA, ["auto", "expandida", "colapsada"], "auto"),
   );
@@ -72,6 +86,7 @@ export default function App() {
           onIr={setSeccion}
           onAlternar={() => cambiarModoBarra(expandida ? "colapsada" : "expandida")}
           impresora={impresora}
+          turno={caja === null ? undefined : caja.turno}
           insignias={
             enEspera > 0
               ? { caja: { valor: enEspera, descripcion: enEspera === 1 ? "1 venta en espera" : `${enEspera} ventas en espera` } }
@@ -86,6 +101,8 @@ export default function App() {
               onCrearProducto={crearDesdeCaja}
               onEnEspera={setEnEspera}
               onImpresion={refrescarImpresora}
+              caja={caja}
+              onCambioCaja={refrescarCaja}
             />
           </div>
           {seccion === "productos" && (

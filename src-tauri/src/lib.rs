@@ -85,6 +85,14 @@ pub fn run() {
             comandos::seguridad::quitar_pin,
             comandos::seguridad::recuperar_pin,
             comandos::seguridad::guardar_protegidas,
+            comandos::turnos::estado_caja,
+            comandos::turnos::abrir_turno,
+            comandos::turnos::registrar_movimiento_caja,
+            comandos::turnos::resumen_turno,
+            comandos::turnos::cerrar_turno,
+            comandos::turnos::listar_turnos,
+            comandos::turnos::imprimir_cierre,
+            comandos::turnos::guardar_cierre_pdf,
         ])
         .run(tauri::generate_context!())
         .expect("error al iniciar CHUPS POS");

@@ -72,6 +72,9 @@ impl From<sqlx::Error> for Error {
             if db.is_unique_violation() && db.message().contains("categorias.nombre") {
                 return Error::Conflicto("Ya existe una categoría con ese nombre".into());
             }
+            if db.is_unique_violation() && db.message().contains("turnos.estado") {
+                return Error::Conflicto("La caja ya está abierta".into());
+            }
         }
         Error::BaseDatos(e)
     }

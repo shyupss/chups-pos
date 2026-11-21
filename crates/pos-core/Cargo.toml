@@ -27,6 +27,8 @@ lopdf = { version = "0.31", default-features = false, features = ["pom_parser"] 
 argon2 = "0.6"
 # Código de recuperación al azar (la misma versión que usa argon2 para la sal).
 getrandom = "0.4"
+# Detalle del conteo de efectivo al cerrar la caja.
+serde_json = "1"
 # Argon2 gasta CPU a propósito: se calcula en spawn_blocking, fuera de los hilos async.
 tokio = { version = "1", default-features = false, features = ["rt"] }
 

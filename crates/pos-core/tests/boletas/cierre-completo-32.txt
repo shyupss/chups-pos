@@ -1,0 +1,56 @@
+A l m a c é n   D o n   P e p e
+        RUT 12.345.678-5
+  Av. Siempre Viva 742, Talca
+--------------------------------
+  C I E R R E   D E   C A J A
+        Turno N° 000012
+--------------------------------
+Apertura        21-11-2026 09:12
+Cierre          21-11-2026 21:05
+--------------------------------
+VENTAS
+Efectivo (10)            $80.000
+Débito (3)               $30.000
+Crédito (0)                   $0
+Transferencia (1)         $3.450
+Fiado (1)                $10.000
+Total (15)              $123.450
+Redondeo del efectivo       -$12
+--------------------------------
+ANULACIONES
+Efectivo (1)             -$2.000
+Fiado, sin reembolso (1) -$5.000
+DEVOLUCIONES
+Transferencia (1)        -$1.000
+--------------------------------
+INGRESOS Y RETIROS
+Ingreso: Sencillo del banco
+                         $10.000
+Retiro: Pago al panadero por la
+entrega de la mañana
+                         -$5.000
+--------------------------------
+EFECTIVO
+Monto inicial            $20.000
+Ventas en efectivo       $80.000
+Ingresos                 $10.000
+Retiros                  -$5.000
+Reembolsos               -$2.000
+Esperado                $103.000
+Contado                 $103.100
+DIFERENCIA                 +$100
+          SOBRAN $100
+--------------------------------
+CONTEO
+4 x $20.000              $80.000
+2 x $10.000              $20.000
+3 x $1.000                $3.000
+1 x $100                    $100
+--------------------------------
+Nota: Sobran $100: un cliente no
+esperó el vuelto.
+--------------------------------
+
+
+     _____________________
+             Firma

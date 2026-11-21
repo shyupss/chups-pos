@@ -8,4 +8,5 @@ pub mod config;
 pub mod espera;
 pub mod negocio;
 pub mod productos;
+pub mod turnos;
 pub mod ventas;

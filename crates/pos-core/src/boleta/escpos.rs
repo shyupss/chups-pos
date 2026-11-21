@@ -8,7 +8,7 @@
 //! - `ESC p m t1 t2` pulso para abrir el cajón
 
 use super::texto::{self, Alineacion, Estilo, LineaTexto};
-use super::Boleta;
+use super::{Boleta, Documento};
 use crate::logo::LogoBn;
 use crate::servicios::config::TablaCaracteres;
 
@@ -250,8 +250,13 @@ impl Escritor {
 
 /// La boleta completa, lista para mandar a la impresora en modo RAW.
 pub fn boleta(b: &Boleta, op: &Opciones) -> Vec<u8> {
+    documento(b, op)
+}
+
+/// Cualquier comprobante (boleta, cierre de caja, anulación, devolución) listo para la impresora.
+pub fn documento(d: &dyn Documento, op: &Opciones) -> Vec<u8> {
     let mut e = Escritor::new(op.tabla);
-    for linea in texto::renderizar(b, op.columnas) {
+    for linea in d.lineas(op.columnas) {
         match linea {
             LineaTexto::Texto {
                 texto,
@@ -275,7 +280,7 @@ pub fn boleta(b: &Boleta, op: &Opciones) -> Vec<u8> {
             }
             LineaTexto::Blanco => e.linea(""),
             LineaTexto::Logo => {
-                if let Some(logo) = &b.negocio.logo {
+                if let Some(logo) = d.logo() {
                     e.logo(logo);
                 }
             }

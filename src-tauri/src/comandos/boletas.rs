@@ -20,6 +20,17 @@ pub async fn guardar_boleta_pdf(
     let pendiente = srv::preparar_pdf(&estado.pool, venta_id)
         .await
         .map_err(a_texto)?;
+    guardar_pdf(&app, &estado, pendiente, abrir).await
+}
+
+/// Dibuja y guarda el PDF fuera de los hilos async, en la carpeta configurada (o la
+/// predeterminada), y si se pide lo abre con el visor del sistema. Devuelve la ruta.
+pub async fn guardar_pdf(
+    app: &AppHandle,
+    estado: &EstadoApp,
+    pendiente: srv::PdfPendiente,
+    abrir: bool,
+) -> ResultadoComando<String> {
     let carpeta = pendiente
         .carpeta
         .as_ref()
