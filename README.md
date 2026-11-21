@@ -30,6 +30,58 @@ Reglas del proyecto:
 - Ventas y movimientos de stock no se borran: se anulan o se compensan.
 - La interfaz nunca carga el catálogo completo; cada comando devuelve solo lo que la pantalla muestra.
 
+## Impresoras
+
+Cada venta genera una boleta: un **comprobante interno**, que no reemplaza la boleta electrónica del SII.
+Sale en la impresora térmica y se puede guardar como PDF en `DocumentosCHUPS POSBoletas`
+(la carpeta se cambia en Configuración).
+
+**Elegir la impresora.** Instala la impresora en Windows con el driver del fabricante (o "Generic / Text
+Only"), sea USB, de red o Bluetooth. Aparece en Configuración > Impresora y escáner; si no está, usa
+"Actualizar". CHUPS POS le manda los comandos ESC/POS en modo RAW por la cola de impresión, así que el
+driver no los cambia. Elige el ancho del papel (58 mm = 32 caracteres, 80 mm = 48) y usa "Imprimir página
+de prueba". Para probar sin impresora está "Archivo (pruebas)", que guarda cada trabajo como un `.bin`
+en la carpeta de datos (`impresora-pruebas`).
+
+**Tabla de caracteres.** Si en la página de prueba las tildes o la ñ salen mal, prueba otra tabla, en este
+orden:
+
+1. **CP858** (por defecto): la 850 con el €. Funciona en la mayoría de las térmicas Epson y chinas
+   (Xprinter, 3nStar, Bixolon).
+2. **CP850**: para modelos antiguos que no tienen la 858.
+3. **WPC1252**: la de Windows; algunas impresoras chinas solo responden bien a esta.
+
+Lo que la tabla no tiene sale sin tilde, en ASCII o como "?" (por ejemplo, los emojis).
+
+**Cajón.** Se conecta a la impresora y se abre con un pulso. Casi todos usan el pin 2; si con "Probar
+cajón" no abre, cambia al pin 5.
+
+**Estado.** El indicador de la barra lateral muestra lo que informa el driver: lista, desconectada o con
+error ("Sin papel", "Tapa abierta"…). Se lee al abrir la app y cada 60 s. Muchas térmicas USB no avisan
+cuando están apagadas: siguen como "lista" hasta que falla una impresión. Si una impresión falla, la venta
+queda guardada igual y el aviso ofrece "Reintentar". Una impresora que no responde no congela la app:
+después de 10 s se informa el error.
+
+### Códigos de balanza
+
+Las balanzas con impresora etiquetan los productos por peso con un EAN-13 de uso interno:
+
+```
+20 12345 00532 7
+│  │     │     └ dígito verificador
+│  │     └────── peso en gramos (o precio en pesos)
+│  └──────────── código del producto
+└─────────────── prefijo (20 a 29)
+```
+
+Se activan en Configuración > Impresora y escáner > Códigos de balanza, donde se eligen los prefijos (20-29
+por defecto), si la etiqueta trae peso o precio y cuántos dígitos tiene el código del producto (4 a 6; el
+resto, hasta el último, es el valor). En la Caja, si el código escaneado no existe como producto y tiene
+ese formato, se agrega el producto por kg con ese peso, sin pedirlo. El producto se busca por su código de
+barras igual al de la etiqueta, con o sin ceros a la izquierda (`00123` o `123`), y tiene que venderse
+por kg. Si la etiqueta trae precio, el peso se calcula con el precio por kilo del producto. Un dígito
+verificador incorrecto se rechaza: vuelve a escanear la etiqueta. Hay un campo para probar una etiqueta.
+
 ## Desarrollo
 
 Requisitos: Node 22, Rust estable y, en Windows, las

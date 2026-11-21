@@ -49,6 +49,7 @@ pub fn run() {
             comandos::sistema::estado_sistema,
             comandos::productos::buscar_producto_por_codigo,
             comandos::productos::buscar_productos,
+            comandos::productos::leer_codigo_balanza,
             comandos::productos::crear_producto,
             comandos::productos::editar_producto,
             comandos::productos::cambiar_estado_producto,

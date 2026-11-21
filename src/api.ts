@@ -164,6 +164,12 @@ export interface Negocio {
 
 export type DatosNegocio = Omit<Negocio, "logoPng">;
 
+/** Etiqueta de balanza leída: producto por kg y los gramos de la etiqueta. */
+export interface LecturaBalanza {
+  producto: Producto;
+  cantidadMil: number;
+}
+
 export const api = {
   estadoSistema: () => invoke<EstadoSistema>("estado_sistema"),
 
@@ -207,6 +213,8 @@ export const api = {
       limite,
       desplazamiento,
     }),
+  /** null si no es una etiqueta de balanza o los códigos de balanza están desactivados. */
+  leerCodigoBalanza: (codigo: string) => invoke<LecturaBalanza | null>("leer_codigo_balanza", { codigo }),
   crearProducto: (datos: DatosProducto) => invoke<Producto>("crear_producto", { datos }),
   editarProducto: (id: number, datos: DatosProducto) =>
     invoke<Producto>("editar_producto", { id, datos }),

@@ -72,3 +72,15 @@ pub async fn cambiar_estado_producto(
         .await
         .map_err(a_texto)
 }
+
+/// Etiqueta de balanza (EAN-13 con prefijo 20–29): producto por kg y su peso.
+/// `None` si no es una etiqueta de balanza o los códigos de balanza están desactivados.
+#[tauri::command]
+pub async fn leer_codigo_balanza(
+    estado: State<'_, EstadoApp>,
+    codigo: String,
+) -> ResultadoComando<Option<pos_core::servicios::balanza::LecturaBalanza>> {
+    pos_core::servicios::balanza::leer(&estado.pool, &codigo)
+        .await
+        .map_err(a_texto)
+}

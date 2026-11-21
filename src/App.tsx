@@ -89,7 +89,13 @@ export default function App() {
         {seccion === "productos" && (
           <Productos codigoNuevo={codigoNuevo} onCodigoUsado={() => setCodigoNuevo(null)} />
         )}
-        {seccion === "configuracion" && <Configuracion modoBarra={modoBarra} onModoBarra={cambiarModoBarra} />}
+        {seccion === "configuracion" && (
+          <Configuracion
+            modoBarra={modoBarra}
+            onModoBarra={cambiarModoBarra}
+            onCambioImpresora={refrescarImpresora}
+          />
+        )}
         {pendiente && <Proximamente seccion={pendiente} />}
       </main>
     </div>

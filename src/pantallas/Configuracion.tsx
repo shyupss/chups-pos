@@ -4,6 +4,8 @@ import { api, type EstadoSistema } from "../api";
 import { Bloque, Fila } from "../componentes/Ajustes";
 import type { ModoBarra } from "../componentes/BarraLateral";
 import Opciones, { type Opcion } from "../componentes/Opciones";
+import EscanerConfig from "./configuracion/Escaner";
+import ImpresoraConfig from "./configuracion/Impresora";
 import NegocioConfig from "./configuracion/Negocio";
 import { useConfig, type ConfigEditable } from "../hooks/useConfig";
 import { useTema, type Tema } from "../hooks/useTema";
@@ -11,6 +13,8 @@ import { useTema, type Tema } from "../hooks/useTema";
 interface Props {
   modoBarra: ModoBarra;
   onModoBarra: (modo: ModoBarra) => void;
+  /** Cambió la impresora o se probó: la barra lateral vuelve a leer su estado. */
+  onCambioImpresora: () => void;
 }
 
 const TEMAS: Opcion<Tema>[] = [
@@ -30,7 +34,7 @@ const SI_NO: Opcion<"si" | "no">[] = [
   { id: "no", nombre: "Desactivado" },
 ];
 
-export default function Configuracion({ modoBarra, onModoBarra }: Props) {
+export default function Configuracion({ modoBarra, onModoBarra, onCambioImpresora }: Props) {
   const [tema, setTema] = useTema();
   const cfg = useConfig();
 
@@ -38,6 +42,11 @@ export default function Configuracion({ modoBarra, onModoBarra }: Props) {
     <div className="h-full overflow-auto p-6">
       <div className="max-w-3xl space-y-4">
         <h1 className="text-xl font-semibold">Configuración</h1>
+        {cfg.error && (
+          <p role="alert" className="sticky top-0 z-10 rounded-lg bg-peligro/10 px-4 py-3 text-peligro">
+            No se guardó el cambio: {cfg.error}
+          </p>
+        )}
 
         <Bloque titulo="Apariencia">
           <div className="space-y-4">
@@ -63,8 +72,9 @@ export default function Configuracion({ modoBarra, onModoBarra }: Props) {
         <Bloque titulo="Negocio">
           <NegocioConfig />
         </Bloque>
-        <Bloque titulo="Impresora y escáner" fase={3}>
-          Impresora térmica o PDF y lector de códigos de barras.
+        <Bloque titulo="Impresora y escáner">
+          <ImpresoraConfig cfg={cfg} onCambioImpresora={onCambioImpresora} />
+          <EscanerConfig cfg={cfg} />
         </Bloque>
         <Bloque titulo="Seguridad" fase={4}>
           PIN de administrador para las acciones sensibles.
@@ -86,15 +96,13 @@ export default function Configuracion({ modoBarra, onModoBarra }: Props) {
 
 /** Interruptor de la clave redondeo_efectivo de la tabla config. */
 function RedondeoEfectivo({ cfg }: { cfg: ConfigEditable }) {
-  const { config, error, cambiar } = cfg;
+  const { config, cambiar } = cfg;
   return (
     <Fila
       etiqueta="Redondeo del efectivo"
       ayuda="Cobra en efectivo a la decena: 1 a 5 pesos hacia abajo, 6 a 9 hacia arriba. Tarjetas y transferencias no se redondean."
     >
-      {error ? (
-        <span className="text-peligro">{error}</span>
-      ) : config === null ? (
+      {config === null ? (
         <span className="text-tenue">Cargando…</span>
       ) : (
         <Opciones

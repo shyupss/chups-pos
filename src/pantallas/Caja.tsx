@@ -162,6 +162,12 @@ export default function Caja({ activa, onCrearProducto, onEnEspera, onImpresion 
       const porCodigo = PARECE_CODIGO.test(texto) ? await api.buscarProductoPorCodigo(texto) : null;
       if (porCodigo) return elegir(porCodigo, multiplo);
 
+      // Etiqueta de balanza (EAN-13 que empieza con 2): producto por kg con su peso, sin diálogo.
+      if (config?.balanzaActiva && /^2d{12}$/.test(texto)) {
+        const etiqueta = await api.leerCodigoBalanza(texto);
+        if (etiqueta) return agregar(etiqueta.producto, etiqueta.cantidadMil);
+      }
+
       const encontrados = await api.buscarProductos(texto, false, 8, 0);
       if (encontrados.length === 1) return elegir(encontrados[0], multiplo);
       if (encontrados.length > 1) {
@@ -179,7 +185,7 @@ export default function Caja({ activa, onCrearProducto, onEnEspera, onImpresion 
     } catch (e) {
       setAviso({ tipo: "error", texto: textoError(e) });
     }
-  }, [entrada, elegir]);
+  }, [entrada, elegir, agregar, config]);
 
   const fijarCantidad = (id: number, mil: number) =>
     setLineas((ls) =>

@@ -7,6 +7,7 @@
 //! - [`repositorios`]: consultas SQL, una función por operación.
 //! - [`servicios`]: reglas de negocio que combinan repositorios.
 
+pub mod balanza;
 pub mod boleta;
 pub mod db;
 pub mod error;
