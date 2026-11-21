@@ -12,7 +12,12 @@ interface Props {
 
 const POR_PAGINA = 100;
 const ALTO_FILA = 40;
-const COLUMNAS = "grid-cols-[minmax(8rem,1fr)_8rem_9rem_7rem_6rem]";
+// Columnas según el ancho de la lista (container queries): con el panel abierto o la ventana
+// angosta se ocultan primero el código y luego la categoría, para que nada se corte.
+const COLUMNAS =
+  "grid-cols-[minmax(0,1fr)_6.5rem_6.5rem] @md:grid-cols-[minmax(0,1fr)_7rem_6.5rem_6.5rem] @xl:grid-cols-[minmax(0,1fr)_7rem_8rem_6.5rem_6.5rem]";
+const COL_CATEGORIA = "hidden truncate @md:block";
+const COL_CODIGO = "hidden truncate @xl:block";
 
 type Panel =
   | { tipo: "nuevo"; codigo?: string }
@@ -122,7 +127,7 @@ export default function Productos({ codigoNuevo, onCodigoUsado }: Props) {
 
   return (
     <div className="flex h-full">
-      <section className="flex min-w-0 flex-1 flex-col p-6">
+      <section className="@container flex min-w-0 flex-1 flex-col p-6">
         <div className="flex flex-wrap items-center gap-3">
           <input
             value={texto}
@@ -167,8 +172,8 @@ export default function Productos({ codigoNuevo, onCodigoUsado }: Props) {
 
         <div className={`mt-4 grid ${COLUMNAS} gap-2 px-4 text-xs font-medium uppercase text-tenue`}>
           <span>Nombre</span>
-          <span>Categoría</span>
-          <span>Código</span>
+          <span className={COL_CATEGORIA}>Categoría</span>
+          <span className={COL_CODIGO}>Código</span>
           <span className="text-right">Precio</span>
           <span className="text-right">Stock</span>
         </div>
@@ -194,11 +199,13 @@ export default function Productos({ codigoNuevo, onCodigoUsado }: Props) {
                       seleccionado ? "bg-linea/70" : "hover:bg-fondo"
                     } ${p.activo ? "" : "text-tenue line-through"}`}
                   >
-                    <span className="truncate">{p.nombre}</span>
-                    <span className="truncate text-tenue">
+                    <span className="truncate" title={p.nombre}>
+                      {p.nombre}
+                    </span>
+                    <span className={`${COL_CATEGORIA} text-tenue`}>
                       {p.categoriaId === null ? "—" : (nombreCategoria.get(p.categoriaId) ?? "—")}
                     </span>
-                    <span className="truncate text-tenue">{p.codigoBarras ?? "—"}</span>
+                    <span className={`${COL_CODIGO} text-tenue`}>{p.codigoBarras ?? "—"}</span>
                     <span className="text-right">
                       {pesos(p.precioVenta)}
                       {p.unidad === "kg" && <span className="text-tenue">/kg</span>}

@@ -131,7 +131,9 @@ export default function PanelCategorias({ categorias, onCambio, onCerrar }: Prop
               </>
             ) : (
               <>
-                <span className="min-w-0 flex-1 truncate">{c.nombre}</span>
+                <span className="min-w-0 flex-1 truncate" title={c.nombre}>
+                  {c.nombre}
+                </span>
                 <span className="shrink-0 text-xs text-tenue tabular-nums">
                   {c.productos} {c.productos === 1 ? "producto" : "productos"}
                 </span>

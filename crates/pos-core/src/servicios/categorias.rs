@@ -42,15 +42,20 @@ pub async fn renombrar(pool: &SqlitePool, id: i64, nombre: &str) -> Resultado<Ca
 /// Solo se elimina una categoría vacía, para no dejar productos apuntando a nada.
 pub async fn eliminar(pool: &SqlitePool, id: i64) -> Resultado<()> {
     let mut tx = pool.begin().await?;
-    let productos = repo::contar_productos(&mut tx, id).await?;
+    let (productos, desactivados) = repo::contar_productos(&mut tx, id).await?;
     if productos > 0 {
         let cuantos = if productos == 1 {
             "1 producto".to_owned()
         } else {
             format!("{productos} productos")
         };
+        let nota = match desactivados {
+            0 => String::new(),
+            1 => " (1 desactivado)".to_owned(),
+            n => format!(" ({n} desactivados)"),
+        };
         return Err(Error::Conflicto(format!(
-            "No se puede eliminar: la categoría tiene {cuantos} (contando los desactivados). \
+            "No se puede eliminar: la categoría tiene {cuantos}{nota}. \
              Cámbialos de categoría primero."
         )));
     }
