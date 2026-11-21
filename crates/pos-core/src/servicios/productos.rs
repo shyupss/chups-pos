@@ -29,12 +29,12 @@ pub struct DatosProducto {
     pub stock_inicial_mil: i64,
 }
 
-struct Limpios {
-    codigo: Option<String>,
-    nombre: String,
+pub(crate) struct Limpios {
+    pub(crate) codigo: Option<String>,
+    pub(crate) nombre: String,
 }
 
-fn validar(d: &DatosProducto) -> Resultado<Limpios> {
+pub(crate) fn validar(d: &DatosProducto) -> Resultado<Limpios> {
     let nombre = d.nombre.trim().to_owned();
     if nombre.is_empty() {
         return validacion("El nombre es obligatorio");

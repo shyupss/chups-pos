@@ -1,3 +1,4 @@
+import BotonExportar from "../../componentes/BotonExportar";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { ClipboardList, History, PackageMinus, Scale } from "lucide-react";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
@@ -173,6 +174,7 @@ export default function Stock({ activa, onVerMovimientos, estadoInicial }: Props
           >
             <ClipboardList size={16} aria-hidden /> Contar inventario
           </button>
+          <BotonExportar que="stock" etiqueta="Excel" />
         </div>
 
         {aviso && (

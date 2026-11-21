@@ -5,6 +5,7 @@ import { Bloque, Fila } from "../componentes/Ajustes";
 import type { ModoBarra } from "../componentes/BarraLateral";
 import Opciones, { type Opcion } from "../componentes/Opciones";
 import { useConPinRecordado } from "../componentes/PedirPin";
+import DatosConfig from "./configuracion/Datos";
 import EscanerConfig from "./configuracion/Escaner";
 import ImpresoraConfig from "./configuracion/Impresora";
 import NegocioConfig from "./configuracion/Negocio";
@@ -87,8 +88,8 @@ export default function Configuracion({ modoBarra, onModoBarra, onCambioImpresor
         <Bloque titulo="Seguridad">
           <SeguridadConfig conPin={conPin} onPinCambiado={olvidar} />
         </Bloque>
-        <Bloque titulo="Datos y respaldos" fase={6}>
-          Importar y exportar Excel, y respaldos de la base de datos.
+        <Bloque titulo="Datos">
+          <DatosConfig />
         </Bloque>
         <Bloque titulo="Licencia" fase={7}>
           Activación de la licencia.

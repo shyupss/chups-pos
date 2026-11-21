@@ -181,6 +181,7 @@ export interface AccionesProtegidas {
   ajustarInventario: boolean;
   /** Vender fiado por sobre el límite de crédito del cliente. */
   fiarSobreLimite: boolean;
+  importarDatos: boolean;
 }
 
 export interface EstadoSeguridad {
@@ -794,6 +795,77 @@ export interface ReporteFiados {
 export type TipoReporte = "ventas" | "productos" | "ganancia" | "turnos" | "fiados";
 export type FormatoExportacion = "excel" | "pdf";
 
+// --- Importar y exportar Excel ----------------------------------------------------------
+
+export type CampoProducto = "codigo" | "nombre" | "categoria" | "unidad" | "precio" | "costo" | "stock" | "stockMinimo";
+export type CampoCliente = "nombre" | "telefono" | "rut" | "direccion" | "nota" | "limite";
+export type TipoImportacion = "productos" | "clientes";
+export type Exportacion = "productos" | "stock" | "ventas" | "movimientos" | "compras" | "clientes";
+
+/** La planilla elegida y lo que se detectó en cada columna. */
+export interface Apertura {
+  ruta: string;
+  encabezados: string[];
+  productos: (CampoProducto | null)[];
+  clientes: (CampoCliente | null)[];
+  filas: number;
+  /** Las primeras filas como texto. */
+  muestra: string[][];
+}
+
+export interface FilaError {
+  fila: number;
+  motivo: string;
+}
+
+export interface FilaProductoImportado {
+  fila: number;
+  codigo: string | null;
+  nombre: string;
+  categoria: string | null;
+  unidad: Unidad;
+  precio: number;
+  costo: number | null;
+  stockMil: number | null;
+  stockMinimoMil: number;
+  cambios: string[];
+}
+
+export interface FilaClienteImportado {
+  fila: number;
+  nombre: string;
+  telefono: string | null;
+  rut: string | null;
+  direccion: string | null;
+  nota: string | null;
+  limiteCredito: number | null;
+  cambios: string[];
+}
+
+export interface VistaProductos {
+  huella: string;
+  nuevas: FilaProductoImportado[];
+  actualizan: FilaProductoImportado[];
+  errores: FilaError[];
+  sinCambios: number;
+  categoriasNuevas: string[];
+}
+
+export interface VistaClientes {
+  huella: string;
+  nuevas: FilaClienteImportado[];
+  actualizan: FilaClienteImportado[];
+  errores: FilaError[];
+  sinCambios: number;
+}
+
+export interface ResultadoImportacion {
+  creados: number;
+  actualizados: number;
+  omitidos: number;
+  categoriasCreadas: number;
+}
+
 /** Rust avisa cuando cambia algo de la pantalla Hoy (ventas, caja, fiados, stock). */
 export function escucharCambiosDelDia(alCambiar: () => void): () => void {
   let dejar: (() => void) | null = null;
@@ -888,6 +960,21 @@ export const api = {
   exportarReporte: (tipo: TipoReporte, desde: string, hasta: string, categoria: number | null, formato: FormatoExportacion) =>
     invoke<string | null>("exportar_reporte", { tipo, desde, hasta, categoria, formato }),
   abrirArchivo: (ruta: string) => invoke<void>("abrir_archivo", { ruta }),
+  elegirPlanilla: () => invoke<string | null>("elegir_planilla"),
+  abrirPlanilla: (ruta: string) => invoke<Apertura>("abrir_planilla", { ruta }),
+  previsualizarProductos: (ruta: string, mapeo: (CampoProducto | null)[]) =>
+    invoke<VistaProductos>("previsualizar_productos", { ruta, mapeo }),
+  previsualizarClientes: (ruta: string, mapeo: (CampoCliente | null)[]) =>
+    invoke<VistaClientes>("previsualizar_clientes", { ruta, mapeo }),
+  /** Protegido con el PIN de "importar datos". */
+  importarProductos: (ruta: string, mapeo: (CampoProducto | null)[], huella: string, pin: string | null) =>
+    invoke<ResultadoImportacion>("importar_productos", { ruta, mapeo, huella, pin }),
+  importarClientes: (ruta: string, mapeo: (CampoCliente | null)[], huella: string, pin: string | null) =>
+    invoke<ResultadoImportacion>("importar_clientes", { ruta, mapeo, huella, pin }),
+  descargarPlanillaEjemplo: (tipo: TipoImportacion) => invoke<string | null>("descargar_planilla_ejemplo", { tipo }),
+  /** Ventas, movimientos y compras usan el rango. null si se cancela el "Guardar como". */
+  exportarDatos: (que: Exportacion, desde: string | null, hasta: string | null) =>
+    invoke<string | null>("exportar_datos", { que, desde, hasta }),
   listarDeudores: (texto: string, todos: boolean, limite: number, desplazamiento: number) =>
     invoke<PaginaDeudores>("listar_deudores", { texto, todos, limite, desplazamiento }),
   fichaCliente: (id: number) => invoke<FichaCliente>("ficha_cliente", { id }),

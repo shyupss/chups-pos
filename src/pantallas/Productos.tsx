@@ -1,3 +1,4 @@
+import BotonExportar from "../componentes/BotonExportar";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api, textoError, type Categoria, type FiltroCategoria, type Producto } from "../api";
@@ -170,6 +171,7 @@ export default function Productos({ codigoNuevo, onCodigoUsado, onVerMovimientos
           >
             Nuevo producto
           </button>
+          <BotonExportar que="productos" etiqueta="Excel" />
         </div>
 
         {error && <p className="mt-3 rounded-lg bg-peligro/10 px-3 py-2 text-peligro">{error}</p>}

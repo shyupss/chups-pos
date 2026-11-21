@@ -6,6 +6,7 @@
 
 pub mod excel;
 pub mod pdf;
+pub mod planilla;
 
 use chrono::NaiveDate;
 

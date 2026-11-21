@@ -1,3 +1,4 @@
+import BotonExportar from "../componentes/BotonExportar";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { api, textoError, type Cliente, type Config, type DatosCliente, type Deudor } from "../api";
@@ -112,6 +113,9 @@ export default function Fiados({ activa, onIrAVenta, onImpresion, clienteInicial
           <input type="checkbox" checked={todos} onChange={(e) => setTodos(e.target.checked)} />
           Ver también a los que no deben
         </label>
+        <div className="mt-2">
+          <BotonExportar que="clientes" etiqueta="Exportar clientes y deudas" />
+        </div>
         {error && <p className="mt-3 rounded-lg bg-peligro/10 px-3 py-2 text-peligro">{error}</p>}
         <div ref={contenedor} className="mt-3 min-h-0 flex-1 overflow-auto rounded-lg border border-linea bg-superficie">
           {filas.length === 0 ? (

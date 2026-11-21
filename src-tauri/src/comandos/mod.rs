@@ -8,6 +8,7 @@ pub mod categorias;
 pub mod clientes;
 pub mod compras;
 pub mod config;
+pub mod datos;
 pub mod espera;
 pub mod fiados;
 pub mod impresion;

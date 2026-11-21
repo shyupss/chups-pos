@@ -1,13 +1,12 @@
-//! Escribe un [`Libro`] como .xlsx: una hoja por tabla, con el título arriba, la fila de
-//! encabezados congelada, montos y cantidades como números con formato y fechas en hora local.
-//! Las hojas se escriben fila a fila (constant_memory): una exportación grande no se queda en
-//! memoria.
+//! Escribe .xlsx: una hoja por tabla, con el título arriba, la fila de encabezados congelada,
+//! montos y cantidades como números con formato y fechas en hora local. Las hojas se escriben
+//! fila a fila (constant_memory) con [`Escritor`]: una exportación grande no se queda en memoria.
 
 use std::path::Path;
 
-use rust_xlsxwriter::{Color, Format, FormatAlign, FormatBorder, Workbook, Worksheet, XlsxError};
+use rust_xlsxwriter::{Color, Format, FormatAlign, FormatBorder, Workbook, XlsxError};
 
-use super::{Libro, Valor};
+use super::{Columna, Libro, Valor};
 use crate::zona::{self, Zona};
 use crate::{Error, Resultado};
 
@@ -68,103 +67,172 @@ fn nombre_hoja(nombre: &str, usados: &mut Vec<String>) -> String {
     n
 }
 
-fn escribir_celda(
-    hoja: &mut Worksheet,
-    fila: u32,
-    col: u16,
-    v: &Valor,
-    f: &Formatos,
-    zona: &dyn Zona,
-) -> Result<(), XlsxError> {
-    match v {
-        Valor::Vacio => {}
-        Valor::Texto(t) => {
-            hoja.write_string(fila, col, t)?;
-        }
-        // Excel guarda los números como double: los pesos enteros (hasta 2^53) quedan exactos.
-        Valor::Pesos(p) => {
-            hoja.write_number_with_format(fila, col, *p as f64, &f.pesos)?;
-        }
-        Valor::Cantidad { mil, .. } => {
-            hoja.write_number_with_format(fila, col, *mil as f64 / 1000.0, &f.cantidad)?;
-        }
-        Valor::Entero(n) => {
-            hoja.write_number_with_format(fila, col, *n as f64, &f.entero)?;
-        }
-        Valor::Porcentaje(None) => {}
-        Valor::Porcentaje(Some(pb)) => {
-            hoja.write_number_with_format(fila, col, *pb as f64 / 10_000.0, &f.porcentaje)?;
-        }
-        Valor::Fecha(utc) => match zona::de_texto(utc) {
-            Some(t) => {
-                hoja.write_datetime_with_format(fila, col, zona.a_local(t), &f.fecha)?;
-            }
-            None => {
-                hoja.write_string(fila, col, utc)?;
-            }
-        },
-        Valor::Dia(d) => {
-            hoja.write_datetime_with_format(fila, col, d, &f.dia)?;
-        }
-    }
-    Ok(())
+/// La hoja que se está escribiendo.
+struct Hoja {
+    indice: usize,
+    encabezado: u32,
+    columnas: u16,
+    filas: u32,
 }
 
-/// Escribe el libro en `ruta`. Es trabajo de disco y CPU: llamarlo fuera de los hilos async.
-pub fn escribir(libro: &Libro, ruta: &Path, zona: &dyn Zona) -> Resultado<()> {
-    let mut wb = Workbook::new();
-    let f = Formatos::new();
-    let mut usados = Vec::new();
-    for t in &libro.tablas {
-        let hoja = wb.add_worksheet_with_constant_memory().map_err(error)?;
-        hoja.set_name(nombre_hoja(&t.nombre, &mut usados))
-            .map_err(error)?;
-        // Título, negocio y rango arriba; los encabezados en la fila 4 (congelada).
-        hoja.write_string_with_format(0, 0, &libro.titulo, &f.titulo)
-            .map_err(error)?;
-        let detalle = [
-            libro.negocio.as_str(),
-            libro.rango.as_str(),
-            &format!("Emitido el {}", libro.emitido),
-        ]
-        .into_iter()
-        .filter(|s| !s.is_empty())
-        .collect::<Vec<_>>()
-        .join(" · ");
-        hoja.write_string_with_format(1, 0, &detalle, &f.subtitulo)
-            .map_err(error)?;
-        let primera = 3u32;
-        for (c, col) in t.columnas.iter().enumerate() {
-            let c = c as u16;
-            hoja.set_column_width(c, f64::from(col.ancho.max(6)))
-                .map_err(error)?;
-            hoja.write_string_with_format(primera, c, &col.titulo, &f.encabezado)
-                .map_err(error)?;
+/// Escribe un libro hoja por hoja y fila por fila. Es trabajo de disco y CPU: usarlo fuera de
+/// los hilos async.
+pub struct Escritor<'z> {
+    wb: Workbook,
+    f: Formatos,
+    usados: Vec<String>,
+    zona: &'z dyn Zona,
+    /// Título, negocio, rango y emisión (vacío en las planillas de ejemplo: solo encabezados).
+    titulo: String,
+    detalle: String,
+    hoja: Option<Hoja>,
+    hojas: usize,
+}
+
+impl<'z> Escritor<'z> {
+    pub fn new(
+        titulo: &str,
+        negocio: &str,
+        rango: &str,
+        emitido: &str,
+        zona: &'z dyn Zona,
+    ) -> Self {
+        let emision = if emitido.is_empty() {
+            String::new()
+        } else {
+            format!("Emitido el {emitido}")
+        };
+        Escritor {
+            wb: Workbook::new(),
+            f: Formatos::new(),
+            usados: Vec::new(),
+            zona,
+            titulo: titulo.into(),
+            detalle: [negocio, rango, emision.as_str()]
+                .into_iter()
+                .filter(|s| !s.is_empty())
+                .collect::<Vec<_>>()
+                .join(" · "),
+            hoja: None,
+            hojas: 0,
         }
-        hoja.set_freeze_panes(primera + 1, 0).map_err(error)?;
-        for (i, fila) in t.filas.iter().enumerate() {
-            let r = primera + 1 + i as u32;
-            for (c, v) in fila.iter().enumerate() {
-                escribir_celda(hoja, r, c as u16, v, &f, zona).map_err(error)?;
+    }
+
+    /// El filtro de la hoja anterior, cuando ya se sabe cuántas filas tuvo.
+    fn cerrar_hoja(&mut self) -> Resultado<()> {
+        if let Some(h) = self.hoja.take() {
+            if h.filas > 0 && h.columnas > 0 {
+                self.wb
+                    .worksheet_from_index(h.indice)
+                    .map_err(error)?
+                    .autofilter(h.encabezado, 0, h.encabezado + h.filas, h.columnas - 1)
+                    .map_err(error)?;
             }
         }
-        if !t.filas.is_empty() && !t.columnas.is_empty() {
-            hoja.autofilter(
-                primera,
-                0,
-                primera + t.filas.len() as u32,
-                t.columnas.len() as u16 - 1,
-            )
+        Ok(())
+    }
+
+    /// Empieza una hoja nueva con sus encabezados.
+    pub fn hoja(&mut self, nombre: &str, columnas: &[Columna]) -> Resultado<()> {
+        self.cerrar_hoja()?;
+        let nombre = nombre_hoja(nombre, &mut self.usados);
+        let hoja = self
+            .wb
+            .add_worksheet_with_constant_memory()
+            .map_err(error)?;
+        hoja.set_name(nombre).map_err(error)?;
+        for (c, col) in columnas.iter().enumerate() {
+            hoja.set_column_width(c as u16, f64::from(col.ancho.max(6)))
+                .map_err(error)?;
+        }
+        let encabezado = if self.titulo.is_empty() {
+            0
+        } else {
+            hoja.write_string_with_format(0, 0, &self.titulo, &self.f.titulo)
+                .map_err(error)?;
+            hoja.write_string_with_format(1, 0, &self.detalle, &self.f.subtitulo)
+                .map_err(error)?;
+            3
+        };
+        for (c, col) in columnas.iter().enumerate() {
+            hoja.write_string_with_format(encabezado, c as u16, &col.titulo, &self.f.encabezado)
+                .map_err(error)?;
+        }
+        hoja.set_freeze_panes(encabezado + 1, 0).map_err(error)?;
+        self.hoja = Some(Hoja {
+            indice: self.hojas,
+            encabezado,
+            columnas: columnas.len() as u16,
+            filas: 0,
+        });
+        self.hojas += 1;
+        Ok(())
+    }
+
+    /// Agrega una fila a la hoja actual.
+    pub fn fila(&mut self, valores: &[Valor]) -> Resultado<()> {
+        let Some(h) = self.hoja.as_mut() else {
+            return Err(Error::Validacion("Falta empezar una hoja".into()));
+        };
+        h.filas += 1;
+        let r = h.encabezado + h.filas;
+        let hoja = self.wb.worksheet_from_index(h.indice).map_err(error)?;
+        let f = &self.f;
+        for (c, v) in valores.iter().enumerate() {
+            let c = c as u16;
+            match v {
+                Valor::Vacio | Valor::Porcentaje(None) => Ok(&mut *hoja),
+                Valor::Texto(t) => hoja.write_string(r, c, t),
+                // Excel guarda los números como double: los pesos enteros (hasta 2^53) quedan exactos.
+                Valor::Pesos(p) => hoja.write_number_with_format(r, c, *p as f64, &f.pesos),
+                Valor::Cantidad { mil, .. } => {
+                    hoja.write_number_with_format(r, c, *mil as f64 / 1000.0, &f.cantidad)
+                }
+                Valor::Entero(n) => hoja.write_number_with_format(r, c, *n as f64, &f.entero),
+                Valor::Porcentaje(Some(pb)) => {
+                    hoja.write_number_with_format(r, c, *pb as f64 / 10_000.0, &f.porcentaje)
+                }
+                Valor::Fecha(utc) => match zona::de_texto(utc) {
+                    Some(t) => {
+                        hoja.write_datetime_with_format(r, c, self.zona.a_local(t), &f.fecha)
+                    }
+                    None => hoja.write_string(r, c, utc),
+                },
+                Valor::Dia(d) => hoja.write_datetime_with_format(r, c, d, &f.dia),
+            }
             .map_err(error)?;
         }
+        Ok(())
     }
-    if libro.tablas.is_empty() {
-        wb.add_worksheet();
+
+    pub fn guardar(mut self, ruta: &Path) -> Resultado<()> {
+        self.cerrar_hoja()?;
+        if self.hojas == 0 {
+            self.wb.add_worksheet();
+        }
+        self.wb.save(ruta).map_err(|e| match e {
+            XlsxError::IoError(io) => Error::Validacion(format!(
+                "No se pudo guardar el Excel (¿está abierto en otro programa?): {io}"
+            )),
+            otro => error(otro),
+        })
     }
-    wb.save(ruta).map_err(|e| match e {
-        XlsxError::IoError(io) => Error::Validacion(format!(
-            "No se pudo guardar el Excel (¿está abierto en otro programa?): {io}"
-        )),
-        otro => error(otro),
-    })
+}
+
+/// Escribe un libro completo (los reportes, que son chicos) en `ruta`.
+pub fn escribir(libro: &Libro, ruta: &Path, zona: &dyn Zona) -> Resultado<()> {
+    let mut e = Escritor::new(
+        &libro.titulo,
+        &libro.negocio,
+        &libro.rango,
+        &libro.emitido,
+        zona,
+    );
+    for t in &libro.tablas {
+        e.hoja(&t.nombre, &t.columnas)?;
+        for fila in &t.filas {
+            e.fila(fila)?;
+        }
+    }
+    e.guardar(ruta)
 }

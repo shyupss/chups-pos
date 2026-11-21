@@ -192,6 +192,7 @@ async fn protege_solo_las_acciones_marcadas() {
         cambiar_configuracion: false,
         ajustar_inventario: true,
         fiar_sobre_limite: true,
+        importar_datos: true,
     };
     assert_eq!(
         fallo(seguridad::guardar_protegidas(&pool, &control, nuevas, None).await),

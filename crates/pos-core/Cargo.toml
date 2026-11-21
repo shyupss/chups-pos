@@ -30,10 +30,14 @@ getrandom = "0.4"
 # Detalle del conteo de efectivo al cerrar la caja.
 serde_json = "1"
 # Argon2 gasta CPU a propósito: se calcula en spawn_blocking, fuera de los hilos async.
-tokio = { version = "1", default-features = false, features = ["rt"] }
+tokio = { version = "1", default-features = false, features = ["rt", "sync"] }
 # Exportar a Excel (.xlsx). constant_memory: las hojas grandes (ventas con su detalle) se escriben
 # fila a fila en un archivo temporal en vez de quedar en memoria.
 rust_xlsxwriter = { version = "0.103", features = ["constant_memory", "chrono"] }
+# Importar planillas: .xlsx, .xls y .ods (los .csv los lee datos::csv). Sin features opcionales.
+calamine = "0.38"
+# Los .csv que no vienen en UTF-8 suelen venir en Windows-1252 (lo trae calamine).
+encoding_rs = "0.8"
 
 [dev-dependencies]
 tempfile = "3"

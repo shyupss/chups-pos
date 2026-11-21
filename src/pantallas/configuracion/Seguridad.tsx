@@ -27,6 +27,11 @@ const ACCIONES: { clave: keyof AccionesProtegidas; nombre: string; ayuda: string
     ayuda: "Vender fiado aunque la deuda pase el límite de crédito del cliente.",
   },
   {
+    clave: "importarDatos",
+    nombre: "Importar datos",
+    ayuda: "Crear o actualizar productos y clientes desde una planilla de Excel.",
+  },
+  {
     clave: "cambiarConfiguracion",
     nombre: "Cambiar la configuración",
     ayuda: "Todo lo de esta pantalla menos la apariencia. El PIN se pide una vez mientras estás aquí.",
@@ -129,6 +134,9 @@ export default function SeguridadConfig({ conPin, onPinCambiado }: Props) {
                 />
               </Fila>
             ))}
+            <Fila etiqueta="Restaurar un respaldo" ayuda="Reemplaza toda la base de datos: siempre pide el PIN.">
+              <span className="text-tenue">Siempre pide PIN</span>
+            </Fila>
           </div>
         </>
       ) : (
