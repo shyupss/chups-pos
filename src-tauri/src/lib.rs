@@ -100,6 +100,13 @@ pub fn run() {
             comandos::turnos::listar_turnos,
             comandos::turnos::imprimir_cierre,
             comandos::turnos::guardar_cierre_pdf,
+            comandos::inventario::listar_stock,
+            comandos::inventario::resumen_inventario,
+            comandos::inventario::contar_bajo_minimo,
+            comandos::inventario::listar_movimientos,
+            comandos::inventario::previsualizar_conteo,
+            comandos::inventario::ajustar_conteo,
+            comandos::inventario::registrar_merma,
         ])
         .run(tauri::generate_context!())
         .expect("error al iniciar CHUPS POS");

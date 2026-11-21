@@ -46,6 +46,7 @@ pub enum Accion {
     RetiroEfectivo,
     CerrarCaja,
     CambiarConfiguracion,
+    AjustarInventario,
 }
 
 impl AccionesProtegidas {
@@ -56,6 +57,7 @@ impl AccionesProtegidas {
             Accion::RetiroEfectivo => self.retiro_efectivo,
             Accion::CerrarCaja => self.cerrar_caja,
             Accion::CambiarConfiguracion => self.cambiar_configuracion,
+            Accion::AjustarInventario => self.ajustar_inventario,
         }
     }
 }

@@ -92,7 +92,7 @@ pub struct PaginaVentas {
 
 /// Medianoche local de `dia` en UTC, como la guarda la base. Si esa medianoche no existe
 /// (en Chile el cambio de hora de septiembre se salta las 00:00), la primera hora que sí.
-fn inicio_del_dia(dia: NaiveDate) -> String {
+pub(crate) fn inicio_del_dia(dia: NaiveDate) -> String {
     let medianoche: NaiveDateTime = dia.and_hms_opt(0, 0, 0).expect("00:00 es una hora válida");
     let local = (0..=2)
         .find_map(|h| {
@@ -107,7 +107,7 @@ fn inicio_del_dia(dia: NaiveDate) -> String {
         .to_string()
 }
 
-fn dia(texto: &str) -> Resultado<NaiveDate> {
+pub(crate) fn dia(texto: &str) -> Resultado<NaiveDate> {
     NaiveDate::parse_from_str(texto.trim(), "%Y-%m-%d")
         .map_err(|_| Error::Validacion(format!("La fecha «{texto}» no es válida")))
 }

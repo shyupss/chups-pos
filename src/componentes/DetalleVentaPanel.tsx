@@ -2,6 +2,7 @@ import { Ban, FileDown, Printer, Undo2, X } from "lucide-react";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { api, textoError, type Config, type DetalleVenta, type LineaDetalle, type MedioPago } from "../api";
 import { cantidad, fechaHora, folio, NOMBRE_MEDIO, pesos, pesosConSigno } from "../formato";
+import { avisarCambioStock } from "../eventos";
 import { useSalidasVenta } from "../hooks/useSalidasVenta";
 import AvisoVenta from "./AvisoVenta";
 import DialogoAnular from "./DialogoAnular";
@@ -88,6 +89,7 @@ export default function DetalleVentaPanel({ ventaId, activa, onImpresion, onCamb
     setVenta(d);
     setDialogo(null);
     onCambio();
+    avisarCambioStock();
     if (config?.impresora) imprimirComprobante(que, enviar);
   };
   const { salida, iniciar, imprimir, reintentar, guardarPdf, cerrar } = useSalidasVenta(onImpresion);

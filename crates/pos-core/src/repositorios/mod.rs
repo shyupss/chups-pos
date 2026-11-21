@@ -7,6 +7,7 @@ pub mod categorias;
 pub mod config;
 pub mod devoluciones;
 pub mod espera;
+pub mod inventario;
 pub mod negocio;
 pub mod productos;
 pub mod turnos;

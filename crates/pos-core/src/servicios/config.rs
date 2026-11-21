@@ -153,6 +153,8 @@ pub struct AccionesProtegidas {
     pub retiro_efectivo: bool,
     pub cerrar_caja: bool,
     pub cambiar_configuracion: bool,
+    /// Ajustes de stock por conteo, mermas y anular compras.
+    pub ajustar_inventario: bool,
 }
 
 impl Default for AccionesProtegidas {
@@ -163,6 +165,7 @@ impl Default for AccionesProtegidas {
             retiro_efectivo: true,
             cerrar_caja: false,
             cambiar_configuracion: true,
+            ajustar_inventario: true,
         }
     }
 }
@@ -226,6 +229,7 @@ const PROTEGER_DEVOLUCION: &str = "proteger_devolucion";
 const PROTEGER_RETIRO: &str = "proteger_retiro_efectivo";
 const PROTEGER_CIERRE: &str = "proteger_cerrar_caja";
 const PROTEGER_CONFIG: &str = "proteger_cambiar_configuracion";
+const PROTEGER_INVENTARIO: &str = "proteger_ajustar_inventario";
 
 fn si_no(valor: bool) -> String {
     if valor { "1" } else { "0" }.into()
@@ -252,11 +256,12 @@ impl Seguridad {
                 retiro_efectivo: bool_de(claves, PROTEGER_RETIRO, d.retiro_efectivo),
                 cerrar_caja: bool_de(claves, PROTEGER_CIERRE, d.cerrar_caja),
                 cambiar_configuracion: bool_de(claves, PROTEGER_CONFIG, d.cambiar_configuracion),
+                ajustar_inventario: bool_de(claves, PROTEGER_INVENTARIO, d.ajustar_inventario),
             },
         }
     }
 
-    fn a_claves(&self) -> [(&'static str, String); 7] {
+    fn a_claves(&self) -> [(&'static str, String); 8] {
         let p = &self.protegidas;
         [
             (PIN_HASH, self.pin_hash.clone().unwrap_or_default()),
@@ -269,6 +274,7 @@ impl Seguridad {
             (PROTEGER_RETIRO, si_no(p.retiro_efectivo)),
             (PROTEGER_CIERRE, si_no(p.cerrar_caja)),
             (PROTEGER_CONFIG, si_no(p.cambiar_configuracion)),
+            (PROTEGER_INVENTARIO, si_no(p.ajustar_inventario)),
         ]
     }
 }

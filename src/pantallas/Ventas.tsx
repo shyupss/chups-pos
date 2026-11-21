@@ -18,6 +18,9 @@ interface Props {
   activa: boolean;
   /** Se intentó imprimir: conviene volver a leer el estado de la impresora. */
   onImpresion: () => void;
+  /** Folio que se abre al llegar (enlace desde Inventario > Movimientos). */
+  folioInicial?: number | null;
+  onFolioUsado?: () => void;
 }
 
 const POR_PAGINA = 100;
@@ -71,7 +74,7 @@ const periodoDe = (desde: string | null, hasta: string | null): Periodo | null =
 const claseCampo = "h-10 rounded-lg border border-linea bg-superficie px-3 outline-none focus:border-texto";
 
 /** Ventas (F5): historial con filtros, detalle, reimpresión, anulación y devoluciones. */
-export default function Ventas({ activa, onImpresion }: Props) {
+export default function Ventas({ activa, onImpresion, folioInicial = null, onFolioUsado }: Props) {
   const [filtros, setFiltros] = useState<FiltrosVentas>(() => ({
     ...rango("hoy"),
     folio: null,
@@ -90,6 +93,15 @@ export default function Ventas({ activa, onImpresion }: Props) {
   const consultaActual = useRef(0);
   const contenedor = useRef<HTMLDivElement>(null);
   const buscador = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (folioInicial === null) return;
+    api
+      .ventaPorFolio(folioInicial)
+      .then((id) => id !== null && setAbierta(id))
+      .catch(() => {})
+      .finally(() => onFolioUsado?.());
+  }, [folioInicial, onFolioUsado]);
 
   useEffect(() => {
     api

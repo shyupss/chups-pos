@@ -9,6 +9,7 @@ pub mod devoluciones;
 pub mod espera;
 pub mod historial;
 pub mod impresion;
+pub mod inventario;
 pub mod negocio;
 pub mod productos;
 pub mod seguridad;

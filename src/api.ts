@@ -171,6 +171,8 @@ export interface AccionesProtegidas {
   retiroEfectivo: boolean;
   cerrarCaja: boolean;
   cambiarConfiguracion: boolean;
+  /** Ajustes por conteo, mermas y anular compras. */
+  ajustarInventario: boolean;
 }
 
 export interface EstadoSeguridad {
@@ -380,6 +382,97 @@ export interface DevolucionRegistrada {
   venta: DetalleVenta;
 }
 
+/** Qué productos mostrar en Inventario > Stock. */
+export type FiltroEstadoStock = "todos" | "bajoMinimo" | "sinStock" | "negativo";
+
+export interface FiltrosStock {
+  texto: string;
+  categoriaId: number | null;
+  sinCategoria: boolean;
+  estado: FiltroEstadoStock;
+}
+
+export interface ProductoStock {
+  id: number;
+  codigoBarras: string | null;
+  nombre: string;
+  categoriaId: number | null;
+  unidad: Unidad;
+  precioVenta: number;
+  costo: number | null;
+  stockMil: number;
+  stockMinimoMil: number;
+  /** Stock × costo (lo calcula Rust); null si no tiene costo. */
+  valor: number | null;
+  bajoMinimo: boolean;
+}
+
+export interface ResumenInventario {
+  valorCosto: number;
+  valorVenta: number;
+  /** Productos con stock y sin costo: cuentan como $0 en valorCosto. */
+  sinCosto: number;
+  bajoMinimo: number;
+  productos: number;
+}
+
+export type TipoMovimientoStock = "venta" | "compra" | "ajuste" | "merma" | "devolucion";
+
+/** Fechas como días locales "aaaa-mm-dd" (hasta incluido). */
+export interface FiltrosMovimientos {
+  productoId: number | null;
+  tipo: TipoMovimientoStock | null;
+  desde: string | null;
+  hasta: string | null;
+}
+
+/** Dónde sigue la lista: fecha e id del último movimiento mostrado. */
+export interface CursorMovimientos {
+  fecha: string;
+  id: number;
+}
+
+export interface MovimientoStock {
+  id: number;
+  fecha: string;
+  productoId: number;
+  producto: string;
+  unidad: Unidad;
+  tipo: TipoMovimientoStock;
+  /** Positivo entra, negativo sale (milésimas). */
+  cantidadMil: number;
+  stockResultanteMil: number;
+  motivo: string | null;
+  nota: string | null;
+  ventaId: number | null;
+  folio: number | null;
+  compraId: number | null;
+}
+
+export interface PaginaMovimientos {
+  movimientos: MovimientoStock[];
+  siguiente: CursorMovimientos | null;
+}
+
+export interface Contado {
+  productoId: number;
+  contadoMil: number;
+}
+
+/** Diferencia de un conteo contra el stock del momento (la calcula Rust). */
+export interface Diferencia {
+  productoId: number;
+  nombre: string;
+  unidad: Unidad;
+  stockMil: number;
+  contadoMil: number;
+  diferenciaMil: number;
+  /** La diferencia a costo; null si no tiene costo. */
+  valor: number | null;
+}
+
+export type MotivoMerma = "vencido" | "danado" | "robo" | "consumoInterno" | "otro";
+
 /** Etiqueta de balanza leída: producto por kg y los gramos de la etiqueta. */
 export interface LecturaBalanza {
   producto: Producto;
@@ -466,6 +559,25 @@ export const api = {
 
   obtenerConfig: () => invoke<Config>("obtener_config"),
   guardarConfig: (config: Config, pin: string | null) => invoke<Config>("guardar_config", { config, pin }),
+
+  listarStock: (filtros: FiltrosStock, limite: number, desplazamiento: number) =>
+    invoke<ProductoStock[]>("listar_stock", { filtros, limite, desplazamiento }),
+  resumenInventario: () => invoke<ResumenInventario>("resumen_inventario"),
+  contarBajoMinimo: () => invoke<number>("contar_bajo_minimo"),
+  listarMovimientos: (filtros: FiltrosMovimientos, despuesDe: CursorMovimientos | null, limite: number) =>
+    invoke<PaginaMovimientos>("listar_movimientos", { filtros, despuesDe, limite }),
+  previsualizarConteo: (items: Contado[]) => invoke<Diferencia[]>("previsualizar_conteo", { items }),
+  /** Deja el stock en lo contado, todo en una transacción. Protegido con PIN. */
+  ajustarConteo: (items: Contado[], motivo: string, pin: string | null) =>
+    invoke<Diferencia[]>("ajustar_conteo", { items, motivo, pin }),
+  /** Devuelve el stock que quedó. Protegido con PIN. */
+  registrarMerma: (
+    productoId: number,
+    cantidadMil: number,
+    motivo: MotivoMerma,
+    detalle: string | null,
+    pin: string | null,
+  ) => invoke<number>("registrar_merma", { productoId, cantidadMil, motivo, detalle, pin }),
 
   estadoCaja: () => invoke<EstadoCaja>("estado_caja"),
   abrirTurno: (montoInicial: number) => invoke<Turno>("abrir_turno", { montoInicial }),

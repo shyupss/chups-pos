@@ -17,6 +17,11 @@ const ACCIONES: { clave: keyof AccionesProtegidas; nombre: string; ayuda: string
   { clave: "retiroEfectivo", nombre: "Retirar efectivo", ayuda: "Sacar dinero de la caja durante el turno." },
   { clave: "cerrarCaja", nombre: "Cerrar la caja", ayuda: "El cierre del turno con el conteo del efectivo." },
   {
+    clave: "ajustarInventario",
+    nombre: "Ajustar inventario",
+    ayuda: "Ajustes por conteo, mermas y anular compras.",
+  },
+  {
     clave: "cambiarConfiguracion",
     nombre: "Cambiar la configuración",
     ayuda: "Todo lo de esta pantalla menos la apariencia. El PIN se pide una vez mientras estás aquí.",
