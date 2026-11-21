@@ -19,6 +19,8 @@ pub fn run() {
     let inicio = Instant::now();
 
     tauri::Builder::default()
+        .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_opener::init())
         .setup(move |app| {
             let carpeta = app.path().app_data_dir()?;
             std::fs::create_dir_all(&carpeta)?;
@@ -26,10 +28,20 @@ pub fn run() {
 
             let pool = tauri::async_runtime::block_on(pos_core::db::abrir(&ruta_db))?;
 
+            // Documentos del usuario; si Windows no la informa, la carpeta de datos.
+            let carpeta_pdf = app
+                .path()
+                .document_dir()
+                .unwrap_or_else(|_| carpeta.clone())
+                .join("CHUPS POS")
+                .join("Boletas");
+
             app.manage(EstadoApp {
                 pool,
                 ruta_db,
                 ms_inicio: inicio.elapsed().as_millis() as u64,
+                carpeta_pdf,
+                hardware: pos_hardware::Hardware::new(&carpeta),
             });
             Ok(())
         })
@@ -37,12 +49,13 @@ pub fn run() {
             comandos::sistema::estado_sistema,
             comandos::productos::buscar_producto_por_codigo,
             comandos::productos::buscar_productos,
+            comandos::productos::leer_codigo_balanza,
             comandos::productos::crear_producto,
             comandos::productos::editar_producto,
             comandos::productos::cambiar_estado_producto,
             comandos::ventas::confirmar_venta,
-            comandos::config::config_caja,
-            comandos::config::cambiar_redondeo_efectivo,
+            comandos::config::obtener_config,
+            comandos::config::guardar_config,
             comandos::categorias::listar_categorias,
             comandos::categorias::crear_categoria,
             comandos::categorias::renombrar_categoria,
@@ -51,6 +64,20 @@ pub fn run() {
             comandos::espera::listar_en_espera,
             comandos::espera::recuperar_en_espera,
             comandos::espera::descartar_en_espera,
+            comandos::negocio::obtener_negocio,
+            comandos::negocio::guardar_negocio,
+            comandos::negocio::elegir_logo,
+            comandos::negocio::quitar_logo,
+            comandos::boletas::guardar_boleta_pdf,
+            comandos::boletas::carpeta_pdf_predeterminada,
+            comandos::boletas::elegir_carpeta_pdf,
+            comandos::boletas::ultima_venta,
+            comandos::impresion::listar_impresoras,
+            comandos::impresion::estado_impresora,
+            comandos::impresion::imprimir_boleta,
+            comandos::impresion::imprimir_prueba,
+            comandos::impresion::abrir_cajon,
+            comandos::impresion::carpeta_impresora_pruebas,
         ])
         .run(tauri::generate_context!())
         .expect("error al iniciar CHUPS POS");

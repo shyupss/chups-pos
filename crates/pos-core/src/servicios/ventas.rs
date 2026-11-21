@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 use sqlx::SqlitePool;
 
 use crate::error::validacion;
+use crate::repositorios::productos::Unidad;
 use crate::repositorios::{productos, ventas};
 use crate::servicios::{cantidades, config};
 use crate::{Error, Resultado};
@@ -19,6 +20,28 @@ pub enum MedioPago {
 }
 
 impl MedioPago {
+    pub fn desde_texto(texto: &str) -> Option<Self> {
+        Some(match texto {
+            "efectivo" => MedioPago::Efectivo,
+            "debito" => MedioPago::Debito,
+            "credito" => MedioPago::Credito,
+            "transferencia" => MedioPago::Transferencia,
+            "fiado" => MedioPago::Fiado,
+            _ => return None,
+        })
+    }
+
+    /// Nombre para mostrar e imprimir.
+    pub fn nombre(self) -> &'static str {
+        match self {
+            MedioPago::Efectivo => "Efectivo",
+            MedioPago::Debito => "Débito",
+            MedioPago::Credito => "Crédito",
+            MedioPago::Transferencia => "Transferencia",
+            MedioPago::Fiado => "Fiado",
+        }
+    }
+
     pub fn como_texto(self) -> &'static str {
         match self {
             MedioPago::Efectivo => "efectivo",
@@ -57,6 +80,7 @@ pub struct NuevaVenta {
 pub struct LineaVendida {
     pub producto_id: i64,
     pub nombre: String,
+    pub unidad: Unidad,
     pub precio_unitario: i64,
     pub cantidad_mil: i64,
     pub subtotal: i64,
@@ -145,6 +169,7 @@ pub async fn confirmar(pool: &SqlitePool, v: &NuevaVenta) -> Resultado<VentaConf
         lineas.push(LineaVendida {
             producto_id: p.id,
             nombre: p.nombre,
+            unidad: p.unidad,
             precio_unitario: p.precio_venta,
             cantidad_mil,
             subtotal: sub,
@@ -203,11 +228,14 @@ pub async fn confirmar(pool: &SqlitePool, v: &NuevaVenta) -> Resultado<VentaConf
         ventas::insertar_item(
             &mut tx,
             cabecera.id,
-            l.producto_id,
-            &l.nombre,
-            l.precio_unitario,
-            l.cantidad_mil,
-            l.subtotal,
+            &ventas::NuevoItem {
+                producto_id: l.producto_id,
+                nombre: &l.nombre,
+                unidad: l.unidad,
+                precio_unitario: l.precio_unitario,
+                cantidad_mil: l.cantidad_mil,
+                subtotal: l.subtotal,
+            },
         )
         .await?;
         l.stock_resultante_mil = productos::mover_stock(

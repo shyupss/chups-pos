@@ -1,4 +1,5 @@
-import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { PanelLeftClose, PanelLeftOpen, Printer } from "lucide-react";
+import type { EstadoConfigurada } from "../api";
 import { SECCIONES, type DatosSeccion, type Seccion } from "../secciones";
 
 /** "auto": colapsada en la Caja y expandida en las demás secciones. */
@@ -12,6 +13,8 @@ interface Props {
   onAlternar: () => void;
   /** Número junto a una sección, por ejemplo las ventas en espera de la Caja. */
   insignias?: Partial<Record<Seccion, Insignia>>;
+  /** Estado de la impresora elegida; null mientras se lee. */
+  impresora?: EstadoConfigurada | null;
 }
 
 interface Insignia {
@@ -20,7 +23,7 @@ interface Insignia {
   descripcion: string;
 }
 
-export default function BarraLateral({ actual, expandida, onIr, onAlternar, insignias = {} }: Props) {
+export default function BarraLateral({ actual, expandida, onIr, onAlternar, insignias = {}, impresora = null }: Props) {
   const item = (s: DatosSeccion) => (
     <li key={s.id}>
       <Item seccion={s} activa={s.id === actual} expandida={expandida} insignia={insignias[s.id]} onIr={onIr} />
@@ -44,17 +47,20 @@ export default function BarraLateral({ actual, expandida, onIr, onAlternar, insi
         <ul className="mt-auto space-y-1 border-t border-linea pt-2">{SECCIONES.filter((s) => s.abajo).map(item)}</ul>
       </nav>
 
-      <div className={`flex shrink-0 items-center gap-2 border-t border-linea p-2 ${expandida ? "" : "flex-col"}`}>
+      <div className="flex shrink-0 flex-col gap-1 border-t border-linea p-2">
         {/* Fijo por ahora: se conecta con los turnos de caja en la fase 4. */}
         <div
           className={`flex h-8 items-center gap-2 rounded-lg bg-exito-fondo text-xs font-medium text-exito ${
-            expandida ? "flex-1 px-3" : "w-full justify-center"
+            expandida ? "px-3" : "justify-center"
           }`}
           title="Caja abierta"
         >
           <span className="size-2 shrink-0 rounded-full bg-exito" aria-hidden />
           <span className={expandida ? "truncate" : "sr-only"}>Caja abierta</span>
         </div>
+        {impresora && <IndicadorImpresora impresora={impresora} expandida={expandida} onIr={onIr} />}
+      </div>
+      <div className={`flex shrink-0 items-center gap-2 px-2 pb-2 ${expandida ? "justify-end" : "flex-col"}`}>
         <button
           type="button"
           onClick={onAlternar}
@@ -109,6 +115,41 @@ function Item({
         </>
       )}
       {expandida && <span className={`text-xs ${activa ? "" : "text-tenue"}`}>{tecla}</span>}
+    </button>
+  );
+}
+
+/** Estado real de la impresora (lo informa el driver). Lleva a Configuración. */
+function IndicadorImpresora({
+  impresora,
+  expandida,
+  onIr,
+}: {
+  impresora: EstadoConfigurada;
+  expandida: boolean;
+  onIr: (seccion: Seccion) => void;
+}) {
+  const e = impresora.estado;
+  const [texto, clase] =
+    impresora.impresora === null
+      ? ["Sin impresora", "bg-fondo text-tenue"]
+      : e?.tipo === "lista"
+        ? ["Impresora lista", "bg-exito-fondo text-exito"]
+        : e?.tipo === "desconectada"
+          ? ["Impresora desconectada", "bg-peligro/10 text-peligro"]
+          : e?.tipo === "conError"
+            ? [`Impresora: ${e.detalle}`, "bg-aviso-fondo text-aviso"]
+            : ["Impresora sin estado", "bg-fondo text-tenue"];
+  const detalle = impresora.impresora ? `${texto} (${impresora.impresora})` : `${texto}: elígela en Configuración`;
+  return (
+    <button
+      type="button"
+      onClick={() => onIr("configuracion")}
+      title={detalle}
+      className={`flex h-8 items-center gap-2 rounded-lg text-xs font-medium ${clase} ${expandida ? "px-3" : "justify-center"}`}
+    >
+      <Printer size={14} className="shrink-0" aria-hidden />
+      <span className={expandida ? "truncate" : "sr-only"}>{texto}</span>
     </button>
   );
 }

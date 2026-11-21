@@ -1,13 +1,20 @@
 import { Monitor, Moon, Sun } from "lucide-react";
-import { useEffect, useState, type ReactNode } from "react";
-import { api, textoError, type EstadoSistema } from "../api";
+import { useEffect, useState } from "react";
+import { api, type EstadoSistema } from "../api";
+import { Bloque, Fila } from "../componentes/Ajustes";
 import type { ModoBarra } from "../componentes/BarraLateral";
 import Opciones, { type Opcion } from "../componentes/Opciones";
+import EscanerConfig from "./configuracion/Escaner";
+import ImpresoraConfig from "./configuracion/Impresora";
+import NegocioConfig from "./configuracion/Negocio";
+import { useConfig, type ConfigEditable } from "../hooks/useConfig";
 import { useTema, type Tema } from "../hooks/useTema";
 
 interface Props {
   modoBarra: ModoBarra;
   onModoBarra: (modo: ModoBarra) => void;
+  /** Cambió la impresora o se probó: la barra lateral vuelve a leer su estado. */
+  onCambioImpresora: () => void;
 }
 
 const TEMAS: Opcion<Tema>[] = [
@@ -27,13 +34,19 @@ const SI_NO: Opcion<"si" | "no">[] = [
   { id: "no", nombre: "Desactivado" },
 ];
 
-export default function Configuracion({ modoBarra, onModoBarra }: Props) {
+export default function Configuracion({ modoBarra, onModoBarra, onCambioImpresora }: Props) {
   const [tema, setTema] = useTema();
+  const cfg = useConfig();
 
   return (
     <div className="h-full overflow-auto p-6">
       <div className="max-w-3xl space-y-4">
         <h1 className="text-xl font-semibold">Configuración</h1>
+        {cfg.error && (
+          <p role="alert" className="sticky top-0 z-10 rounded-lg bg-peligro/10 px-4 py-3 text-peligro">
+            No se guardó el cambio: {cfg.error}
+          </p>
+        )}
 
         <Bloque titulo="Apariencia">
           <div className="space-y-4">
@@ -53,14 +66,15 @@ export default function Configuracion({ modoBarra, onModoBarra }: Props) {
         </Bloque>
 
         <Bloque titulo="Caja">
-          <RedondeoEfectivo />
+          <RedondeoEfectivo cfg={cfg} />
         </Bloque>
 
-        <Bloque titulo="Negocio" fase={3}>
-          Datos del negocio que aparecen en la boleta.
+        <Bloque titulo="Negocio">
+          <NegocioConfig />
         </Bloque>
-        <Bloque titulo="Impresora y escáner" fase={3}>
-          Impresora térmica o PDF y lector de códigos de barras.
+        <Bloque titulo="Impresora y escáner">
+          <ImpresoraConfig cfg={cfg} onCambioImpresora={onCambioImpresora} />
+          <EscanerConfig cfg={cfg} />
         </Bloque>
         <Bloque titulo="Seguridad" fase={4}>
           PIN de administrador para las acciones sensibles.
@@ -80,70 +94,23 @@ export default function Configuracion({ modoBarra, onModoBarra }: Props) {
   );
 }
 
-function Bloque({ titulo, fase, children }: { titulo: string; fase?: number; children: ReactNode }) {
-  return (
-    <section className="rounded-lg border border-linea bg-superficie p-5">
-      <h2 className="font-semibold">{titulo}</h2>
-      {fase === undefined ? (
-        <div className="mt-3">{children}</div>
-      ) : (
-        <p className="mt-1 text-tenue">
-          {children} Llega en la fase {fase}.
-        </p>
-      )}
-    </section>
-  );
-}
-
-function Fila({ etiqueta, ayuda, children }: { etiqueta: string; ayuda: string; children: ReactNode }) {
-  return (
-    <div className="flex items-center justify-between gap-6">
-      <div className="min-w-0">
-        <div className="font-medium">{etiqueta}</div>
-        <div className="text-xs text-tenue">{ayuda}</div>
-      </div>
-      <div className="shrink-0">{children}</div>
-    </div>
-  );
-}
-
 /** Interruptor de la clave redondeo_efectivo de la tabla config. */
-function RedondeoEfectivo() {
-  const [activo, setActivo] = useState<boolean | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    api
-      .configCaja()
-      .then((c) => setActivo(c.redondeoEfectivo))
-      .catch((e) => setError(textoError(e)));
-  }, []);
-
-  const cambiar = (valor: "si" | "no") => {
-    const nuevo = valor === "si";
-    setActivo(nuevo);
-    api.cambiarRedondeoEfectivo(nuevo).catch((e) => {
-      setActivo(!nuevo);
-      setError(textoError(e));
-    });
-  };
-
+function RedondeoEfectivo({ cfg }: { cfg: ConfigEditable }) {
+  const { config, cambiar } = cfg;
   return (
     <Fila
       etiqueta="Redondeo del efectivo"
       ayuda="Cobra en efectivo a la decena: 1 a 5 pesos hacia abajo, 6 a 9 hacia arriba. Tarjetas y transferencias no se redondean."
     >
-      {error ? (
-        <span className="text-peligro">{error}</span>
-      ) : activo === null ? (
+      {config === null ? (
         <span className="text-tenue">Cargando…</span>
       ) : (
         <Opciones
           nombre="redondeo"
           etiqueta="Redondeo del efectivo"
           opciones={SI_NO}
-          valor={activo ? "si" : "no"}
-          onCambiar={cambiar}
+          valor={config.redondeoEfectivo ? "si" : "no"}
+          onCambiar={(v) => void cambiar({ redondeoEfectivo: v === "si" })}
         />
       )}
     </Fila>

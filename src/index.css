@@ -20,6 +20,8 @@
   --aviso-fondo: #fff4e5;
   --aviso: #8a4b00;
   --velo: rgb(20 24 29 / 0.4);
+  /* El papel de la boleta: blanco en ambos temas, para las vistas previas. */
+  --papel: #ffffff;
 }
 
 :root[data-theme="dark"] {
@@ -55,6 +57,7 @@
   --color-aviso-fondo: var(--aviso-fondo);
   --color-aviso: var(--aviso);
   --color-velo: var(--velo);
+  --color-papel: var(--papel);
 
   --font-sans: "Inter Variable", "Segoe UI", system-ui, sans-serif;
   --default-transition-duration: 100ms;

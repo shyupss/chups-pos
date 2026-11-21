@@ -1,0 +1,24 @@
+A l m a c é n   D o n   P e p e
+        RUT 12.345.678-5
+  Av. Siempre Viva 742, Talca
+      Tel. +56 9 1234 5678
+--------------------------------
+ COMPROBANTE DE VENTA N° 000123
+        21-11-2026 14:05
+--------------------------------
+Detergente líquido 3 L
+1 x $6.990                $6.990
+--------------------------------
+Subtotal                  $6.990
+TOTAL                     $6.990
+--------------------------------
+Pago                      Débito
+--------------------------------
+Productos: 1
+
+    ¡Gracias por su compra!
+
+Comprobante interno sin validez
+           tributaria
+
+   [código de barras 000123]

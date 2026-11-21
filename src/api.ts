@@ -88,8 +88,30 @@ export interface VentaConfirmada {
   lineas: LineaVendida[];
 }
 
-export interface ConfigCaja {
+export type TablaCaracteres = "cp858" | "cp850" | "wpc1252";
+export type FormatoPdf = "ticket" | "carta";
+export type FormatoBalanza = "peso" | "precio";
+
+/** Configuración tipada de la tabla config (la valida el servicio de Rust). */
+export interface Config {
   redondeoEfectivo: boolean;
+  boletaLeyenda: boolean;
+  boletaCodigo: boolean;
+  impresora: string | null;
+  anchoPapelMm: 58 | 80;
+  tablaCaracteres: TablaCaracteres;
+  imprimirAlCobrar: boolean;
+  copias: 1 | 2;
+  pdfFormato: FormatoPdf;
+  pdfCarpeta: string | null;
+  cajonActivo: boolean;
+  cajonPin: 2 | 5;
+  cajonPulsoMs: number;
+  cajonSoloEfectivo: boolean;
+  balanzaActiva: boolean;
+  balanzaPrefijos: string;
+  balanzaFormato: FormatoBalanza;
+  balanzaLargoCodigo: number;
 }
 
 /** Una venta en espera en la lista. El total usa los precios actuales de los productos activos. */
@@ -109,8 +131,70 @@ export interface VentaRecuperada {
   intercambioId: number | null;
 }
 
+/** Estado que informa el driver de la impresora. */
+export type EstadoImpresora =
+  | { tipo: "lista" }
+  | { tipo: "desconectada" }
+  | { tipo: "conError"; detalle: string }
+  | { tipo: "desconocido" };
+
+export interface Impresora {
+  nombre: string;
+  predeterminada: boolean;
+  estado: EstadoImpresora;
+  /** "Archivo (pruebas)": escribe los bytes en un .bin. */
+  esVirtual: boolean;
+}
+
+/** La impresora elegida en Configuración y su estado (null si no hay ninguna elegida). */
+export interface EstadoConfigurada {
+  impresora: string | null;
+  estado: EstadoImpresora | null;
+}
+
+export interface Negocio {
+  nombre: string;
+  rut: string | null;
+  direccion: string | null;
+  telefono: string | null;
+  mensajePie: string;
+  /** PNG de 1 bit en base64 (para la vista previa). */
+  logoPng: string | null;
+}
+
+export type DatosNegocio = Omit<Negocio, "logoPng">;
+
+/** Etiqueta de balanza leída: producto por kg y los gramos de la etiqueta. */
+export interface LecturaBalanza {
+  producto: Producto;
+  cantidadMil: number;
+}
+
 export const api = {
   estadoSistema: () => invoke<EstadoSistema>("estado_sistema"),
+
+  obtenerNegocio: () => invoke<Negocio>("obtener_negocio"),
+  guardarNegocio: (datos: DatosNegocio) => invoke<Negocio>("guardar_negocio", { datos }),
+  /** Abre el diálogo de archivos; null si el usuario cancela. */
+  elegirLogo: () => invoke<Negocio | null>("elegir_logo"),
+  quitarLogo: () => invoke<Negocio>("quitar_logo"),
+
+  /** Guarda el PDF de la boleta y, si `abrir`, lo abre. Devuelve la ruta. */
+  guardarBoletaPdf: (ventaId: number, abrir: boolean) =>
+    invoke<string>("guardar_boleta_pdf", { ventaId, abrir }),
+  carpetaPdfPredeterminada: () => invoke<string>("carpeta_pdf_predeterminada"),
+  /** Diálogo de carpeta; null si el usuario cancela. */
+  elegirCarpetaPdf: () => invoke<string | null>("elegir_carpeta_pdf"),
+
+  listarImpresoras: () => invoke<Impresora[]>("listar_impresoras"),
+  estadoImpresora: () => invoke<EstadoConfigurada>("estado_impresora"),
+  /** Sin `copias`, las de la configuración. */
+  imprimirBoleta: (ventaId: number, copias?: number) =>
+    invoke<void>("imprimir_boleta", { ventaId, copias: copias ?? null }),
+  imprimirPrueba: () => invoke<void>("imprimir_prueba"),
+  abrirCajon: () => invoke<void>("abrir_cajon"),
+  carpetaImpresoraPruebas: () => invoke<string>("carpeta_impresora_pruebas"),
+  ultimaVenta: () => invoke<number | null>("ultima_venta"),
 
   buscarProductoPorCodigo: (codigo: string) =>
     invoke<Producto | null>("buscar_producto_por_codigo", { codigo }),
@@ -129,6 +213,8 @@ export const api = {
       limite,
       desplazamiento,
     }),
+  /** null si no es una etiqueta de balanza o los códigos de balanza están desactivados. */
+  leerCodigoBalanza: (codigo: string) => invoke<LecturaBalanza | null>("leer_codigo_balanza", { codigo }),
   crearProducto: (datos: DatosProducto) => invoke<Producto>("crear_producto", { datos }),
   editarProducto: (id: number, datos: DatosProducto) =>
     invoke<Producto>("editar_producto", { id, datos }),
@@ -143,8 +229,8 @@ export const api = {
 
   confirmarVenta: (venta: NuevaVenta) => invoke<VentaConfirmada>("confirmar_venta", { venta }),
 
-  configCaja: () => invoke<ConfigCaja>("config_caja"),
-  cambiarRedondeoEfectivo: (activo: boolean) => invoke<void>("cambiar_redondeo_efectivo", { activo }),
+  obtenerConfig: () => invoke<Config>("obtener_config"),
+  guardarConfig: (config: Config) => invoke<Config>("guardar_config", { config }),
 
   ponerEnEspera: (nombre: string | null, items: ItemPedido[]) =>
     invoke<number>("poner_en_espera", { nombre, items }),

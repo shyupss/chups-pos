@@ -1,0 +1,33 @@
+A l m a c é n   D o n   P e p e
+        RUT 12.345.678-5
+  Av. Siempre Viva 742, Talca
+      Tel. +56 9 1234 5678
+--------------------------------
+ COMPROBANTE DE VENTA N° 000123
+        21-11-2026 14:05
+--------------------------------
+Pan corriente (marraqueta)
+0,532 kg x $2.300/kg      $1.224
+Queso mantecoso
+0,318 kg x $10.490/kg     $3.336
+Bebida 3 L
+1 x $2.790                $2.790
+Plátano
+0,812 kg x $1.290/kg      $1.047
+--------------------------------
+Subtotal                  $8.397
+Redondeo                     +$3
+TOTAL                     $8.400
+--------------------------------
+Pago                    Efectivo
+Recibido                 $20.000
+Vuelto                   $11.600
+--------------------------------
+Productos: 4
+
+    ¡Gracias por su compra!
+
+Comprobante interno sin validez
+           tributaria
+
+   [código de barras 000123]

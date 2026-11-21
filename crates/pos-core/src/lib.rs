@@ -7,9 +7,13 @@
 //! - [`repositorios`]: consultas SQL, una función por operación.
 //! - [`servicios`]: reglas de negocio que combinan repositorios.
 
+pub mod balanza;
+pub mod boleta;
 pub mod db;
 pub mod error;
+pub mod logo;
 pub mod repositorios;
+pub mod rut;
 pub mod servicios;
 
 pub use error::{Error, Resultado};
