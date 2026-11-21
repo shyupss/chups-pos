@@ -1,6 +1,7 @@
 // Única puerta de la Vista hacia el Controlador (comandos Tauri en Rust).
 // Cada comando tiene aquí su función tipada; las pantallas no llaman a `invoke` directo.
 import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 
 export interface EstadoSistema {
   version: string;
@@ -659,6 +660,151 @@ export interface LecturaBalanza {
   cantidadMil: number;
 }
 
+// --- Reportes ---------------------------------------------------------------------------
+// Montos en pesos; porcentajes en puntos básicos (1234 = 12,34 %); días "aaaa-mm-dd" locales.
+
+export interface Celda {
+  monto: number;
+  boletas: number;
+}
+
+export interface TotalMedioReporte {
+  medio: MedioPago;
+  monto: number;
+  boletas: number;
+}
+
+export interface ProductoVendido {
+  productoId: number;
+  nombre: string;
+  unidad: Unidad;
+  categoriaId: number | null;
+  categoria: string | null;
+  cantidadMil: number;
+  /** Ya sin lo devuelto. */
+  monto: number;
+  montoConCosto: number;
+  /** null si ninguna de sus líneas tiene costo. */
+  costo: number | null;
+  ganancia: number | null;
+  margenPb: number | null;
+  /** Lo vendido sin costo conocido: no entra en la ganancia. */
+  montoSinCosto: number;
+  /** Parte del costo es estimada (ventas de antes de guardar el costo en cada línea). */
+  costoEstimado: boolean;
+}
+
+export interface BajoMinimo {
+  id: number;
+  nombre: string;
+  unidad: Unidad;
+  stockMil: number;
+  stockMinimoMil: number;
+}
+
+export interface ClienteAtrasado {
+  id: number;
+  nombre: string;
+  deuda: number;
+  desde: string;
+  dias: number;
+}
+
+export interface ResumenHoy {
+  fecha: string;
+  ventas: number;
+  boletas: number;
+  ticketPromedio: number;
+  ganancia: number;
+  ventasSinCosto: number;
+  /** El mismo día de la semana pasada hasta la misma hora. */
+  ventasSemanaAnterior: number;
+  variacionPb: number | null;
+  /** null con la caja cerrada. */
+  efectivoEsperado: number | null;
+  fiadoOtorgado: number;
+  pagosFiado: number;
+  /** 24 horas. */
+  porHora: Celda[];
+  porMedio: TotalMedioReporte[];
+  masVendidos: ProductoVendido[];
+  bajoMinimo: BajoMinimo[];
+  totalBajoMinimo: number;
+  atrasados: ClienteAtrasado[];
+  diasAlerta: number;
+}
+
+export interface ReporteVentas {
+  desde: string;
+  hasta: string;
+  total: number;
+  boletas: number;
+  ticketPromedio: number;
+  porDia: { dia: string; monto: number; boletas: number }[];
+  porMedio: TotalMedioReporte[];
+  porCategoria: { categoriaId: number | null; nombre: string; monto: number }[];
+  /** Lunes a domingo. */
+  porDiaSemana: Celda[];
+  /** 7 × 24: lunes primero, por hora local. */
+  mapa: Celda[][];
+}
+
+export interface ReporteProductos {
+  desde: string;
+  hasta: string;
+  productos: ProductoVendido[];
+  sinVentas: { productoId: number; nombre: string; unidad: Unidad; categoria: string | null; stockMil: number }[];
+}
+
+export interface ReporteGanancia {
+  desde: string;
+  hasta: string;
+  ventas: number;
+  costo: number;
+  ganancia: number;
+  margenPb: number | null;
+  ventasEstimadas: number;
+  costoEstimado: number;
+  ventasSinCosto: number;
+  productos: ProductoVendido[];
+  porCategoria: { categoriaId: number | null; nombre: string; ventas: number; costo: number; ganancia: number; margenPb: number | null }[];
+  sinCosto: ProductoVendido[];
+}
+
+export interface ReporteTurnos {
+  desde: string;
+  hasta: string;
+  turnos: { id: number; abiertoEn: string; cerradoEn: string; montoInicial: number; esperado: number; contado: number; diferencia: number }[];
+  sobrantes: number;
+  faltantes: number;
+  cuadrados: number;
+}
+
+export interface ReporteFiados {
+  desde: string;
+  hasta: string;
+  deudaAlCierre: number;
+  clientesConDeuda: number;
+  otorgado: number;
+  pagado: number;
+  antiguedad: { tramo: string; monto: number; ventas: number }[];
+  deudores: { clienteId: number; nombre: string; deuda: number }[];
+}
+
+/** Rust avisa cuando cambia algo de la pantalla Hoy (ventas, caja, fiados, stock). */
+export function escucharCambiosDelDia(alCambiar: () => void): () => void {
+  let dejar: (() => void) | null = null;
+  let cancelado = false;
+  void listen("cambios-del-dia", () => alCambiar()).then((f) => {
+    if (cancelado) f();
+    else dejar = f;
+  });
+  return () => {
+    cancelado = true;
+    dejar?.();
+  };
+}
+
 export const api = {
   estadoSistema: () => invoke<EstadoSistema>("estado_sistema"),
 
@@ -727,6 +873,14 @@ export const api = {
   editarCliente: (id: number, datos: DatosCliente) => invoke<Cliente>("editar_cliente", { id, datos }),
   /** Desactivar solo si no debe nada. */
   cambiarEstadoCliente: (id: number, activo: boolean) => invoke<Cliente>("cambiar_estado_cliente", { id, activo }),
+  reporteHoy: () => invoke<ResumenHoy>("reporte_hoy"),
+  reporteVentas: (desde: string, hasta: string) => invoke<ReporteVentas>("reporte_ventas", { desde, hasta }),
+  /** categoria: null todas, 0 sin categoría. */
+  reporteProductos: (desde: string, hasta: string, categoria: number | null) =>
+    invoke<ReporteProductos>("reporte_productos", { desde, hasta, categoria }),
+  reporteGanancia: (desde: string, hasta: string) => invoke<ReporteGanancia>("reporte_ganancia", { desde, hasta }),
+  reporteTurnos: (desde: string, hasta: string) => invoke<ReporteTurnos>("reporte_turnos", { desde, hasta }),
+  reporteFiados: (desde: string, hasta: string) => invoke<ReporteFiados>("reporte_fiados", { desde, hasta }),
   listarDeudores: (texto: string, todos: boolean, limite: number, desplazamiento: number) =>
     invoke<PaginaDeudores>("listar_deudores", { texto, todos, limite, desplazamiento }),
   fichaCliente: (id: number) => invoke<FichaCliente>("ficha_cliente", { id }),

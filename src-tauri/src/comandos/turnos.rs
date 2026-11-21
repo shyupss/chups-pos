@@ -29,13 +29,14 @@ pub async fn abrir_turno(
 /// Ingreso o retiro de efectivo. El retiro pide el PIN si está protegido.
 #[tauri::command]
 pub async fn registrar_movimiento_caja(
+    app: AppHandle,
     estado: State<'_, EstadoApp>,
     tipo: TipoMovimiento,
     monto: i64,
     motivo: String,
     pin: Option<String>,
 ) -> ResultadoProtegido<MovimientoCaja> {
-    Ok(srv::registrar_movimiento(
+    let r = srv::registrar_movimiento(
         &estado.pool,
         &estado.pin,
         tipo,
@@ -43,7 +44,9 @@ pub async fn registrar_movimiento_caja(
         &motivo,
         pin.as_deref(),
     )
-    .await?)
+    .await?;
+    super::avisar_cambios(&app);
+    Ok(r)
 }
 
 #[tauri::command]
@@ -57,13 +60,14 @@ pub async fn resumen_turno(
 /// Cierra la caja con el efectivo contado. Pide el PIN si "cerrar caja" está protegida.
 #[tauri::command]
 pub async fn cerrar_turno(
+    app: AppHandle,
     estado: State<'_, EstadoApp>,
     efectivo_contado: i64,
     detalle_conteo: Option<Vec<Conteo>>,
     nota: Option<String>,
     pin: Option<String>,
 ) -> ResultadoProtegido<ResumenTurno> {
-    Ok(srv::cerrar(
+    let r = srv::cerrar(
         &estado.pool,
         &estado.pin,
         efectivo_contado,
@@ -71,7 +75,9 @@ pub async fn cerrar_turno(
         nota.as_deref(),
         pin.as_deref(),
     )
-    .await?)
+    .await?;
+    super::avisar_cambios(&app);
+    Ok(r)
 }
 
 #[tauri::command]

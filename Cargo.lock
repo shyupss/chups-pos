@@ -565,6 +565,7 @@ dependencies = [
 name = "chups-pos"
 version = "0.1.0"
 dependencies = [
+ "chrono",
  "pos-core",
  "pos-hardware",
  "serde",

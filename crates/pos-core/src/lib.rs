@@ -15,5 +15,6 @@ pub mod logo;
 pub mod repositorios;
 pub mod rut;
 pub mod servicios;
+pub mod zona;
 
 pub use error::{Error, FalloPin, Resultado};

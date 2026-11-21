@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import RegistrarCompra from "../componentes/RegistrarCompra";
+import type { FiltroEstadoStock } from "../api";
 import { avisarCambioStock } from "../eventos";
 import Compras from "./inventario/Compras";
 import Movimientos from "./inventario/Movimientos";
@@ -23,10 +24,12 @@ interface Props {
   producto: { id: number; nombre: string } | null;
   onProducto: (p: { id: number; nombre: string } | null) => void;
   onIrAVenta: (folio: number) => void;
+  /** Filtro con que se abre Stock (desde Reportes > Hoy, "bajo el mínimo"). */
+  estadoStock?: FiltroEstadoStock | null;
 }
 
 /** Inventario (F3): stock con su valor, movimientos, compras y proveedores. Ctrl+N: nueva compra. */
-export default function Inventario({ activa, pestana, onPestana, producto, onProducto, onIrAVenta }: Props) {
+export default function Inventario({ activa, pestana, onPestana, producto, onProducto, onIrAVenta, estadoStock }: Props) {
   const [nuevaCompra, setNuevaCompra] = useState(false);
   const [compraElegida, setCompraElegida] = useState<number | null>(null);
   const [version, setVersion] = useState(0);
@@ -64,6 +67,7 @@ export default function Inventario({ activa, pestana, onPestana, producto, onPro
       {pestana === "stock" && (
         <Stock
           activa={activa}
+          estadoInicial={estadoStock ?? undefined}
           onVerMovimientos={(p) => {
             onProducto(p);
             onPestana("movimientos");

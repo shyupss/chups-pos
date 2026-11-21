@@ -14,17 +14,19 @@ interface Props {
   activa: boolean;
   onIrAVenta: (folio: number) => void;
   onImpresion: () => void;
+  /** Cliente cuya ficha se abre al llegar (desde Reportes > Hoy). */
+  clienteInicial?: number | null;
 }
 
 /** Fiados (F4): quién debe y cuánto, la ficha de cada cliente y sus pagos. */
-export default function Fiados({ activa, onIrAVenta, onImpresion }: Props) {
+export default function Fiados({ activa, onIrAVenta, onImpresion, clienteInicial }: Props) {
   const [texto, setTexto] = useState("");
   const [busqueda, setBusqueda] = useState("");
   const [todos, setTodos] = useState(false);
   const [filas, setFilas] = useState<Deudor[]>([]);
   const [hayMas, setHayMas] = useState(true);
   const [total, setTotal] = useState<{ monto: number; clientes: number } | null>(null);
-  const [panel, setPanel] = useState<Panel>(null);
+  const [panel, setPanel] = useState<Panel>(clienteInicial ? { tipo: "ficha", id: clienteInicial } : null);
   const [config, setConfig] = useState<Config | null>(null);
   const [error, setError] = useState<string | null>(null);
   const cargando = useRef(false);
