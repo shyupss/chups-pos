@@ -127,7 +127,7 @@ export default function FormularioProducto({ producto, codigoInicial, onGuardado
           </Campo>
         ) : (
           <Campo etiqueta="Stock actual">
-            <div className="py-2 text-slate-700">{producto.stock}</div>
+            <div className="flex h-10 items-center tabular-nums">{producto.stock}</div>
           </Campo>
         )}
         <Campo etiqueta="Avisar con stock menor o igual a">
@@ -140,24 +140,24 @@ export default function FormularioProducto({ producto, codigoInicial, onGuardado
         </Campo>
       </div>
 
-      {error && <p className="rounded bg-red-50 px-3 py-2 text-sm text-red-800">{error}</p>}
+      {error && <p className="rounded-lg bg-peligro/10 px-3 py-2 text-peligro">{error}</p>}
 
       <div className="mt-auto flex flex-wrap gap-2">
         <button
           type="submit"
           disabled={guardando}
-          className="flex-1 rounded-lg bg-slate-900 py-3 font-semibold text-white disabled:bg-slate-300"
+          className="h-11 flex-1 rounded-lg bg-acento font-semibold text-sobre-acento disabled:bg-linea disabled:text-tenue"
         >
           Guardar
         </button>
-        <button type="button" onClick={onCerrar} className="rounded-lg px-4 text-slate-600 hover:bg-slate-100">
+        <button type="button" onClick={onCerrar} className="h-11 rounded-lg px-4 text-tenue hover:bg-fondo hover:text-texto">
           Cerrar
         </button>
         {!nuevo && (
           <button
             type="button"
             onClick={() => void alternarActivo()}
-            className="w-full rounded-lg py-2 text-sm text-slate-500 hover:bg-slate-100"
+            className="h-10 w-full rounded-lg text-tenue hover:bg-fondo hover:text-texto"
           >
             {producto.activo ? "Desactivar (deja de aparecer en la caja)" : "Volver a activar"}
           </button>
@@ -168,12 +168,12 @@ export default function FormularioProducto({ producto, codigoInicial, onGuardado
 }
 
 const claseCampo =
-  "w-full rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-slate-900";
+  "h-10 w-full rounded-lg border border-linea bg-fondo px-3 tabular-nums outline-none focus:border-texto";
 
 function Campo({ etiqueta, children }: { etiqueta: string; children: React.ReactNode }) {
   return (
     <label className="block">
-      <span className="text-xs text-slate-500">{etiqueta}</span>
+      <span className="text-xs text-tenue">{etiqueta}</span>
       <div className="mt-1">{children}</div>
     </label>
   );

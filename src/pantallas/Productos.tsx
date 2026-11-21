@@ -10,7 +10,7 @@ interface Props {
 }
 
 const POR_PAGINA = 100;
-const ALTO_FILA = 44;
+const ALTO_FILA = 40;
 
 type Edicion = { tipo: "nuevo"; codigo?: string } | { tipo: "editar"; producto: Producto } | null;
 
@@ -98,32 +98,32 @@ export default function Productos({ codigoNuevo, onCodigoUsado }: Props) {
             value={texto}
             onChange={(e) => setTexto(e.target.value)}
             placeholder="Buscar por nombre o código"
-            className="flex-1 rounded-lg border border-slate-300 bg-white px-4 py-2 outline-none focus:border-slate-900"
+            className="h-10 flex-1 rounded-lg border border-linea bg-superficie px-4 outline-none focus:border-texto"
             autoFocus
           />
-          <label className="flex items-center gap-2 text-sm text-slate-600">
+          <label className="flex items-center gap-2 text-tenue">
             <input type="checkbox" checked={inactivos} onChange={(e) => setInactivos(e.target.checked)} />
             Ver desactivados
           </label>
           <button
             onClick={() => setEdicion({ tipo: "nuevo" })}
-            className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white"
+            className="h-10 rounded-lg bg-acento px-4 font-semibold text-sobre-acento"
           >
             Nuevo producto
           </button>
         </div>
 
-        {error && <p className="mt-3 rounded bg-red-50 px-3 py-2 text-sm text-red-800">{error}</p>}
+        {error && <p className="mt-3 rounded-lg bg-peligro/10 px-3 py-2 text-peligro">{error}</p>}
 
-        <div className="mt-4 grid grid-cols-[1fr_10rem_7rem_5rem] gap-2 px-4 text-xs uppercase text-slate-500">
+        <div className="mt-4 grid grid-cols-[1fr_10rem_7rem_5rem] gap-2 px-4 text-xs font-medium uppercase text-tenue">
           <span>Nombre</span>
           <span>Código</span>
           <span className="text-right">Precio</span>
           <span className="text-right">Stock</span>
         </div>
-        <div ref={contenedor} className="mt-1 min-h-0 flex-1 overflow-auto rounded-lg border border-slate-200 bg-white">
+        <div ref={contenedor} className="mt-1 min-h-0 flex-1 overflow-auto rounded-lg border border-linea bg-superficie tabular-nums">
           {filas.length === 0 ? (
-            <p className="p-8 text-center text-slate-400">
+            <p className="p-8 text-center text-tenue">
               {busqueda ? "Sin resultados" : "Todavía no hay productos. Crea el primero con \"Nuevo producto\"."}
             </p>
           ) : (
@@ -137,14 +137,14 @@ export default function Productos({ codigoNuevo, onCodigoUsado }: Props) {
                     key={p.id}
                     onClick={() => setEdicion({ tipo: "editar", producto: p })}
                     style={{ position: "absolute", top: 0, left: 0, width: "100%", height: ALTO_FILA, transform: `translateY(${v.start}px)` }}
-                    className={`grid grid-cols-[1fr_10rem_7rem_5rem] items-center gap-2 border-b border-slate-100 px-4 text-left text-sm ${
-                      seleccionado ? "bg-slate-100" : "hover:bg-slate-50"
-                    } ${p.activo ? "" : "text-slate-400 line-through"}`}
+                    className={`grid grid-cols-[1fr_10rem_7rem_5rem] items-center gap-2 border-b border-linea px-4 text-left ${
+                      seleccionado ? "bg-linea/70" : "hover:bg-fondo"
+                    } ${p.activo ? "" : "text-tenue line-through"}`}
                   >
                     <span className="truncate">{p.nombre}</span>
-                    <span className="truncate text-slate-500">{p.codigoBarras ?? "—"}</span>
-                    <span className="text-right tabular-nums">{pesos(p.precioVenta)}</span>
-                    <span className={`text-right tabular-nums ${bajo || p.stock < 0 ? "font-semibold text-red-700" : ""}`}>
+                    <span className="truncate text-tenue">{p.codigoBarras ?? "—"}</span>
+                    <span className="text-right">{pesos(p.precioVenta)}</span>
+                    <span className={`text-right ${bajo || p.stock < 0 ? "font-semibold text-peligro" : ""}`}>
                       {p.stock}
                     </span>
                   </button>
@@ -156,7 +156,7 @@ export default function Productos({ codigoNuevo, onCodigoUsado }: Props) {
       </section>
 
       {edicion && (
-        <aside className="w-96 shrink-0 border-l border-slate-200 bg-white">
+        <aside className="w-96 shrink-0 border-l border-linea bg-superficie">
           <FormularioProducto
             key={edicion.tipo === "editar" ? edicion.producto.id : `nuevo-${edicion.codigo ?? ""}`}
             producto={edicion.tipo === "editar" ? edicion.producto : null}
