@@ -181,6 +181,8 @@ pub async fn confirmar_autorizada(
         .ok_or_else(|| Error::Validacion("Abre la caja para vender".into()))?;
 
     let mut lineas = Vec::with_capacity(orden.len());
+    // El costo viene en la misma lectura del producto: copiarlo no agrega consultas.
+    let mut costos = Vec::with_capacity(orden.len());
     let mut subtotal: i64 = 0;
     for producto_id in &orden {
         let cantidad_mil = cantidades_mil[producto_id];
@@ -193,6 +195,7 @@ pub async fn confirmar_autorizada(
         cantidades::validar_venta(p.unidad, &p.nombre, cantidad_mil)?;
         let sub = cantidades::subtotal(p.precio_venta, cantidad_mil).ok_or_else(desborde)?;
         subtotal = subtotal.checked_add(sub).ok_or_else(desborde)?;
+        costos.push(p.costo);
         lineas.push(LineaVendida {
             producto_id: p.id,
             nombre: p.nombre,
@@ -277,7 +280,7 @@ pub async fn confirmar_autorizada(
     )
     .await?;
 
-    for l in &mut lineas {
+    for (l, costo) in lineas.iter_mut().zip(costos) {
         ventas::insertar_item(
             &mut tx,
             cabecera.id,
@@ -288,6 +291,7 @@ pub async fn confirmar_autorizada(
                 precio_unitario: l.precio_unitario,
                 cantidad_mil: l.cantidad_mil,
                 subtotal: l.subtotal,
+                costo_unitario: costo,
             },
         )
         .await?;

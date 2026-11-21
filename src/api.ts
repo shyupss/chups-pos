@@ -1,6 +1,7 @@
 // Única puerta de la Vista hacia el Controlador (comandos Tauri en Rust).
 // Cada comando tiene aquí su función tipada; las pantallas no llaman a `invoke` directo.
 import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 
 export interface EstadoSistema {
   version: string;
@@ -117,6 +118,9 @@ export interface Config {
   balanzaLargoCodigo: number;
   /** Días desde la fiada pendiente más antigua a partir de los que la deuda se resalta. */
   fiadoDiasAlerta: number;
+  /** null = Respaldos junto a los datos de la app. */
+  respaldosCarpeta: string | null;
+  respaldosConservar: number;
 }
 
 /** Una venta en espera en la lista. El total usa los precios actuales de los productos activos. */
@@ -180,6 +184,7 @@ export interface AccionesProtegidas {
   ajustarInventario: boolean;
   /** Vender fiado por sobre el límite de crédito del cliente. */
   fiarSobreLimite: boolean;
+  importarDatos: boolean;
 }
 
 export interface EstadoSeguridad {
@@ -659,6 +664,274 @@ export interface LecturaBalanza {
   cantidadMil: number;
 }
 
+// --- Reportes ---------------------------------------------------------------------------
+// Montos en pesos; porcentajes en puntos básicos (1234 = 12,34 %); días "aaaa-mm-dd" locales.
+
+export interface Celda {
+  monto: number;
+  boletas: number;
+}
+
+export interface TotalMedioReporte {
+  medio: MedioPago;
+  monto: number;
+  boletas: number;
+}
+
+export interface ProductoVendido {
+  productoId: number;
+  nombre: string;
+  unidad: Unidad;
+  categoriaId: number | null;
+  categoria: string | null;
+  cantidadMil: number;
+  /** Ya sin lo devuelto. */
+  monto: number;
+  montoConCosto: number;
+  /** null si ninguna de sus líneas tiene costo. */
+  costo: number | null;
+  ganancia: number | null;
+  margenPb: number | null;
+  /** Lo vendido sin costo conocido: no entra en la ganancia. */
+  montoSinCosto: number;
+  /** Parte del costo es estimada (ventas de antes de guardar el costo en cada línea). */
+  costoEstimado: boolean;
+}
+
+export interface BajoMinimo {
+  id: number;
+  nombre: string;
+  unidad: Unidad;
+  stockMil: number;
+  stockMinimoMil: number;
+}
+
+export interface ClienteAtrasado {
+  id: number;
+  nombre: string;
+  deuda: number;
+  desde: string;
+  dias: number;
+}
+
+export interface ResumenHoy {
+  fecha: string;
+  ventas: number;
+  boletas: number;
+  ticketPromedio: number;
+  ganancia: number;
+  ventasSinCosto: number;
+  /** El mismo día de la semana pasada hasta la misma hora. */
+  ventasSemanaAnterior: number;
+  variacionPb: number | null;
+  /** null con la caja cerrada. */
+  efectivoEsperado: number | null;
+  fiadoOtorgado: number;
+  pagosFiado: number;
+  /** 24 horas. */
+  porHora: Celda[];
+  porMedio: TotalMedioReporte[];
+  masVendidos: ProductoVendido[];
+  bajoMinimo: BajoMinimo[];
+  totalBajoMinimo: number;
+  atrasados: ClienteAtrasado[];
+  diasAlerta: number;
+}
+
+export interface ReporteVentas {
+  desde: string;
+  hasta: string;
+  total: number;
+  boletas: number;
+  ticketPromedio: number;
+  porDia: { dia: string; monto: number; boletas: number }[];
+  porMedio: TotalMedioReporte[];
+  porCategoria: { categoriaId: number | null; nombre: string; monto: number }[];
+  /** Lunes a domingo. */
+  porDiaSemana: Celda[];
+  /** 7 × 24: lunes primero, por hora local. */
+  mapa: Celda[][];
+}
+
+export interface ReporteProductos {
+  desde: string;
+  hasta: string;
+  productos: ProductoVendido[];
+  sinVentas: { productoId: number; nombre: string; unidad: Unidad; categoria: string | null; stockMil: number }[];
+}
+
+export interface ReporteGanancia {
+  desde: string;
+  hasta: string;
+  ventas: number;
+  costo: number;
+  ganancia: number;
+  margenPb: number | null;
+  ventasEstimadas: number;
+  costoEstimado: number;
+  ventasSinCosto: number;
+  productos: ProductoVendido[];
+  porCategoria: { categoriaId: number | null; nombre: string; ventas: number; costo: number; ganancia: number; margenPb: number | null }[];
+  sinCosto: ProductoVendido[];
+}
+
+export interface ReporteTurnos {
+  desde: string;
+  hasta: string;
+  turnos: { id: number; abiertoEn: string; cerradoEn: string; montoInicial: number; esperado: number; contado: number; diferencia: number }[];
+  sobrantes: number;
+  faltantes: number;
+  cuadrados: number;
+}
+
+export interface ReporteFiados {
+  desde: string;
+  hasta: string;
+  deudaAlCierre: number;
+  clientesConDeuda: number;
+  otorgado: number;
+  pagado: number;
+  antiguedad: { tramo: string; monto: number; ventas: number }[];
+  deudores: { clienteId: number; nombre: string; deuda: number }[];
+}
+
+export type TipoReporte = "ventas" | "productos" | "ganancia" | "turnos" | "fiados";
+export type FormatoExportacion = "excel" | "pdf";
+
+// --- Importar y exportar Excel ----------------------------------------------------------
+
+export type CampoProducto = "codigo" | "nombre" | "categoria" | "unidad" | "precio" | "costo" | "stock" | "stockMinimo";
+export type CampoCliente = "nombre" | "telefono" | "rut" | "direccion" | "nota" | "limite";
+export type TipoImportacion = "productos" | "clientes";
+export type Exportacion = "productos" | "stock" | "ventas" | "movimientos" | "compras" | "clientes";
+
+/** La planilla elegida y lo que se detectó en cada columna. */
+export interface Apertura {
+  ruta: string;
+  encabezados: string[];
+  productos: (CampoProducto | null)[];
+  clientes: (CampoCliente | null)[];
+  filas: number;
+  /** Las primeras filas como texto. */
+  muestra: string[][];
+}
+
+export interface FilaError {
+  fila: number;
+  motivo: string;
+}
+
+export interface FilaProductoImportado {
+  fila: number;
+  codigo: string | null;
+  nombre: string;
+  categoria: string | null;
+  unidad: Unidad;
+  precio: number;
+  costo: number | null;
+  stockMil: number | null;
+  stockMinimoMil: number;
+  cambios: string[];
+}
+
+export interface FilaClienteImportado {
+  fila: number;
+  nombre: string;
+  telefono: string | null;
+  rut: string | null;
+  direccion: string | null;
+  nota: string | null;
+  limiteCredito: number | null;
+  cambios: string[];
+}
+
+export interface VistaProductos {
+  huella: string;
+  nuevas: FilaProductoImportado[];
+  actualizan: FilaProductoImportado[];
+  errores: FilaError[];
+  sinCambios: number;
+  categoriasNuevas: string[];
+}
+
+export interface VistaClientes {
+  huella: string;
+  nuevas: FilaClienteImportado[];
+  actualizan: FilaClienteImportado[];
+  errores: FilaError[];
+  sinCambios: number;
+}
+
+export interface ResultadoImportacion {
+  creados: number;
+  actualizados: number;
+  omitidos: number;
+  categoriasCreadas: number;
+}
+
+// --- Respaldos ---------------------------------------------------------------------------
+
+export interface Respaldo {
+  nombre: string;
+  ruta: string;
+  bytes: number;
+  /** Cuándo se escribió (UTC). */
+  fecha: string;
+}
+
+export interface EstadoRespaldos {
+  rutaBase: string;
+  bytesBase: number;
+  carpeta: string;
+  carpetaPredeterminada: string;
+  conservar: number;
+  /** Del más nuevo al más antiguo. */
+  respaldos: Respaldo[];
+  /** El último respaldo automático que falló. */
+  error: string | null;
+}
+
+/** Lo que se muestra antes de restaurar. */
+export interface InfoRespaldo {
+  ruta: string;
+  bytes: number;
+  fecha: string;
+  versionEsquema: number;
+  versionApp: number;
+  negocio: string | null;
+  productos: number;
+  ventas: number;
+  ultimaVenta: string | null;
+}
+
+/** Rust avisa si un respaldo automático falló (con el mensaje). */
+export function escucharRespaldoFallido(alFallar: (mensaje: string) => void): () => void {
+  let dejar: (() => void) | null = null;
+  let cancelado = false;
+  void listen<string>("respaldo-fallido", (e) => alFallar(e.payload)).then((f) => {
+    if (cancelado) f();
+    else dejar = f;
+  });
+  return () => {
+    cancelado = true;
+    dejar?.();
+  };
+}
+
+/** Rust avisa cuando cambia algo de la pantalla Hoy (ventas, caja, fiados, stock). */
+export function escucharCambiosDelDia(alCambiar: () => void): () => void {
+  let dejar: (() => void) | null = null;
+  let cancelado = false;
+  void listen("cambios-del-dia", () => alCambiar()).then((f) => {
+    if (cancelado) f();
+    else dejar = f;
+  });
+  return () => {
+    cancelado = true;
+    dejar?.();
+  };
+}
+
 export const api = {
   estadoSistema: () => invoke<EstadoSistema>("estado_sistema"),
 
@@ -727,6 +1000,44 @@ export const api = {
   editarCliente: (id: number, datos: DatosCliente) => invoke<Cliente>("editar_cliente", { id, datos }),
   /** Desactivar solo si no debe nada. */
   cambiarEstadoCliente: (id: number, activo: boolean) => invoke<Cliente>("cambiar_estado_cliente", { id, activo }),
+  reporteHoy: () => invoke<ResumenHoy>("reporte_hoy"),
+  reporteVentas: (desde: string, hasta: string) => invoke<ReporteVentas>("reporte_ventas", { desde, hasta }),
+  /** categoria: null todas, 0 sin categoría. */
+  reporteProductos: (desde: string, hasta: string, categoria: number | null) =>
+    invoke<ReporteProductos>("reporte_productos", { desde, hasta, categoria }),
+  reporteGanancia: (desde: string, hasta: string) => invoke<ReporteGanancia>("reporte_ganancia", { desde, hasta }),
+  reporteTurnos: (desde: string, hasta: string) => invoke<ReporteTurnos>("reporte_turnos", { desde, hasta }),
+  reporteFiados: (desde: string, hasta: string) => invoke<ReporteFiados>("reporte_fiados", { desde, hasta }),
+  /** Pregunta dónde guardar; null si se cancela. */
+  exportarReporte: (tipo: TipoReporte, desde: string, hasta: string, categoria: number | null, formato: FormatoExportacion) =>
+    invoke<string | null>("exportar_reporte", { tipo, desde, hasta, categoria, formato }),
+  abrirArchivo: (ruta: string) => invoke<void>("abrir_archivo", { ruta }),
+  estadoRespaldos: () => invoke<EstadoRespaldos>("estado_respaldos"),
+  respaldarAhora: () => invoke<Respaldo>("respaldar_ahora"),
+  /** Otra carpeta (un pendrive); null si se cancela. */
+  respaldarEn: () => invoke<Respaldo | null>("respaldar_en"),
+  elegirCarpetaRespaldos: () => invoke<string | null>("elegir_carpeta_respaldos"),
+  abrirCarpetaRespaldos: () => invoke<void>("abrir_carpeta_respaldos"),
+  /** null si se cancela. */
+  elegirRespaldo: () => invoke<string | null>("elegir_respaldo"),
+  inspeccionarRespaldo: (ruta: string) => invoke<InfoRespaldo>("inspeccionar_respaldo", { ruta }),
+  /** Siempre pide el PIN (si hay uno). Si sale bien, la app se reinicia. */
+  restaurarRespaldo: (ruta: string, pin: string | null) => invoke<void>("restaurar_respaldo", { ruta, pin }),
+  elegirPlanilla: () => invoke<string | null>("elegir_planilla"),
+  abrirPlanilla: (ruta: string) => invoke<Apertura>("abrir_planilla", { ruta }),
+  previsualizarProductos: (ruta: string, mapeo: (CampoProducto | null)[]) =>
+    invoke<VistaProductos>("previsualizar_productos", { ruta, mapeo }),
+  previsualizarClientes: (ruta: string, mapeo: (CampoCliente | null)[]) =>
+    invoke<VistaClientes>("previsualizar_clientes", { ruta, mapeo }),
+  /** Protegido con el PIN de "importar datos". */
+  importarProductos: (ruta: string, mapeo: (CampoProducto | null)[], huella: string, pin: string | null) =>
+    invoke<ResultadoImportacion>("importar_productos", { ruta, mapeo, huella, pin }),
+  importarClientes: (ruta: string, mapeo: (CampoCliente | null)[], huella: string, pin: string | null) =>
+    invoke<ResultadoImportacion>("importar_clientes", { ruta, mapeo, huella, pin }),
+  descargarPlanillaEjemplo: (tipo: TipoImportacion) => invoke<string | null>("descargar_planilla_ejemplo", { tipo }),
+  /** Ventas, movimientos y compras usan el rango. null si se cancela el "Guardar como". */
+  exportarDatos: (que: Exportacion, desde: string | null, hasta: string | null) =>
+    invoke<string | null>("exportar_datos", { que, desde, hasta }),
   listarDeudores: (texto: string, todos: boolean, limite: number, desplazamiento: number) =>
     invoke<PaginaDeudores>("listar_deudores", { texto, todos, limite, desplazamiento }),
   fichaCliente: (id: number) => invoke<FichaCliente>("ficha_cliente", { id }),

@@ -14,6 +14,11 @@ use tauri::Manager;
 use estado::EstadoApp;
 
 const NOMBRE_ARCHIVO_DB: &str = "chups-pos.db";
+/// Si restaurar un respaldo falla después de cerrar la base, el motivo queda aquí para mostrarlo
+/// al volver a abrir la app (la base anterior queda intacta).
+pub(crate) const ARCHIVO_RESTAURACION_FALLIDA: &str = "restauracion-fallida.txt";
+/// El respaldo automático al abrir espera un poco: el arranque y la primera venta van primero.
+const ESPERA_RESPALDO_AL_ABRIR: std::time::Duration = std::time::Duration::from_secs(20);
 
 pub fn run() {
     let inicio = Instant::now();
@@ -27,6 +32,10 @@ pub fn run() {
             let ruta_db = carpeta.join(NOMBRE_ARCHIVO_DB);
 
             let pool = tauri::async_runtime::block_on(pos_core::db::abrir(&ruta_db))?;
+            let lectura = tauri::async_runtime::block_on(pos_core::db::abrir_lectura(&ruta_db))?;
+            let aviso = carpeta.join(ARCHIVO_RESTAURACION_FALLIDA);
+            let restauracion_fallida = std::fs::read_to_string(&aviso).ok();
+            let _ = std::fs::remove_file(&aviso);
 
             // Documentos del usuario; si Windows no la informa, la carpeta de datos.
             let carpeta_pdf = app
@@ -38,11 +47,21 @@ pub fn run() {
 
             app.manage(EstadoApp {
                 pool,
+                lectura,
                 ruta_db,
                 ms_inicio: inicio.elapsed().as_millis() as u64,
                 carpeta_pdf,
                 hardware: pos_hardware::Hardware::new(&carpeta),
                 pin: pos_core::servicios::seguridad::ControlPin::new(),
+                carpeta_respaldos: carpeta.join("Respaldos"),
+                error_respaldo: std::sync::Mutex::new(restauracion_fallida),
+            });
+
+            // Respaldo automático si el último tiene más de 24 horas (en segundo plano).
+            let app_respaldo = app.handle().clone();
+            tauri::async_runtime::spawn(async move {
+                tokio::time::sleep(ESPERA_RESPALDO_AL_ABRIR).await;
+                comandos::respaldos::automatico(&app_respaldo, false);
             });
             Ok(())
         })
@@ -120,6 +139,30 @@ pub fn run() {
             comandos::clientes::crear_cliente,
             comandos::clientes::editar_cliente,
             comandos::clientes::cambiar_estado_cliente,
+            comandos::reportes::reporte_hoy,
+            comandos::reportes::reporte_ventas,
+            comandos::reportes::reporte_productos,
+            comandos::reportes::reporte_ganancia,
+            comandos::reportes::reporte_turnos,
+            comandos::reportes::reporte_fiados,
+            comandos::reportes::exportar_reporte,
+            comandos::reportes::abrir_archivo,
+            comandos::datos::elegir_planilla,
+            comandos::datos::abrir_planilla,
+            comandos::datos::previsualizar_productos,
+            comandos::datos::previsualizar_clientes,
+            comandos::datos::importar_productos,
+            comandos::datos::importar_clientes,
+            comandos::datos::descargar_planilla_ejemplo,
+            comandos::datos::exportar_datos,
+            comandos::respaldos::estado_respaldos,
+            comandos::respaldos::respaldar_ahora,
+            comandos::respaldos::respaldar_en,
+            comandos::respaldos::elegir_carpeta_respaldos,
+            comandos::respaldos::abrir_carpeta_respaldos,
+            comandos::respaldos::elegir_respaldo,
+            comandos::respaldos::inspeccionar_respaldo,
+            comandos::respaldos::restaurar_respaldo,
             comandos::fiados::listar_deudores,
             comandos::fiados::ficha_cliente,
             comandos::fiados::registrar_pago,

@@ -254,6 +254,8 @@ pub struct NuevoItem<'a> {
     pub precio_unitario: i64,
     pub cantidad_mil: i64,
     pub subtotal: i64,
+    /// Costo del producto al vender (por unidad o por kg); `None` si no tiene.
+    pub costo_unitario: Option<i64>,
 }
 
 pub async fn insertar_item(
@@ -263,8 +265,9 @@ pub async fn insertar_item(
 ) -> Resultado<()> {
     sqlx::query(
         "INSERT INTO venta_items
-            (venta_id, producto_id, nombre, unidad, precio_unitario, cantidad_mil, subtotal)
-         VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (venta_id, producto_id, nombre, unidad, precio_unitario, cantidad_mil, subtotal,
+             costo_unitario)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
     )
     .bind(venta_id)
     .bind(item.producto_id)
@@ -273,6 +276,7 @@ pub async fn insertar_item(
     .bind(item.precio_unitario)
     .bind(item.cantidad_mil)
     .bind(item.subtotal)
+    .bind(item.costo_unitario)
     .execute(conn)
     .await?;
     Ok(())

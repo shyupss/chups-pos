@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { api, type EstadoCaja, type EstadoConfigurada } from "./api";
+import { api, escucharRespaldoFallido, type EstadoCaja, type EstadoConfigurada } from "./api";
 import BarraLateral, { type ModoBarra } from "./componentes/BarraLateral";
 import Caja from "./pantallas/Caja";
 import { ProveedorPin } from "./componentes/PedirPin";
@@ -9,6 +9,8 @@ import Inventario, { type PestanaInventario } from "./pantallas/Inventario";
 import Productos from "./pantallas/Productos";
 import Fiados from "./pantallas/Fiados";
 import Proximamente from "./pantallas/Proximamente";
+import Reportes, { type PestanaReportes } from "./pantallas/Reportes";
+import type { FiltroEstadoStock } from "./api";
 import Ventas from "./pantallas/Ventas";
 import { guardarPreferencia, leerPreferencia } from "./preferencias";
 import { SECCIONES, type Seccion } from "./secciones";
@@ -63,6 +65,26 @@ export default function App() {
     contar();
     return escucharCambioStock(contar);
   }, []);
+  // Un respaldo automático que falló: se avisa sin interrumpir la caja.
+  const [respaldoFallido, setRespaldoFallido] = useState<string | null>(null);
+  useEffect(() => escucharRespaldoFallido(setRespaldoFallido), []);
+  // Enlaces desde Reportes > Hoy: Inventario filtrado bajo el mínimo y la ficha de un cliente.
+  const [pestanaReportes, setPestanaReportes] = useState<PestanaReportes>("hoy");
+  const [estadoStock, setEstadoStock] = useState<FiltroEstadoStock | null>(null);
+  const [clienteFiados, setClienteFiados] = useState<number | null>(null);
+  useEffect(() => {
+    if (seccion !== "inventario") setEstadoStock(null);
+    if (seccion !== "fiados") setClienteFiados(null);
+  }, [seccion]);
+  const verBajoMinimo = useCallback(() => {
+    setEstadoStock("bajoMinimo");
+    setPestanaInventario("stock");
+    setSeccion("inventario");
+  }, []);
+  const verCliente = useCallback((id: number) => {
+    setClienteFiados(id);
+    setSeccion("fiados");
+  }, []);
   // Venta que se abre al llegar a Ventas (enlace desde un movimiento de stock).
   const [folioVentas, setFolioVentas] = useState<number | null>(null);
   const verMovimientos = useCallback((p: { id: number; nombre: string }) => {
@@ -88,6 +110,8 @@ export default function App() {
       if (s) {
         e.preventDefault();
         setSeccion(s.id);
+        // F6 siempre abre Reportes en Hoy.
+        if (s.id === "reportes") setPestanaReportes("hoy");
       }
     };
     window.addEventListener("keydown", alPresionar);
@@ -154,9 +178,22 @@ export default function App() {
               producto={productoMovimientos}
               onProducto={setProductoMovimientos}
               onIrAVenta={irAVenta}
+              estadoStock={estadoStock}
             />
           )}
-          {seccion === "fiados" && <Fiados activa onIrAVenta={irAVenta} onImpresion={refrescarImpresora} />}
+          {seccion === "fiados" && (
+            <Fiados activa onIrAVenta={irAVenta} onImpresion={refrescarImpresora} clienteInicial={clienteFiados} />
+          )}
+          {seccion === "reportes" && (
+            <Reportes
+              activa
+              pestana={pestanaReportes}
+              onPestana={setPestanaReportes}
+              onVerBajoMinimo={verBajoMinimo}
+              onVerCliente={verCliente}
+              onVerProducto={verMovimientos}
+            />
+          )}
           {seccion === "ventas" && (
             <Ventas
               activa
@@ -174,6 +211,26 @@ export default function App() {
           )}
           {pendiente && <Proximamente seccion={pendiente} />}
         </main>
+        {respaldoFallido && (
+          <div role="alert" className="fixed right-4 bottom-4 z-30 max-w-md rounded-lg border border-linea bg-superficie p-4 shadow-lg">
+            <p className="font-medium text-peligro">{respaldoFallido}</p>
+            <div className="mt-3 flex justify-end gap-2 text-sm">
+              <button type="button" onClick={() => setRespaldoFallido(null)} className="h-8 rounded-lg px-3 text-tenue hover:bg-fondo">
+                Cerrar
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setRespaldoFallido(null);
+                  setSeccion("configuracion");
+                }}
+                className="h-8 rounded-lg border border-linea px-3 hover:bg-fondo"
+              >
+                Ver respaldos
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </ProveedorPin>
   );

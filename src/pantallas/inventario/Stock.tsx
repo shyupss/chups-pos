@@ -1,3 +1,4 @@
+import BotonExportar from "../../componentes/BotonExportar";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { ClipboardList, History, PackageMinus, Scale } from "lucide-react";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
@@ -34,14 +35,15 @@ type Dialogo = "ajuste" | "merma" | "conteo" | null;
 interface Props {
   activa: boolean;
   onVerMovimientos: (p: { id: number; nombre: string }) => void;
+  estadoInicial?: FiltroEstadoStock;
 }
 
 /** Inventario > Stock: stock actual, mínimo, costo y valor, con totales y acciones por producto. */
-export default function Stock({ activa, onVerMovimientos }: Props) {
+export default function Stock({ activa, onVerMovimientos, estadoInicial }: Props) {
   const [texto, setTexto] = useState("");
   const [busqueda, setBusqueda] = useState("");
   const [categoria, setCategoria] = useState<string>("todas");
-  const [estado, setEstado] = useState<FiltroEstadoStock>("todos");
+  const [estado, setEstado] = useState<FiltroEstadoStock>(estadoInicial ?? "todos");
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [filas, setFilas] = useState<ProductoStock[]>([]);
   const [hayMas, setHayMas] = useState(true);
@@ -172,6 +174,7 @@ export default function Stock({ activa, onVerMovimientos }: Props) {
           >
             <ClipboardList size={16} aria-hidden /> Contar inventario
           </button>
+          <BotonExportar que="stock" etiqueta="Excel" />
         </div>
 
         {aviso && (

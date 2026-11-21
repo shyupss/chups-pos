@@ -105,6 +105,12 @@ pub struct Config {
     // Fiados
     /// Días desde la venta fiada más antigua a partir de los que la deuda se resalta.
     pub fiado_dias_alerta: u16,
+
+    // Respaldos
+    /// Carpeta de los respaldos automáticos; `None` usa Respaldos junto a los datos de la app.
+    pub respaldos_carpeta: Option<String>,
+    /// Cuántos respaldos automáticos se conservan (los más antiguos se borran).
+    pub respaldos_conservar: u16,
 }
 
 impl Default for Config {
@@ -129,6 +135,8 @@ impl Default for Config {
             balanza_formato: FormatoBalanza::Peso,
             balanza_largo_codigo: 5,
             fiado_dias_alerta: 30,
+            respaldos_carpeta: None,
+            respaldos_conservar: 14,
         }
     }
 }
@@ -162,6 +170,8 @@ pub struct AccionesProtegidas {
     pub ajustar_inventario: bool,
     /// Vender fiado por sobre el límite de crédito del cliente.
     pub fiar_sobre_limite: bool,
+    /// Importar productos o clientes desde Excel.
+    pub importar_datos: bool,
 }
 
 impl Default for AccionesProtegidas {
@@ -174,6 +184,7 @@ impl Default for AccionesProtegidas {
             cambiar_configuracion: true,
             ajustar_inventario: true,
             fiar_sobre_limite: true,
+            importar_datos: true,
         }
     }
 }
@@ -230,6 +241,8 @@ const BALANZA_PREFIJOS: &str = "balanza_prefijos";
 const BALANZA_FORMATO: &str = "balanza_formato";
 const BALANZA_LARGO_CODIGO: &str = "balanza_largo_codigo";
 const FIADO_DIAS_ALERTA: &str = "fiado_dias_alerta";
+const RESPALDOS_CARPETA: &str = "respaldos_carpeta";
+const RESPALDOS_CONSERVAR: &str = "respaldos_conservar";
 // Seguridad: fuera de `Config`.
 const PIN_HASH: &str = "pin_hash";
 const RECUPERACION_HASH: &str = "pin_recuperacion_hash";
@@ -240,6 +253,7 @@ const PROTEGER_CIERRE: &str = "proteger_cerrar_caja";
 const PROTEGER_CONFIG: &str = "proteger_cambiar_configuracion";
 const PROTEGER_INVENTARIO: &str = "proteger_ajustar_inventario";
 const PROTEGER_LIMITE: &str = "proteger_fiar_sobre_limite";
+const PROTEGER_IMPORTAR: &str = "proteger_importar_datos";
 
 fn si_no(valor: bool) -> String {
     if valor { "1" } else { "0" }.into()
@@ -268,11 +282,12 @@ impl Seguridad {
                 cambiar_configuracion: bool_de(claves, PROTEGER_CONFIG, d.cambiar_configuracion),
                 ajustar_inventario: bool_de(claves, PROTEGER_INVENTARIO, d.ajustar_inventario),
                 fiar_sobre_limite: bool_de(claves, PROTEGER_LIMITE, d.fiar_sobre_limite),
+                importar_datos: bool_de(claves, PROTEGER_IMPORTAR, d.importar_datos),
             },
         }
     }
 
-    fn a_claves(&self) -> [(&'static str, String); 9] {
+    fn a_claves(&self) -> [(&'static str, String); 10] {
         let p = &self.protegidas;
         [
             (PIN_HASH, self.pin_hash.clone().unwrap_or_default()),
@@ -287,6 +302,7 @@ impl Seguridad {
             (PROTEGER_CONFIG, si_no(p.cambiar_configuracion)),
             (PROTEGER_INVENTARIO, si_no(p.ajustar_inventario)),
             (PROTEGER_LIMITE, si_no(p.fiar_sobre_limite)),
+            (PROTEGER_IMPORTAR, si_no(p.importar_datos)),
         ]
     }
 }
@@ -347,6 +363,13 @@ impl Config {
                 .and_then(|v| v.parse().ok())
                 .filter(|n| (1..=365).contains(n))
                 .unwrap_or(d.fiado_dias_alerta),
+            respaldos_carpeta: texto(RESPALDOS_CARPETA)
+                .filter(|v| !v.is_empty())
+                .map(str::to_owned),
+            respaldos_conservar: texto(RESPALDOS_CONSERVAR)
+                .and_then(|v| v.parse().ok())
+                .filter(|n| (1..=365).contains(n))
+                .unwrap_or(d.respaldos_conservar),
         }
     }
 
@@ -371,6 +394,11 @@ impl Config {
             (BALANZA_FORMATO, self.balanza_formato.como_texto().into()),
             (BALANZA_LARGO_CODIGO, self.balanza_largo_codigo.to_string()),
             (FIADO_DIAS_ALERTA, self.fiado_dias_alerta.to_string()),
+            (
+                RESPALDOS_CARPETA,
+                self.respaldos_carpeta.clone().unwrap_or_default(),
+            ),
+            (RESPALDOS_CONSERVAR, self.respaldos_conservar.to_string()),
         ]
     }
 
@@ -387,6 +415,9 @@ impl Config {
         }
         if !(10..=500).contains(&self.cajon_pulso_ms) {
             return validacion("El pulso del cajón debe durar entre 10 y 500 ms");
+        }
+        if !(1..=365).contains(&self.respaldos_conservar) {
+            return validacion("Se conservan entre 1 y 365 respaldos");
         }
         if !(1..=365).contains(&self.fiado_dias_alerta) {
             return validacion("La alerta de fiados debe estar entre 1 y 365 días");
@@ -417,6 +448,10 @@ impl Config {
             .filter(|i| !i.is_empty());
         self.pdf_carpeta = self
             .pdf_carpeta
+            .map(|c| c.trim().to_owned())
+            .filter(|c| !c.is_empty());
+        self.respaldos_carpeta = self
+            .respaldos_carpeta
             .map(|c| c.trim().to_owned())
             .filter(|c| !c.is_empty());
         Ok(self)

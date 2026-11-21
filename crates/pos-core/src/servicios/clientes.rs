@@ -61,16 +61,16 @@ pub struct DatosCliente {
     pub limite_credito: Option<i64>,
 }
 
-struct Limpios {
-    nombre: String,
-    telefono: Option<String>,
-    rut: Option<String>,
-    direccion: Option<String>,
-    nota: Option<String>,
-    limite: Option<i64>,
+pub(crate) struct Limpios {
+    pub(crate) nombre: String,
+    pub(crate) telefono: Option<String>,
+    pub(crate) rut: Option<String>,
+    pub(crate) direccion: Option<String>,
+    pub(crate) nota: Option<String>,
+    pub(crate) limite: Option<i64>,
 }
 
-fn validar(d: &DatosCliente) -> Resultado<Limpios> {
+pub(crate) fn validar(d: &DatosCliente) -> Resultado<Limpios> {
     let Some(nombre) = opcional(Some(&d.nombre), 80, "El nombre")? else {
         return validacion("El nombre del cliente es obligatorio");
     };
@@ -94,7 +94,7 @@ fn validar(d: &DatosCliente) -> Resultado<Limpios> {
 }
 
 impl Limpios {
-    fn campos(&self) -> Campos<'_> {
+    pub(crate) fn campos(&self) -> Campos<'_> {
         Campos {
             nombre: &self.nombre,
             telefono: self.telefono.as_deref(),

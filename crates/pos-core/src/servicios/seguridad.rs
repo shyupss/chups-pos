@@ -48,6 +48,9 @@ pub enum Accion {
     CambiarConfiguracion,
     AjustarInventario,
     FiarSobreLimite,
+    ImportarDatos,
+    /// Reemplaza toda la base: siempre pide el PIN (si hay uno), no se puede desproteger.
+    RestaurarRespaldo,
 }
 
 impl AccionesProtegidas {
@@ -60,6 +63,8 @@ impl AccionesProtegidas {
             Accion::CambiarConfiguracion => self.cambiar_configuracion,
             Accion::AjustarInventario => self.ajustar_inventario,
             Accion::FiarSobreLimite => self.fiar_sobre_limite,
+            Accion::ImportarDatos => self.importar_datos,
+            Accion::RestaurarRespaldo => true,
         }
     }
 }

@@ -19,6 +19,8 @@ pos-hardware.workspace = true
 serde.workspace = true
 sqlx.workspace = true
 tauri = { version = "2", features = [] }
+# El "ahora" de los reportes (la misma versión y features que pos-core).
+chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
 # Elegir el logo y la carpeta de los PDF con el diálogo nativo (se usa desde Rust).
 tauri-plugin-dialog = "2.8"
 # Abrir el PDF de la boleta con el visor del sistema.

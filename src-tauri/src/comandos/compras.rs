@@ -4,7 +4,7 @@ use pos_core::servicios::compras::{
     self as srv, Compra, DetalleCompra, FiltrosCompras, NuevaCompra,
 };
 use pos_core::servicios::proveedores::{self, DatosProveedor, Proveedor};
-use tauri::State;
+use tauri::{AppHandle, State};
 
 use super::{a_texto, ResultadoComando, ResultadoProtegido};
 use crate::estado::EstadoApp;
@@ -63,11 +63,14 @@ pub async fn cambiar_estado_proveedor(
 /// Registra la compra. Si se paga con la caja, pide el PIN de los retiros cuando está protegido.
 #[tauri::command]
 pub async fn registrar_compra(
+    app: AppHandle,
     estado: State<'_, EstadoApp>,
     compra: NuevaCompra,
     pin: Option<String>,
 ) -> ResultadoProtegido<DetalleCompra> {
-    Ok(srv::registrar(&estado.pool, &estado.pin, &compra, pin.as_deref()).await?)
+    let r = srv::registrar(&estado.pool, &estado.pin, &compra, pin.as_deref()).await?;
+    super::avisar_cambios(&app);
+    Ok(r)
 }
 
 #[tauri::command]
@@ -93,10 +96,13 @@ pub async fn listar_compras(
 /// Anula la compra (compensa stock y caja). Pide el PIN de "ajustar inventario".
 #[tauri::command]
 pub async fn anular_compra(
+    app: AppHandle,
     estado: State<'_, EstadoApp>,
     id: i64,
     motivo: String,
     pin: Option<String>,
 ) -> ResultadoProtegido<DetalleCompra> {
-    Ok(srv::anular(&estado.pool, &estado.pin, id, &motivo, pin.as_deref()).await?)
+    let r = srv::anular(&estado.pool, &estado.pin, id, &motivo, pin.as_deref()).await?;
+    super::avisar_cambios(&app);
+    Ok(r)
 }

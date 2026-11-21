@@ -18,18 +18,18 @@ use crate::logo::LogoBn;
 use crate::servicios::config::FormatoPdf;
 use crate::{Error, Resultado};
 
-const FUENTE_REGULAR: &[u8] = include_bytes!("../../fuentes/Inter-Regular-latin.ttf");
-const FUENTE_NEGRITA: &[u8] = include_bytes!("../../fuentes/Inter-Bold-latin.ttf");
+pub(crate) const FUENTE_REGULAR: &[u8] = include_bytes!("../../fuentes/Inter-Regular-latin.ttf");
+pub(crate) const FUENTE_NEGRITA: &[u8] = include_bytes!("../../fuentes/Inter-Bold-latin.ttf");
 
 /// Ancho del papel del ticket y margen a cada lado.
 const ANCHO_TICKET: f32 = 80.0;
 const MARGEN: f32 = 4.0;
 /// Carta: 215,9 × 279,4 mm, con la columna de 72 mm centrada.
-const CARTA: (f32, f32) = (215.9, 279.4);
+pub(crate) const CARTA: (f32, f32) = (215.9, 279.4);
 const MARGEN_CARTA: f32 = 15.0;
 /// La térmica imprime a 203 dpi (8 puntos por mm): el logo sale del mismo tamaño que en papel.
 const DPI_LOGO: f32 = 203.0;
-const PT_A_MM: f32 = 25.4 / 72.0;
+pub(crate) const PT_A_MM: f32 = 25.4 / 72.0;
 const MODULO_BARRAS: f32 = 0.33;
 const ALTO_BARRAS: f32 = 10.0;
 
@@ -41,18 +41,18 @@ fn tamano(estilo: Estilo) -> f32 {
     }
 }
 
-fn error_pdf<E: std::fmt::Display>(e: E) -> Error {
+pub(crate) fn error_pdf<E: std::fmt::Display>(e: E) -> Error {
     Error::Validacion(format!("No se pudo generar el PDF: {e}"))
 }
 
 /// Fuente para medir anchos y para saber qué caracteres tiene.
-struct Medidas {
+pub(crate) struct Medidas {
     regular: OwnedFace,
     negrita: OwnedFace,
 }
 
 impl Medidas {
-    fn new() -> Resultado<Self> {
+    pub(crate) fn new() -> Resultado<Self> {
         Ok(Medidas {
             regular: OwnedFace::from_vec(FUENTE_REGULAR.to_vec(), 0).map_err(error_pdf)?,
             negrita: OwnedFace::from_vec(FUENTE_NEGRITA.to_vec(), 0).map_err(error_pdf)?,
@@ -60,7 +60,7 @@ impl Medidas {
     }
 
     /// Ancho en mm de un texto en el tamaño dado.
-    fn ancho(&self, texto: &str, negrita: bool, tamano_pt: f32) -> f32 {
+    pub(crate) fn ancho(&self, texto: &str, negrita: bool, tamano_pt: f32) -> f32 {
         let cara = if negrita {
             &self.negrita
         } else {
@@ -80,7 +80,7 @@ impl Medidas {
     }
 
     /// Reemplaza lo que la fuente recortada no tiene (sin tilde, ASCII o "?").
-    fn seguro(&self, texto: &str) -> String {
+    pub(crate) fn seguro(&self, texto: &str) -> String {
         let cara = self.regular.as_face_ref();
         let mut salida = String::with_capacity(texto.len());
         for c in texto.chars() {
@@ -237,7 +237,7 @@ impl Lienzo<'_> {
     }
 }
 
-fn gris(nivel: f32) -> Color {
+pub(crate) fn gris(nivel: f32) -> Color {
     Color::Greyscale(Greyscale::new(nivel, None))
 }
 
@@ -324,7 +324,7 @@ pub fn documento(d: &dyn Documento, formato: FormatoPdf) -> Resultado<Vec<u8>> {
 
 /// printpdf no comprime las fuentes incrustadas (ni nada en debug): se comprimen todos los
 /// streams con Flate. Deja el PDF en menos de la mitad. Si algo falla, queda el original.
-fn comprimir(pdf: Vec<u8>) -> Vec<u8> {
+pub(crate) fn comprimir(pdf: Vec<u8>) -> Vec<u8> {
     let Ok(mut doc) = lopdf::Document::load_mem(&pdf) else {
         return pdf;
     };

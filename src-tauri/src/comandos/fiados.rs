@@ -34,23 +34,29 @@ pub async fn ficha_cliente(
 
 #[tauri::command]
 pub async fn registrar_pago(
+    app: AppHandle,
     estado: State<'_, EstadoApp>,
     pago: NuevoPagoCliente,
 ) -> ResultadoComando<PagoRegistrado> {
-    srv::registrar_pago(&estado.pool, &pago)
+    let r = srv::registrar_pago(&estado.pool, &pago)
         .await
-        .map_err(a_texto)
+        .map_err(a_texto)?;
+    super::avisar_cambios(&app);
+    Ok(r)
 }
 
 /// Anula un pago mal ingresado (PIN de anular venta).
 #[tauri::command]
 pub async fn anular_pago(
+    app: AppHandle,
     estado: State<'_, EstadoApp>,
     id: i64,
     motivo: String,
     pin: Option<String>,
 ) -> ResultadoProtegido<PagoRegistrado> {
-    Ok(srv::anular_pago(&estado.pool, &estado.pin, id, &motivo, pin.as_deref()).await?)
+    let r = srv::anular_pago(&estado.pool, &estado.pin, id, &motivo, pin.as_deref()).await?;
+    super::avisar_cambios(&app);
+    Ok(r)
 }
 
 /// Imprime el "COMPROBANTE DE PAGO" en la impresora configurada.

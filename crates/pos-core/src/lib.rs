@@ -9,11 +9,13 @@
 
 pub mod balanza;
 pub mod boleta;
+pub mod datos;
 pub mod db;
 pub mod error;
 pub mod logo;
 pub mod repositorios;
 pub mod rut;
 pub mod servicios;
+pub mod zona;
 
 pub use error::{Error, FalloPin, Resultado};

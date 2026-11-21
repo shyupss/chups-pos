@@ -77,7 +77,7 @@ async fn migracion_0002_convierte_datos_de_la_fase_1() {
 
     // La versión nueva abre el mismo archivo y aplica el resto de las migraciones.
     let pool = db::abrir(&ruta).await.unwrap();
-    assert_eq!(db::version_esquema(&pool).await.unwrap(), 6);
+    assert_eq!(db::version_esquema(&pool).await.unwrap(), db::version_app());
 
     let (unidad, stock_mil, minimo_mil): (String, i64, i64) =
         sqlx::query_as("SELECT unidad, stock_mil, stock_minimo_mil FROM productos WHERE id = 1")
@@ -170,7 +170,7 @@ async fn migracion_0005_conserva_la_base_de_la_fase_3() {
     pool.close().await;
 
     let pool = db::abrir(&dir.path().join("base.db")).await.unwrap();
-    assert_eq!(db::version_esquema(&pool).await.unwrap(), 6);
+    assert_eq!(db::version_esquema(&pool).await.unwrap(), db::version_app());
 
     let (turno, devuelto, devolucion, anulada): (Option<i64>, i64, Option<String>, Option<String>) =
         sqlx::query_as("SELECT turno_id, monto_devuelto, devolucion, anulada_en FROM ventas")
@@ -261,7 +261,7 @@ async fn migracion_0006_conserva_la_base_de_la_fase_4() {
     pool.close().await;
 
     let pool = db::abrir(&dir.path().join("base.db")).await.unwrap();
-    assert_eq!(db::version_esquema(&pool).await.unwrap(), 6);
+    assert_eq!(db::version_esquema(&pool).await.unwrap(), db::version_app());
 
     // La devolución de la fiada bajó la deuda completa; el reembolso de la anulación quedó a la decena.
     let rebaja: i64 = sqlx::query_scalar("SELECT rebaja_deuda FROM devoluciones WHERE id = 1")
@@ -317,4 +317,104 @@ async fn migracion_0006_conserva_la_base_de_la_fase_4() {
         .execute(&pool)
         .await
         .is_err());
+}
+
+// Una base de la fase 5 abre con la fase 6: cada línea vendida toma el costo actual de su producto
+// marcado como estimado (las de productos sin costo quedan en NULL) y no se pierde nada.
+#[tokio::test]
+async fn migracion_0007_rellena_costos_estimados_desde_la_fase_5() {
+    let dir = tempfile::tempdir().unwrap();
+    let pool = base_hasta(dir.path(), "0006_inventario_y_fiados.sql").await;
+    sqlx::query(
+        "INSERT INTO productos (id, codigo_barras, nombre, precio_venta, costo, stock_mil)
+             VALUES (1, 'L', 'Leche', 1190, 850, 8000), (2, 'P', 'Pan', 2300, NULL, 5000);
+         UPDATE productos SET unidad = 'kg' WHERE id = 2;
+         INSERT INTO clientes (id, nombre) VALUES (1, 'Rosa');
+         INSERT INTO turnos (id, monto_inicial) VALUES (1, 0);
+         INSERT INTO ventas (id, folio, subtotal, total, medio_pago, estado, turno_id)
+             VALUES (1, 1, 3530, 3530, 'debito', 'pagada', 1);
+         INSERT INTO venta_items (venta_id, producto_id, nombre, unidad, precio_unitario,
+                                  cantidad_mil, subtotal)
+             VALUES (1, 1, 'Leche', 'unidad', 1190, 2000, 2380),
+                    (1, 2, 'Pan', 'kg', 2300, 500, 1150);
+         INSERT INTO ventas (id, folio, subtotal, total, medio_pago, estado, cliente_id, turno_id)
+             VALUES (2, 2, 1190, 1190, 'fiado', 'fiada', 1, 1);
+         INSERT INTO venta_items (venta_id, producto_id, nombre, precio_unitario, cantidad_mil,
+                                  subtotal)
+             VALUES (2, 1, 'Leche', 1190, 1000, 1190);
+         INSERT INTO pagos_cliente (id, cliente_id, monto, medio_pago, turno_id)
+             VALUES (1, 1, 500, 'efectivo', 1);
+         INSERT INTO abonos (venta_id, monto, medio_pago, pago_id, turno_id)
+             VALUES (2, 500, 'efectivo', 1, 1);",
+    )
+    .execute(&pool)
+    .await
+    .unwrap();
+    pool.close().await;
+
+    let pool = db::abrir(&dir.path().join("base.db")).await.unwrap();
+    assert_eq!(db::version_esquema(&pool).await.unwrap(), db::version_app());
+    let costos: Vec<(i64, Option<i64>, bool)> = sqlx::query_as(
+        "SELECT producto_id, costo_unitario, costo_estimado FROM venta_items ORDER BY id",
+    )
+    .fetch_all(&pool)
+    .await
+    .unwrap();
+    assert_eq!(
+        costos,
+        [(1, Some(850), true), (2, None, false), (1, Some(850), true)]
+    );
+
+    // Nada se perdió: ventas, líneas, deuda y pagos siguen ahí.
+    let cuentas: (i64, i64, i64, i64) = sqlx::query_as(
+        "SELECT (SELECT COUNT(*) FROM ventas), (SELECT COUNT(*) FROM venta_items),
+                (SELECT COUNT(*) FROM pagos_cliente), (SELECT COUNT(*) FROM abonos)",
+    )
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+    assert_eq!(cuentas, (2, 3, 1, 1));
+    assert_eq!(
+        pos_core::servicios::clientes::obtener(&pool, 1)
+            .await
+            .unwrap()
+            .deuda,
+        690
+    );
+
+    // Una venta nueva guarda el costo del momento, sin marcarlo como estimado.
+    use pos_core::servicios::ventas::{self, ItemPedido, MedioPago, NuevaVenta};
+    sqlx::query("UPDATE productos SET costo = 900 WHERE id = 1")
+        .execute(&pool)
+        .await
+        .unwrap();
+    let v = ventas::confirmar(
+        &pool,
+        &NuevaVenta {
+            items: vec![
+                ItemPedido {
+                    producto_id: 1,
+                    cantidad_mil: 1000,
+                },
+                ItemPedido {
+                    producto_id: 2,
+                    cantidad_mil: 250,
+                },
+            ],
+            medio_pago: MedioPago::Debito,
+            monto_recibido: None,
+            descuento: 0,
+            cliente_id: None,
+        },
+    )
+    .await
+    .unwrap();
+    let nuevas: Vec<(Option<i64>, bool)> = sqlx::query_as(
+        "SELECT costo_unitario, costo_estimado FROM venta_items WHERE venta_id = ? ORDER BY id",
+    )
+    .bind(v.id)
+    .fetch_all(&pool)
+    .await
+    .unwrap();
+    assert_eq!(nuevas, [(Some(900), false), (None, false)]);
 }

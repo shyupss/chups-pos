@@ -2,7 +2,7 @@ use pos_core::servicios::devoluciones::{self, DevolucionRegistrada, ItemDevuelto
 use pos_core::servicios::historial::{self, DetalleVenta, FiltrosVentas, PaginaVentas};
 use pos_core::servicios::ventas::{self as srv, MedioPago, NuevaVenta, VentaConfirmada};
 use pos_core::servicios::{anulacion, impresion};
-use tauri::State;
+use tauri::{AppHandle, State};
 
 use super::{a_texto, ResultadoComando, ResultadoProtegido};
 use crate::estado::EstadoApp;
@@ -11,19 +11,22 @@ use crate::estado::EstadoApp;
 /// `sobre_limite`, que pide el PIN si "fiar sobre el límite" está protegida.
 #[tauri::command]
 pub async fn confirmar_venta(
+    app: AppHandle,
     estado: State<'_, EstadoApp>,
     venta: NuevaVenta,
     sobre_limite: Option<bool>,
     pin: Option<String>,
 ) -> ResultadoProtegido<VentaConfirmada> {
-    Ok(srv::confirmar_autorizada(
+    let r = srv::confirmar_autorizada(
         &estado.pool,
         &estado.pin,
         &venta,
         sobre_limite.unwrap_or(false),
         pin.as_deref(),
     )
-    .await?)
+    .await?;
+    super::avisar_cambios(&app);
+    Ok(r)
 }
 
 /// Una página del historial con los filtros de la pantalla Ventas (y los totales en la primera).
@@ -61,13 +64,14 @@ pub async fn venta_por_folio(
 /// Anula la venta (repone el stock y registra el reembolso). Pide el PIN si está protegido.
 #[tauri::command]
 pub async fn anular_venta(
+    app: AppHandle,
     estado: State<'_, EstadoApp>,
     id: i64,
     motivo: String,
     medio_reembolso: Option<MedioPago>,
     pin: Option<String>,
 ) -> ResultadoProtegido<DetalleVenta> {
-    Ok(anulacion::anular(
+    let r = anulacion::anular(
         &estado.pool,
         &estado.pin,
         id,
@@ -75,7 +79,9 @@ pub async fn anular_venta(
         medio_reembolso,
         pin.as_deref(),
     )
-    .await?)
+    .await?;
+    super::avisar_cambios(&app);
+    Ok(r)
 }
 
 /// Imprime el comprobante "ANULACIÓN DE VENTA" en la impresora configurada.
@@ -93,6 +99,7 @@ pub async fn imprimir_anulacion(
 /// Devuelve parte de una venta. Pide el PIN si "devolución" está protegida.
 #[tauri::command]
 pub async fn registrar_devolucion(
+    app: AppHandle,
     estado: State<'_, EstadoApp>,
     venta_id: i64,
     items: Vec<ItemDevuelto>,
@@ -100,7 +107,7 @@ pub async fn registrar_devolucion(
     motivo: String,
     pin: Option<String>,
 ) -> ResultadoProtegido<DevolucionRegistrada> {
-    Ok(devoluciones::registrar(
+    let r = devoluciones::registrar(
         &estado.pool,
         &estado.pin,
         venta_id,
@@ -109,7 +116,9 @@ pub async fn registrar_devolucion(
         &motivo,
         pin.as_deref(),
     )
-    .await?)
+    .await?;
+    super::avisar_cambios(&app);
+    Ok(r)
 }
 
 /// Imprime la "NOTA DE DEVOLUCIÓN" en la impresora configurada.

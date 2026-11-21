@@ -8,12 +8,15 @@ pub mod categorias;
 pub mod clientes;
 pub mod compras;
 pub mod config;
+pub mod datos;
 pub mod espera;
 pub mod fiados;
 pub mod impresion;
 pub mod inventario;
 pub mod negocio;
 pub mod productos;
+pub mod reportes;
+pub mod respaldos;
 pub mod seguridad;
 pub mod sistema;
 pub mod turnos;
@@ -46,6 +49,16 @@ pub enum ErrorComando {
 }
 
 pub type ResultadoProtegido<T> = Result<T, ErrorComando>;
+
+/// Evento para la vista: cambió algo de lo que muestra la pantalla Hoy (ventas, caja, fiados o
+/// stock). La pantalla se recarga al recibirlo, sin consultar cada tanto.
+pub const EVENTO_CAMBIOS: &str = "cambios-del-dia";
+
+pub(crate) fn avisar_cambios(app: &tauri::AppHandle) {
+    use tauri::Emitter;
+    // Si no hay ventanas escuchando no pasa nada: la pantalla se recarga al volver a ella.
+    let _ = app.emit(EVENTO_CAMBIOS, ());
+}
 
 impl From<pos_core::Error> for ErrorComando {
     fn from(e: pos_core::Error) -> Self {

@@ -142,12 +142,85 @@ se imprime en la térmica o se guarda en PDF (`estado-cuenta-000007.pdf`).
 La deuda siempre se calcula en SQL: total de cada venta fiada − lo que bajaron sus devoluciones − sus
 abonos vigentes. Nada se borra: pagos y abonos anulados quedan con su motivo.
 
+## Reportes
+
+**Reportes** (F6) abre siempre en **Hoy**: ventas y boletas del día, ticket promedio, ganancia
+estimada, comparación con el mismo día de la semana pasada a la misma hora, efectivo esperado del
+turno abierto, fiado otorgado y pagos de fiado del día, ventas por hora y por medio de pago, los 10
+más vendidos, los productos bajo el mínimo (lleva a Inventario filtrado) y los clientes con fiado
+atrasado (lleva a su ficha). Se actualiza al volver a la pantalla y cuando Rust avisa que hubo una
+venta, anulación, devolución, pago o movimiento de caja (sin consultar cada tanto).
+
+Las demás pestañas son por rango (hoy, ayer, esta semana, este mes, mes pasado, últimos 30 días,
+este año o personalizado):
+
+- **Ventas**: total, boletas, ticket promedio; por día, medio de pago, categoría y día de la
+  semana; mapa de calor día × hora.
+- **Productos**: ranking por monto o por cantidad (en kg los de peso), filtro por categoría y
+  productos sin ventas; cada producto lleva a sus movimientos.
+- **Ganancia**: ventas − costo y margen por producto y por categoría. Desde la fase 6 cada venta
+  guarda el costo del producto en ese momento; las ventas anteriores usan el costo actual y se
+  informan aparte como "costos estimados". Lo vendido sin costo no entra en la ganancia y se lista
+  aparte.
+- **Turnos**: los cerrados en el rango con esperado, contado y diferencia, y el total de sobrantes
+  y faltantes.
+- **Fiados**: deuda al cierre del rango, fiado y pagado en el rango, y antigüedad de la deuda.
+
+Las ventas anuladas no cuentan y las devoluciones se descuentan de su venta, así los totales
+cuadran con Ventas (F5). La base guarda las fechas en UTC y los reportes agrupan por el día y la
+hora del computador, también en los cambios de horario. Cada reporte se exporta a Excel (Ctrl+E) o
+PDF (con el nombre del negocio, el rango y la fecha de emisión) en `Documentos\CHUPS POS\Reportes`.
+
+## Importar y exportar Excel
+
+En **Configuración > Datos** se exportan a Excel los productos, el stock con su valorización, las
+ventas con su detalle, los movimientos de inventario y las compras (de un rango) y los clientes con
+su deuda. Productos, Inventario > Stock y Fiados también tienen su botón. Los montos quedan como
+números (se pueden sumar) y las fechas en hora local.
+
+**Importar productos o clientes** acepta .xlsx, .xls, .ods y .csv:
+
+1. Se elige el archivo y la app propone qué columna es cada dato (código, nombre, categoría,
+   unidad, precio, costo, stock y stock mínimo; para clientes, nombre, teléfono, RUT, dirección,
+   nota y límite). Se puede cambiar a mano.
+2. La vista previa separa las filas nuevas, las que actualizan un producto existente (por código
+   de barras, con lo que cambia) o un cliente (por RUT o nombre), y las que tienen errores con su
+   motivo. Nada se guarda todavía.
+3. Al confirmar (pide el PIN si "Importar datos" está protegida, sí por defecto) todo se guarda en
+   una transacción; las filas con error se omiten. El stock entra como un ajuste de inventario con
+   motivo "Importación", nunca escrito directo. Las categorías que no existen se crean. Las deudas
+   de los clientes no se importan: solo nacen de ventas fiadas.
+
+"Descargar planilla de ejemplo" deja una planilla con los encabezados correctos y dos filas. Una
+exportación de productos o clientes se puede volver a importar tal cual.
+
+## Respaldos
+
+Un respaldo es una copia completa de la base hecha con `VACUUM INTO` (consistente aunque la caja
+esté vendiendo), verificada con `PRAGMA integrity_check`, con nombre
+`chups-respaldo-AAAA-MM-DD-HHMM.db`.
+
+- **Automáticos**: al abrir la app si el último tiene más de 24 horas, y al cerrar cada turno. Van
+  a la carpeta `Respaldos` junto a los datos de la app (o la que se elija en Configuración > Datos)
+  y se conservan los últimos 14 (configurable). Corren en segundo plano: la caja nunca espera, y
+  solo se avisa si fallan.
+- **Manuales**: "Respaldar ahora" y "Respaldar en…" para otra carpeta, por ejemplo un pendrive.
+- Configuración > Datos muestra la ruta y el tamaño de la base, el último respaldo (con aviso si
+  tiene más de 3 días) y la lista de respaldos.
+
+**Restaurar**: Configuración > Datos > "Restaurar un respaldo…", elegir el archivo y revisar su
+fecha, versión de la base, productos y última venta. Se rechazan los archivos que no son una base
+de CHUPS POS y los de una versión más nueva de la app. Siempre pide el PIN (si hay uno). Antes de
+reemplazar se respalda la base actual (queda como `…-antes-de-restaurar.db`); después la app se
+reinicia y, si el respaldo es de una versión anterior, las migraciones lo ponen al día.
+
 ## PIN de administrador
 
 En Configuración > Seguridad se crea un PIN de 4 a 6 dígitos. Se guarda solo su hash (Argon2id), nunca el
 PIN. Protege, según lo que se marque ahí: anular ventas (sí por defecto), devoluciones (sí), retiros de
-efectivo (sí), cerrar la caja (no), ajustar inventario (sí), fiar sobre el límite (sí) y cambiar la
-configuración (sí; se pide una vez mientras Configuración está abierta). Sin PIN creado, nada se protege. Cambiar la lista de acciones protegidas siempre lo pide.
+efectivo (sí), cerrar la caja (no), ajustar inventario (sí), fiar sobre el límite (sí), importar datos
+(sí) y cambiar la configuración (sí; se pide una vez mientras Configuración está abierta). Restaurar un
+respaldo siempre lo pide. Sin PIN creado, nada se protege. Cambiar la lista de acciones protegidas siempre lo pide.
 
 La verificación ocurre en Rust: cada comando protegido recibe el PIN y el servicio lo valida, así que llamar
 al comando directamente sin PIN no sirve. Tras 5 intentos fallidos se bloquea 30 segundos.

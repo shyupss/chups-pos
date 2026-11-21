@@ -2,10 +2,14 @@ use std::path::Path;
 use std::str::FromStr;
 use std::time::Duration;
 
+use sqlx::migrate::Migrator;
 use sqlx::sqlite::{SqliteConnectOptions, SqliteJournalMode, SqlitePoolOptions, SqliteSynchronous};
 use sqlx::SqlitePool;
 
 use crate::Resultado;
+
+/// Las migraciones de crates/pos-core/migrations, embebidas en el binario.
+pub static MIGRACIONES: Migrator = sqlx::migrate!("./migrations");
 
 /// Abre (o crea) la base de datos en `ruta` y la deja al día con las migraciones.
 ///
@@ -34,6 +38,28 @@ pub async fn abrir(ruta: &Path) -> Resultado<SqlitePool> {
     Ok(pool)
 }
 
+/// Un pool aparte, solo para leer, para los reportes y las exportaciones (la base ya debe estar
+/// abierta y migrada con [`abrir`]). Lee la base mapeada en memoria (mmap de hasta 256 MB): con
+/// solo la caché de páginas y lecturas por el sistema de archivos de Windows, un reporte anual
+/// tardaba a veces 5 veces más. Va aparte porque el mmap hace un 5 a 10 % más lenta cada venta:
+/// el pool que vende no lo usa. `query_only` impide escribir por error desde aquí.
+pub async fn abrir_lectura(ruta: &Path) -> Resultado<SqlitePool> {
+    let opciones = SqliteConnectOptions::new()
+        .filename(ruta)
+        .create_if_missing(false)
+        .journal_mode(SqliteJournalMode::Wal)
+        .foreign_keys(true)
+        .busy_timeout(Duration::from_secs(5))
+        .pragma("cache_size", "-8000")
+        .pragma("temp_store", "MEMORY")
+        .pragma("mmap_size", "268435456")
+        .pragma("query_only", "1");
+    Ok(SqlitePoolOptions::new()
+        .max_connections(2)
+        .connect_with(opciones)
+        .await?)
+}
+
 /// Base de datos en memoria, para pruebas.
 pub async fn abrir_en_memoria() -> Resultado<SqlitePool> {
     let opciones = SqliteConnectOptions::from_str("sqlite::memory:")?.foreign_keys(true);
@@ -47,8 +73,13 @@ pub async fn abrir_en_memoria() -> Resultado<SqlitePool> {
 }
 
 async fn migrar(pool: &SqlitePool) -> Resultado<()> {
-    sqlx::migrate!("./migrations").run(pool).await?;
+    MIGRACIONES.run(pool).await?;
     Ok(())
+}
+
+/// Versión de esquema que trae esta versión de la app (la última migración embebida).
+pub fn version_app() -> i64 {
+    MIGRACIONES.iter().map(|m| m.version).max().unwrap_or(0)
 }
 
 /// Número de la última migración aplicada.

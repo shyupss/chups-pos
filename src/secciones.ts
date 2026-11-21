@@ -51,7 +51,6 @@ export const SECCIONES: DatosSeccion[] = [
     nombre: "Reportes",
     tecla: "F6",
     Icono: ChartColumn,
-    pendiente: "Pantalla Hoy, ventas por día o rango, más vendidos, ganancia y stock bajo. Llega en la fase 6.",
   },
   { id: "configuracion", nombre: "Configuración", tecla: "F9", Icono: Settings, abajo: true },
 ];

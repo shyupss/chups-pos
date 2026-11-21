@@ -14,5 +14,6 @@ pub mod inventario;
 pub mod negocio;
 pub mod productos;
 pub mod proveedores;
+pub mod reportes;
 pub mod turnos;
 pub mod ventas;
