@@ -138,7 +138,7 @@ pub struct CuadreEfectivo {
     pub abonos: i64,
     pub ingresos: i64,
     pub retiros: i64,
-    /// Lo que salió en efectivo por anulaciones y devoluciones.
+    /// Lo que salió en efectivo por anulaciones, devoluciones y pagos de fiados anulados.
     pub reembolsos: i64,
     pub esperado: i64,
 }
@@ -156,6 +156,8 @@ pub struct ResumenTurno {
     pub abonos: Vec<TotalMedio>,
     pub anulaciones: Vec<TotalMedio>,
     pub devoluciones: Vec<TotalMedio>,
+    /// Pagos de clientes anulados en el turno: su dinero se devolvió desde aquí.
+    pub pagos_anulados: Vec<TotalMedio>,
     /// Ajuste a la decena de los reembolsos en efectivo (negativo: se devolvió de menos).
     pub redondeo_reembolsos: i64,
     pub movimientos: Vec<MovimientoCaja>,
@@ -205,6 +207,7 @@ async fn armar_resumen(conn: &mut SqliteConnection, fila: FilaTurno) -> Resultad
     let abonos = totales(repo::abonos_por_medio(conn, id).await?);
     let anulaciones = totales(repo::anulaciones_por_medio(conn, id).await?);
     let devoluciones = totales(repo::devoluciones_por_medio(conn, id).await?);
+    let pagos_anulados = totales(repo::pagos_anulados_por_medio(conn, id).await?);
     let movimientos: Vec<MovimientoCaja> = repo::movimientos(conn, id)
         .await?
         .into_iter()
@@ -219,7 +222,9 @@ async fn armar_resumen(conn: &mut SqliteConnection, fila: FilaTurno) -> Resultad
             .sum::<i64>()
     };
     let efectivo = MedioPago::Efectivo;
-    let reembolsos = de(&anulaciones, efectivo).monto + de(&devoluciones, efectivo).monto;
+    let reembolsos = de(&anulaciones, efectivo).monto
+        + de(&devoluciones, efectivo).monto
+        + de(&pagos_anulados, efectivo).monto;
     let mut cuadre = CuadreEfectivo {
         monto_inicial: fila.monto_inicial,
         ventas: de(&vendidas, efectivo).monto,
@@ -246,6 +251,7 @@ async fn armar_resumen(conn: &mut SqliteConnection, fila: FilaTurno) -> Resultad
         abonos,
         anulaciones,
         devoluciones,
+        pagos_anulados,
         movimientos,
         efectivo: cuadre,
         turno: Turno::from(fila),

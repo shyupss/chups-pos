@@ -134,6 +134,7 @@ fn cierre_de_caja_completo_con_sobrante() {
             ],
             devoluciones: vec![medio(MedioPago::Transferencia, 1, 1_000, 0)],
             redondeo_reembolsos: 0,
+            pagos_anulados: vec![],
             movimientos: vec![
                 MovimientoCaja {
                     id: 1,
@@ -189,6 +190,7 @@ fn cierre_de_caja_simple_con_faltante() {
             anulaciones: vec![],
             devoluciones: vec![],
             redondeo_reembolsos: 0,
+            pagos_anulados: vec![],
             movimientos: vec![],
             efectivo: CuadreEfectivo {
                 monto_inicial: 0,
@@ -317,4 +319,113 @@ fn nota_de_devolucion_de_una_fiada() {
         motivo: "Compró de más".into(),
     };
     comparar("devolucion-fiada", &n);
+}
+
+use pos_core::boleta::estado_cuenta::{EstadoCuenta, PagoReciente, Pendiente};
+use pos_core::boleta::pago::{ComprobantePago, VentaAbonada};
+
+#[test]
+fn comprobante_de_pago_en_efectivo_con_redondeo_y_vuelto() {
+    let c = ComprobantePago {
+        negocio: negocio(),
+        numero: 42,
+        fecha: "21-11-2026 18:30".into(),
+        cliente: "María González".into(),
+        monto: 12_345,
+        redondeo: -5,
+        medio: MedioPago::Efectivo,
+        monto_recibido: Some(15_000),
+        vuelto: Some(2_660),
+        ventas: vec![
+            VentaAbonada {
+                folio: 101,
+                abono: 8_200,
+                saldo: 0,
+            },
+            VentaAbonada {
+                folio: 115,
+                abono: 4_145,
+                saldo: 3_855,
+            },
+        ],
+        deuda_restante: 3_855,
+        anulado: None,
+    };
+    comparar("pago-efectivo", &c);
+}
+
+#[test]
+fn comprobante_de_pago_que_salda_la_cuenta() {
+    let c = ComprobantePago {
+        negocio: negocio(),
+        numero: 43,
+        fecha: "21-11-2026 18:45".into(),
+        cliente: "Juan Pérez".into(),
+        monto: 5_000,
+        redondeo: 0,
+        medio: MedioPago::Transferencia,
+        monto_recibido: None,
+        vuelto: None,
+        ventas: vec![VentaAbonada {
+            folio: 120,
+            abono: 5_000,
+            saldo: 0,
+        }],
+        deuda_restante: 0,
+        anulado: None,
+    };
+    comparar("pago-saldado", &c);
+}
+
+#[test]
+fn estado_de_cuenta_con_abonos_y_limite() {
+    let e = EstadoCuenta {
+        negocio: negocio(),
+        id_cliente: 7,
+        cliente: "María González".into(),
+        rut: Some("11.111.111-1".into()),
+        telefono: Some("+56 9 8765 4321".into()),
+        fecha: "21-11-2026 19:00".into(),
+        pendientes: vec![
+            Pendiente {
+                folio: 115,
+                fecha: "02-11-2026 10:15".into(),
+                total: 8_000,
+                descontado: 4_145,
+                saldo: 3_855,
+            },
+            Pendiente {
+                folio: 131,
+                fecha: "18-11-2026 17:40".into(),
+                total: 12_990,
+                descontado: 0,
+                saldo: 12_990,
+            },
+        ],
+        deuda: 16_845,
+        limite: Some(30_000),
+        pagos: vec![PagoReciente {
+            fecha: "21-11-2026 18:30".into(),
+            monto: 12_345,
+            medio: MedioPago::Efectivo,
+        }],
+    };
+    comparar("estado-cuenta", &e);
+}
+
+#[test]
+fn estado_de_cuenta_al_dia() {
+    let e = EstadoCuenta {
+        negocio: negocio(),
+        id_cliente: 8,
+        cliente: "Juan Pérez".into(),
+        rut: None,
+        telefono: None,
+        fecha: "21-11-2026 19:00".into(),
+        pendientes: vec![],
+        deuda: 0,
+        limite: None,
+        pagos: vec![],
+    };
+    comparar("estado-cuenta-al-dia", &e);
 }

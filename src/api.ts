@@ -115,6 +115,8 @@ export interface Config {
   balanzaPrefijos: string;
   balanzaFormato: FormatoBalanza;
   balanzaLargoCodigo: number;
+  /** Días desde la fiada pendiente más antigua a partir de los que la deuda se resalta. */
+  fiadoDiasAlerta: number;
 }
 
 /** Una venta en espera en la lista. El total usa los precios actuales de los productos activos. */
@@ -262,6 +264,8 @@ export interface ResumenTurno {
   abonos: TotalMedio[];
   anulaciones: TotalMedio[];
   devoluciones: TotalMedio[];
+  /** Pagos de fiados anulados en el turno: su dinero salió de aquí. */
+  pagosAnulados: TotalMedio[];
   redondeoReembolsos: number;
   movimientos: MovimientoCaja[];
   efectivo: CuadreEfectivo;
@@ -570,6 +574,85 @@ export interface Cliente {
 
 export type DatosCliente = Pick<Cliente, "nombre" | "telefono" | "rut" | "direccion" | "nota" | "limiteCredito">;
 
+export interface Deudor {
+  id: number;
+  nombre: string;
+  telefono: string | null;
+  limiteCredito: number | null;
+  activo: boolean;
+  deuda: number;
+  /** Fecha (UTC) de la fiada pendiente más antigua. */
+  fiadaMasAntigua: string | null;
+  ultimoPago: string | null;
+}
+
+export interface PaginaDeudores {
+  clientes: Deudor[];
+  /** Solo en la primera página. */
+  totalAdeudado: number | null;
+  clientesConDeuda: number | null;
+}
+
+/** Una venta fiada con lo que se debe de ella. */
+export interface VentaFiada {
+  ventaId: number;
+  folio: number;
+  fechaHora: string;
+  total: number;
+  /** Lo que bajaron sus devoluciones. */
+  devuelto: number;
+  abonado: number;
+  saldo: number;
+  pagadaEn: string | null;
+}
+
+export interface AbonoDePago {
+  ventaId: number;
+  folio: number;
+  monto: number;
+}
+
+export interface Pago {
+  id: number;
+  clienteId: number;
+  fecha: string;
+  /** Lo que bajó la deuda; en efectivo entró monto + redondeo. */
+  monto: number;
+  redondeo: number;
+  montoRecibido: number | null;
+  vuelto: number | null;
+  medioPago: MedioPago;
+  turnoId: number | null;
+  nota: string | null;
+  anuladoEn: string | null;
+  motivoAnulacion: string | null;
+  abonos: AbonoDePago[];
+}
+
+export interface FichaCliente {
+  cliente: Cliente;
+  /** De la más antigua a la más nueva. */
+  pendientes: VentaFiada[];
+  pagadas: VentaFiada[];
+  pagos: Pago[];
+}
+
+/** Sin ventas: de la más antigua a la más nueva; con ventas: primero esas. */
+export interface NuevoPagoCliente {
+  clienteId: number;
+  monto: number;
+  medioPago: Exclude<MedioPago, "fiado">;
+  ventas: number[];
+  /** Solo en efectivo; null = justo. */
+  montoRecibido: number | null;
+  nota: string | null;
+}
+
+export interface PagoRegistrado {
+  pago: Pago;
+  deudaRestante: number;
+}
+
 /** Etiqueta de balanza leída: producto por kg y los gramos de la etiqueta. */
 export interface LecturaBalanza {
   producto: Producto;
@@ -644,6 +727,17 @@ export const api = {
   editarCliente: (id: number, datos: DatosCliente) => invoke<Cliente>("editar_cliente", { id, datos }),
   /** Desactivar solo si no debe nada. */
   cambiarEstadoCliente: (id: number, activo: boolean) => invoke<Cliente>("cambiar_estado_cliente", { id, activo }),
+  listarDeudores: (texto: string, todos: boolean, limite: number, desplazamiento: number) =>
+    invoke<PaginaDeudores>("listar_deudores", { texto, todos, limite, desplazamiento }),
+  fichaCliente: (id: number) => invoke<FichaCliente>("ficha_cliente", { id }),
+  registrarPago: (pago: NuevoPagoCliente) => invoke<PagoRegistrado>("registrar_pago", { pago }),
+  /** Protegido con el PIN de anular venta. */
+  anularPago: (id: number, motivo: string, pin: string | null) =>
+    invoke<PagoRegistrado>("anular_pago", { id, motivo, pin }),
+  imprimirPago: (pagoId: number) => invoke<void>("imprimir_pago", { pagoId }),
+  imprimirEstadoCuenta: (clienteId: number) => invoke<void>("imprimir_estado_cuenta", { clienteId }),
+  guardarEstadoCuentaPdf: (clienteId: number, abrir: boolean) =>
+    invoke<string>("guardar_estado_cuenta_pdf", { clienteId, abrir }),
   listarVentas: (filtros: FiltrosVentas, limite: number, desplazamiento: number) =>
     invoke<PaginaVentas>("listar_ventas", { filtros, limite, desplazamiento }),
   detalleVenta: (id: number) => invoke<DetalleVenta>("detalle_venta", { id }),

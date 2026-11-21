@@ -7,6 +7,7 @@ import { escucharCambioStock } from "./eventos";
 import Configuracion from "./pantallas/Configuracion";
 import Inventario, { type PestanaInventario } from "./pantallas/Inventario";
 import Productos from "./pantallas/Productos";
+import Fiados from "./pantallas/Fiados";
 import Proximamente from "./pantallas/Proximamente";
 import Ventas from "./pantallas/Ventas";
 import { guardarPreferencia, leerPreferencia } from "./preferencias";
@@ -155,6 +156,7 @@ export default function App() {
               onIrAVenta={irAVenta}
             />
           )}
+          {seccion === "fiados" && <Fiados activa onIrAVenta={irAVenta} onImpresion={refrescarImpresora} />}
           {seccion === "ventas" && (
             <Ventas
               activa

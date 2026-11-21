@@ -107,3 +107,35 @@ fn una_boleta_larga_en_carta_usa_varias_paginas() {
         1
     );
 }
+
+#[test]
+fn el_estado_de_cuenta_sale_en_pdf() {
+    use pos_core::boleta::estado_cuenta::{EstadoCuenta, Pendiente};
+    use pos_core::boleta::Documento;
+    let e = EstadoCuenta {
+        negocio: boleta(1).negocio,
+        id_cliente: 7,
+        cliente: "María González".into(),
+        rut: None,
+        telefono: Some("+56 9 8765 4321".into()),
+        fecha: "21-11-2026 19:00".into(),
+        pendientes: (0..40)
+            .map(|i| Pendiente {
+                folio: 100 + i,
+                fecha: "02-11-2026 10:15".into(),
+                total: 1_000,
+                descontado: 0,
+                saldo: 1_000,
+            })
+            .collect(),
+        deuda: 40_000,
+        limite: None,
+        pagos: vec![],
+    };
+    for formato in [FormatoPdf::Ticket, FormatoPdf::Carta] {
+        let bytes = pdf::documento(&e, formato).unwrap();
+        assert!(bytes.starts_with(b"%PDF"), "{formato:?}");
+        assert!(paginas(&bytes) >= 1);
+    }
+    assert_eq!(e.nombre(), "estado-cuenta-000007");
+}

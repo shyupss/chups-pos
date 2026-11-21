@@ -221,3 +221,18 @@ pub async fn devoluciones_por_medio(
     .fetch_all(conn)
     .await?)
 }
+
+/// Pagos de clientes anulados durante el turno, por medio (el dinero salió de este turno).
+pub async fn pagos_anulados_por_medio(
+    conn: &mut SqliteConnection,
+    turno_id: i64,
+) -> Resultado<Vec<PorMedio>> {
+    Ok(sqlx::query_as(
+        "SELECT medio_pago AS medio, COUNT(*) AS cantidad, SUM(monto + redondeo) AS monto,
+                SUM(redondeo) AS redondeo
+         FROM pagos_cliente WHERE turno_anulacion_id = ? GROUP BY medio_pago",
+    )
+    .bind(turno_id)
+    .fetch_all(conn)
+    .await?)
+}

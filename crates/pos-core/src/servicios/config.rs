@@ -101,6 +101,10 @@ pub struct Config {
     pub balanza_formato: FormatoBalanza,
     /// Dígitos del código de producto dentro de la etiqueta (4 a 6).
     pub balanza_largo_codigo: u8,
+
+    // Fiados
+    /// Días desde la venta fiada más antigua a partir de los que la deuda se resalta.
+    pub fiado_dias_alerta: u16,
 }
 
 impl Default for Config {
@@ -124,6 +128,7 @@ impl Default for Config {
             balanza_prefijos: "20-29".into(),
             balanza_formato: FormatoBalanza::Peso,
             balanza_largo_codigo: 5,
+            fiado_dias_alerta: 30,
         }
     }
 }
@@ -224,6 +229,7 @@ const BALANZA_ACTIVA: &str = "balanza_activa";
 const BALANZA_PREFIJOS: &str = "balanza_prefijos";
 const BALANZA_FORMATO: &str = "balanza_formato";
 const BALANZA_LARGO_CODIGO: &str = "balanza_largo_codigo";
+const FIADO_DIAS_ALERTA: &str = "fiado_dias_alerta";
 // Seguridad: fuera de `Config`.
 const PIN_HASH: &str = "pin_hash";
 const RECUPERACION_HASH: &str = "pin_recuperacion_hash";
@@ -337,6 +343,10 @@ impl Config {
                 .and_then(|v| v.parse().ok())
                 .filter(|n| (4..=6).contains(n))
                 .unwrap_or(d.balanza_largo_codigo),
+            fiado_dias_alerta: texto(FIADO_DIAS_ALERTA)
+                .and_then(|v| v.parse().ok())
+                .filter(|n| (1..=365).contains(n))
+                .unwrap_or(d.fiado_dias_alerta),
         }
     }
 
@@ -360,6 +370,7 @@ impl Config {
             (BALANZA_PREFIJOS, self.balanza_prefijos.clone()),
             (BALANZA_FORMATO, self.balanza_formato.como_texto().into()),
             (BALANZA_LARGO_CODIGO, self.balanza_largo_codigo.to_string()),
+            (FIADO_DIAS_ALERTA, self.fiado_dias_alerta.to_string()),
         ]
     }
 
@@ -376,6 +387,9 @@ impl Config {
         }
         if !(10..=500).contains(&self.cajon_pulso_ms) {
             return validacion("El pulso del cajón debe durar entre 10 y 500 ms");
+        }
+        if !(1..=365).contains(&self.fiado_dias_alerta) {
+            return validacion("La alerta de fiados debe estar entre 1 y 365 días");
         }
         if !(4..=6).contains(&self.balanza_largo_codigo) {
             return validacion(

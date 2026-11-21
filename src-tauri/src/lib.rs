@@ -120,6 +120,13 @@ pub fn run() {
             comandos::clientes::crear_cliente,
             comandos::clientes::editar_cliente,
             comandos::clientes::cambiar_estado_cliente,
+            comandos::fiados::listar_deudores,
+            comandos::fiados::ficha_cliente,
+            comandos::fiados::registrar_pago,
+            comandos::fiados::anular_pago,
+            comandos::fiados::imprimir_pago,
+            comandos::fiados::imprimir_estado_cuenta,
+            comandos::fiados::guardar_estado_cuenta_pdf,
         ])
         .run(tauri::generate_context!())
         .expect("error al iniciar CHUPS POS");

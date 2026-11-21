@@ -296,7 +296,7 @@ function ResumenVentas({ r }: { r: ResumenTurno }) {
         <Par etiqueta={`Total (${r.cantidadVentas})`} valor={pesos(r.totalVentas)} fuerte />
         {r.redondeoVentas !== 0 && <Par etiqueta="Redondeo del efectivo" valor={pesosConSigno(r.redondeoVentas)} tenue />}
       </dl>
-      {(r.anulaciones.length > 0 || r.devoluciones.length > 0) && (
+      {(r.anulaciones.length > 0 || r.devoluciones.length > 0 || r.pagosAnulados.length > 0) && (
         <>
           <Titulo>Anulaciones y devoluciones</Titulo>
           <dl className="space-y-1 tabular-nums">
@@ -305,6 +305,9 @@ function ResumenVentas({ r }: { r: ResumenTurno }) {
             ))}
             {r.devoluciones.map((t) => (
               <Par key={`d-${t.medio}`} etiqueta={`Devoluciones · ${reembolso(t.medio)} (${t.cantidad})`} valor={pesosConSigno(-t.monto)} />
+            ))}
+            {r.pagosAnulados.map((t) => (
+              <Par key={`p-${t.medio}`} etiqueta={`Pagos de fiados anulados · ${reembolso(t.medio)} (${t.cantidad})`} valor={pesosConSigno(-t.monto)} />
             ))}
           </dl>
         </>

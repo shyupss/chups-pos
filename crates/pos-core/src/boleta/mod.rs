@@ -11,7 +11,9 @@ pub mod anulacion;
 pub mod cierre;
 pub mod devolucion;
 pub mod escpos;
+pub mod estado_cuenta;
 pub mod formato;
+pub mod pago;
 pub mod pdf;
 pub mod texto;
 
