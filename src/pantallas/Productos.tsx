@@ -1,8 +1,9 @@
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { useCallback, useEffect, useRef, useState } from "react";
-import { api, textoError, type Producto } from "../api";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { api, textoError, type Categoria, type FiltroCategoria, type Producto } from "../api";
 import FormularioProducto from "../componentes/FormularioProducto";
-import { pesos } from "../formato";
+import PanelCategorias from "../componentes/PanelCategorias";
+import { cantidad, pesos } from "../formato";
 
 interface Props {
   codigoNuevo: string | null;
@@ -11,24 +12,56 @@ interface Props {
 
 const POR_PAGINA = 100;
 const ALTO_FILA = 40;
+// Columnas según el ancho de la lista (container queries): con el panel abierto o la ventana
+// angosta se ocultan primero el código y luego la categoría, para que nada se corte.
+const COLUMNAS =
+  "grid-cols-[minmax(0,1fr)_6.5rem_6.5rem] @md:grid-cols-[minmax(0,1fr)_7rem_6.5rem_6.5rem] @xl:grid-cols-[minmax(0,1fr)_7rem_8rem_6.5rem_6.5rem]";
+const COL_CATEGORIA = "hidden truncate @md:block";
+const COL_CODIGO = "hidden truncate @xl:block";
 
-type Edicion = { tipo: "nuevo"; codigo?: string } | { tipo: "editar"; producto: Producto } | null;
+type Panel =
+  | { tipo: "nuevo"; codigo?: string }
+  | { tipo: "editar"; producto: Producto }
+  | { tipo: "categorias" }
+  | null;
+
+/** Valor del <select> de categoría: "todas", "sin" o el id como texto. */
+const aFiltro = (valor: string): FiltroCategoria => (valor === "todas" || valor === "sin" ? valor : Number(valor));
 
 export default function Productos({ codigoNuevo, onCodigoUsado }: Props) {
   const [texto, setTexto] = useState("");
   const [busqueda, setBusqueda] = useState("");
   const [inactivos, setInactivos] = useState(false);
+  const [filtro, setFiltro] = useState<FiltroCategoria>("todas");
+  const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [filas, setFilas] = useState<Producto[]>([]);
   const [hayMas, setHayMas] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [edicion, setEdicion] = useState<Edicion>(null);
+  const [panel, setPanel] = useState<Panel>(null);
   const cargando = useRef(false);
   const consultaActual = useRef(0);
   const contenedor = useRef<HTMLDivElement>(null);
 
+  const nombreCategoria = useMemo(() => new Map(categorias.map((c) => [c.id, c.nombre])), [categorias]);
+
+  const cargarCategorias = useCallback(async () => {
+    try {
+      const lista = await api.listarCategorias();
+      setCategorias(lista);
+      // Si se eliminó la categoría del filtro, vuelve a "Todas".
+      setFiltro((f) => (typeof f === "number" && !lista.some((c) => c.id === f) ? "todas" : f));
+    } catch (e) {
+      setError(textoError(e));
+    }
+  }, []);
+
+  useEffect(() => {
+    void cargarCategorias();
+  }, [cargarCategorias]);
+
   useEffect(() => {
     if (codigoNuevo) {
-      setEdicion({ tipo: "nuevo", codigo: codigoNuevo });
+      setPanel({ tipo: "nuevo", codigo: codigoNuevo });
       onCodigoUsado();
     }
   }, [codigoNuevo, onCodigoUsado]);
@@ -44,7 +77,7 @@ export default function Productos({ codigoNuevo, onCodigoUsado }: Props) {
       const consulta = desde === 0 ? ++consultaActual.current : consultaActual.current;
       cargando.current = true;
       try {
-        const pagina = await api.buscarProductos(busqueda, inactivos, POR_PAGINA, desde);
+        const pagina = await api.buscarProductos(busqueda, inactivos, POR_PAGINA, desde, filtro);
         if (consulta !== consultaActual.current) return; // llegó tarde, ya se buscó otra cosa
         setFilas((f) => (desde === 0 ? pagina : [...f, ...pagina]));
         setHayMas(pagina.length === POR_PAGINA);
@@ -55,7 +88,7 @@ export default function Productos({ codigoNuevo, onCodigoUsado }: Props) {
         cargando.current = false;
       }
     },
-    [busqueda, inactivos],
+    [busqueda, inactivos, filtro],
   );
 
   useEffect(() => {
@@ -87,26 +120,48 @@ export default function Productos({ codigoNuevo, onCodigoUsado }: Props) {
       copia[i] = p;
       return copia;
     });
-    setEdicion({ tipo: "editar", producto: p });
+    setPanel({ tipo: "editar", producto: p });
+    // Los contadores de productos por categoría pueden haber cambiado.
+    void cargarCategorias();
   };
 
   return (
     <div className="flex h-full">
-      <section className="flex min-w-0 flex-1 flex-col p-6">
-        <div className="flex items-center gap-3">
+      <section className="@container flex min-w-0 flex-1 flex-col p-6">
+        <div className="flex flex-wrap items-center gap-3">
           <input
             value={texto}
             onChange={(e) => setTexto(e.target.value)}
             placeholder="Buscar por nombre o código"
-            className="h-10 flex-1 rounded-lg border border-linea bg-superficie px-4 outline-none focus:border-texto"
+            className="h-10 min-w-48 flex-1 rounded-lg border border-linea bg-superficie px-4 outline-none focus:border-texto"
             autoFocus
           />
+          <select
+            value={String(filtro)}
+            onChange={(e) => setFiltro(aFiltro(e.target.value))}
+            aria-label="Filtrar por categoría"
+            className="h-10 max-w-48 rounded-lg border border-linea bg-superficie px-3 outline-none focus:border-texto"
+          >
+            <option value="todas">Todas las categorías</option>
+            {categorias.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.nombre}
+              </option>
+            ))}
+            <option value="sin">Sin categoría</option>
+          </select>
+          <button
+            onClick={() => setPanel({ tipo: "categorias" })}
+            className="h-10 rounded-lg border border-linea px-4 hover:bg-superficie"
+          >
+            Categorías
+          </button>
           <label className="flex items-center gap-2 text-tenue">
             <input type="checkbox" checked={inactivos} onChange={(e) => setInactivos(e.target.checked)} />
             Ver desactivados
           </label>
           <button
-            onClick={() => setEdicion({ tipo: "nuevo" })}
+            onClick={() => setPanel({ tipo: "nuevo" })}
             className="h-10 rounded-lg bg-acento px-4 font-semibold text-sobre-acento"
           >
             Nuevo producto
@@ -115,37 +170,48 @@ export default function Productos({ codigoNuevo, onCodigoUsado }: Props) {
 
         {error && <p className="mt-3 rounded-lg bg-peligro/10 px-3 py-2 text-peligro">{error}</p>}
 
-        <div className="mt-4 grid grid-cols-[1fr_10rem_7rem_5rem] gap-2 px-4 text-xs font-medium uppercase text-tenue">
+        <div className={`mt-4 grid ${COLUMNAS} gap-2 px-4 text-xs font-medium uppercase text-tenue`}>
           <span>Nombre</span>
-          <span>Código</span>
+          <span className={COL_CATEGORIA}>Categoría</span>
+          <span className={COL_CODIGO}>Código</span>
           <span className="text-right">Precio</span>
           <span className="text-right">Stock</span>
         </div>
         <div ref={contenedor} className="mt-1 min-h-0 flex-1 overflow-auto rounded-lg border border-linea bg-superficie tabular-nums">
           {filas.length === 0 ? (
             <p className="p-8 text-center text-tenue">
-              {busqueda ? "Sin resultados" : "Todavía no hay productos. Crea el primero con \"Nuevo producto\"."}
+              {busqueda || filtro !== "todas"
+                ? "Sin resultados"
+                : "Todavía no hay productos. Crea el primero con \"Nuevo producto\"."}
             </p>
           ) : (
             <div style={{ height: virtual.getTotalSize(), position: "relative" }}>
               {visibles.map((v) => {
                 const p = filas[v.index];
-                const bajo = p.stockMinimo > 0 && p.stock <= p.stockMinimo;
-                const seleccionado = edicion?.tipo === "editar" && edicion.producto.id === p.id;
+                const bajo = p.stockMinimoMil > 0 && p.stockMil <= p.stockMinimoMil;
+                const seleccionado = panel?.tipo === "editar" && panel.producto.id === p.id;
                 return (
                   <button
                     key={p.id}
-                    onClick={() => setEdicion({ tipo: "editar", producto: p })}
+                    onClick={() => setPanel({ tipo: "editar", producto: p })}
                     style={{ position: "absolute", top: 0, left: 0, width: "100%", height: ALTO_FILA, transform: `translateY(${v.start}px)` }}
-                    className={`grid grid-cols-[1fr_10rem_7rem_5rem] items-center gap-2 border-b border-linea px-4 text-left ${
+                    className={`grid ${COLUMNAS} items-center gap-2 border-b border-linea px-4 text-left ${
                       seleccionado ? "bg-linea/70" : "hover:bg-fondo"
                     } ${p.activo ? "" : "text-tenue line-through"}`}
                   >
-                    <span className="truncate">{p.nombre}</span>
-                    <span className="truncate text-tenue">{p.codigoBarras ?? "—"}</span>
-                    <span className="text-right">{pesos(p.precioVenta)}</span>
-                    <span className={`text-right ${bajo || p.stock < 0 ? "font-semibold text-peligro" : ""}`}>
-                      {p.stock}
+                    <span className="truncate" title={p.nombre}>
+                      {p.nombre}
+                    </span>
+                    <span className={`${COL_CATEGORIA} text-tenue`}>
+                      {p.categoriaId === null ? "—" : (nombreCategoria.get(p.categoriaId) ?? "—")}
+                    </span>
+                    <span className={`${COL_CODIGO} text-tenue`}>{p.codigoBarras ?? "—"}</span>
+                    <span className="text-right">
+                      {pesos(p.precioVenta)}
+                      {p.unidad === "kg" && <span className="text-tenue">/kg</span>}
+                    </span>
+                    <span className={`text-right ${bajo || p.stockMil < 0 ? "font-semibold text-peligro" : ""}`}>
+                      {cantidad(p.stockMil, p.unidad)}
                     </span>
                   </button>
                 );
@@ -155,15 +221,21 @@ export default function Productos({ codigoNuevo, onCodigoUsado }: Props) {
         </div>
       </section>
 
-      {edicion && (
+      {panel && (
         <aside className="w-96 shrink-0 border-l border-linea bg-superficie">
-          <FormularioProducto
-            key={edicion.tipo === "editar" ? edicion.producto.id : `nuevo-${edicion.codigo ?? ""}`}
-            producto={edicion.tipo === "editar" ? edicion.producto : null}
-            codigoInicial={edicion.tipo === "nuevo" ? edicion.codigo : undefined}
-            onGuardado={alGuardar}
-            onCerrar={() => setEdicion(null)}
-          />
+          {panel.tipo === "categorias" ? (
+            <PanelCategorias categorias={categorias} onCambio={cargarCategorias} onCerrar={() => setPanel(null)} />
+          ) : (
+            <FormularioProducto
+              key={panel.tipo === "editar" ? panel.producto.id : `nuevo-${panel.codigo ?? ""}`}
+              producto={panel.tipo === "editar" ? panel.producto : null}
+              codigoInicial={panel.tipo === "nuevo" ? panel.codigo : undefined}
+              categorias={categorias}
+              categoriaInicial={typeof filtro === "number" ? filtro : null}
+              onGuardado={alGuardar}
+              onCerrar={() => setPanel(null)}
+            />
+          )}
         </aside>
       )}
     </div>

@@ -1,5 +1,6 @@
 mod comun;
 
+use pos_core::repositorios::productos::FiltroCategoria::Todas;
 use pos_core::servicios::productos::{self as srv};
 use pos_core::{db, Error};
 
@@ -8,15 +9,15 @@ async fn crea_con_stock_inicial_y_movimiento() {
     let pool = db::abrir_en_memoria().await.unwrap();
     let p = comun::crear(&pool, "780123", "Leche entera 1L", 1190, 24).await;
 
-    assert_eq!(p.stock, 24);
+    assert_eq!(p.stock_mil, 24_000);
     assert!(p.activo);
     let (tipo, cantidad): (String, i64) =
-        sqlx::query_as("SELECT tipo, cantidad FROM movimientos_stock WHERE producto_id = ?")
+        sqlx::query_as("SELECT tipo, cantidad_mil FROM movimientos_stock WHERE producto_id = ?")
             .bind(p.id)
             .fetch_one(&pool)
             .await
             .unwrap();
-    assert_eq!((tipo.as_str(), cantidad), ("ajuste", 24));
+    assert_eq!((tipo.as_str(), cantidad), ("ajuste", 24_000));
 }
 
 #[tokio::test]
@@ -40,12 +41,12 @@ async fn editar_precio_deja_historial() {
     let p = comun::crear(&pool, "222", "Arroz 1kg", 1500, 10).await;
 
     let mut d = comun::datos(Some("222"), "Arroz grado 1, 1kg", 1690, 999);
-    d.stock_minimo = 5;
+    d.stock_minimo_mil = 5000;
     let editado = srv::editar(&pool, p.id, &d).await.unwrap();
 
     assert_eq!(editado.nombre, "Arroz grado 1, 1kg");
     assert_eq!(editado.precio_venta, 1690);
-    assert_eq!(editado.stock, 10, "editar no toca el stock");
+    assert_eq!(editado.stock_mil, 10_000, "editar no toca el stock");
     let (antes, despues): (i64, i64) = sqlx::query_as(
         "SELECT precio_anterior, precio_nuevo FROM historial_precios WHERE producto_id = ?",
     )
@@ -71,19 +72,37 @@ async fn busca_por_codigo_nombre_y_respeta_inactivos() {
         v.into_iter().map(|p| p.nombre).collect::<Vec<_>>()
     };
     assert_eq!(
-        nombres(srv::buscar(&pool, "coca", false, 50, 0).await.unwrap()),
+        nombres(
+            srv::buscar(&pool, "coca", false, Todas, 50, 0)
+                .await
+                .unwrap()
+        ),
         ["Coca-Cola 1.5L"]
     );
     assert_eq!(
-        nombres(srv::buscar(&pool, "te sup", false, 50, 0).await.unwrap()),
+        nombres(
+            srv::buscar(&pool, "te sup", false, Todas, 50, 0)
+                .await
+                .unwrap()
+        ),
         ["Té Supremo 20 bolsitas"]
     );
     assert_eq!(
-        nombres(srv::buscar(&pool, "7802", false, 50, 0).await.unwrap()),
+        nombres(
+            srv::buscar(&pool, "7802", false, Todas, 50, 0)
+                .await
+                .unwrap()
+        ),
         ["Té Supremo 20 bolsitas"]
     );
-    assert_eq!(srv::buscar(&pool, "", false, 50, 0).await.unwrap().len(), 2);
-    assert!(srv::buscar(&pool, "\"*", false, 50, 0)
+    assert_eq!(
+        srv::buscar(&pool, "", false, Todas, 50, 0)
+            .await
+            .unwrap()
+            .len(),
+        2
+    );
+    assert!(srv::buscar(&pool, "\"*", false, Todas, 50, 0)
         .await
         .unwrap()
         .is_empty());
@@ -94,14 +113,17 @@ async fn busca_por_codigo_nombre_y_respeta_inactivos() {
         .unwrap()
         .is_none());
     assert_eq!(
-        srv::buscar(&pool, "coca", false, 50, 0)
+        srv::buscar(&pool, "coca", false, Todas, 50, 0)
             .await
             .unwrap()
             .len(),
         0
     );
     assert_eq!(
-        srv::buscar(&pool, "coca", true, 50, 0).await.unwrap().len(),
+        srv::buscar(&pool, "coca", true, Todas, 50, 0)
+            .await
+            .unwrap()
+            .len(),
         1
     );
 }
@@ -119,8 +141,8 @@ async fn pagina_resultados() {
         )
         .await;
     }
-    let primera = srv::buscar(&pool, "", false, 10, 0).await.unwrap();
-    let tercera = srv::buscar(&pool, "", false, 10, 20).await.unwrap();
+    let primera = srv::buscar(&pool, "", false, Todas, 10, 0).await.unwrap();
+    let tercera = srv::buscar(&pool, "", false, Todas, 10, 20).await.unwrap();
     assert_eq!(primera.len(), 10);
     assert_eq!(primera[0].nombre, "Producto 000");
     assert_eq!(tercera.len(), 5);

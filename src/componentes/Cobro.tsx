@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import { api, textoError, type MedioPago, type NuevaVenta, type VentaConfirmada } from "../api";
-import { aEntero, pesos } from "../formato";
+import { aEntero, pesos, redondeoEfectivo } from "../formato";
 
 interface Props {
   items: NuevaVenta["items"];
   totalEstimado: number;
+  /** Si el efectivo se redondea a la decena (config redondeo_efectivo). */
+  redondeoActivo: boolean;
   onCancelar: () => void;
   onConfirmada: (venta: VentaConfirmada) => void;
 }
@@ -19,16 +21,19 @@ const MEDIOS: { id: MedioPago; nombre: string; tecla: string }[] = [
 
 const BILLETES = [1000, 2000, 5000, 10000, 20000];
 
-export default function Cobro({ items, totalEstimado, onCancelar, onConfirmada }: Props) {
+export default function Cobro({ items, totalEstimado, redondeoActivo, onCancelar, onConfirmada }: Props) {
   const [medio, setMedio] = useState<MedioPago>("efectivo");
   const [recibido, setRecibido] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
   const campoRecibido = useRef<HTMLInputElement>(null);
 
+  // Solo para mostrar: el redondeo que vale lo aplica Rust al confirmar, con la misma regla.
+  const redondeo = medio === "efectivo" && redondeoActivo ? redondeoEfectivo(totalEstimado) : 0;
+  const aPagar = totalEstimado + redondeo;
   const montoRecibido = medio === "efectivo" ? aEntero(recibido) : null;
-  const vuelto = montoRecibido !== null ? montoRecibido - totalEstimado : 0;
-  const falta = medio === "efectivo" && montoRecibido !== null && montoRecibido < totalEstimado;
+  const vuelto = montoRecibido !== null ? montoRecibido - aPagar : 0;
+  const falta = medio === "efectivo" && montoRecibido !== null && montoRecibido < aPagar;
 
   useEffect(() => {
     if (medio === "efectivo") campoRecibido.current?.focus();
@@ -43,7 +48,7 @@ export default function Cobro({ items, totalEstimado, onCancelar, onConfirmada }
         items,
         medioPago: medio,
         // Vacío en efectivo = pagó justo.
-        montoRecibido: medio === "efectivo" ? (montoRecibido ?? totalEstimado) : null,
+        montoRecibido: medio === "efectivo" ? (montoRecibido ?? aPagar) : null,
         descuento: 0,
         clienteId: null,
       });
@@ -74,8 +79,23 @@ export default function Cobro({ items, totalEstimado, onCancelar, onConfirmada }
       <div className="w-[28rem] rounded-lg border border-linea bg-superficie p-6 shadow-xl">
         <div className="flex items-baseline justify-between">
           <h2 className="text-lg font-semibold">Cobrar</h2>
-          <span className="text-3xl font-semibold tabular-nums">{pesos(totalEstimado)}</span>
+          <span className="text-3xl font-semibold tabular-nums">{pesos(aPagar)}</span>
         </div>
+        {redondeo !== 0 && (
+          <dl className="mt-1 space-y-0.5 text-tenue tabular-nums">
+            <div className="flex justify-between">
+              <dt>Total productos</dt>
+              <dd>{pesos(totalEstimado)}</dd>
+            </div>
+            <div className="flex justify-between">
+              <dt>Redondeo</dt>
+              <dd>
+                {redondeo > 0 ? "+" : "−"}
+                {pesos(Math.abs(redondeo))}
+              </dd>
+            </div>
+          </dl>
+        )}
 
         <div className="mt-4 grid grid-cols-4 gap-2">
           {MEDIOS.map((m) => (
@@ -103,10 +123,10 @@ export default function Cobro({ items, totalEstimado, onCancelar, onConfirmada }
               onChange={(e) => setRecibido(e.target.value)}
               className="mt-1 h-13 w-full rounded-lg border border-linea bg-fondo px-4 text-2xl tabular-nums outline-none focus:border-texto"
               inputMode="numeric"
-              placeholder={pesos(totalEstimado)}
+              placeholder={pesos(aPagar)}
             />
             <div className="mt-2 flex gap-2">
-              {BILLETES.filter((b) => b >= totalEstimado || b === 20000).map((b) => (
+              {BILLETES.filter((b) => b >= aPagar || b === 20000).map((b) => (
                 <button
                   key={b}
                   onClick={() => setRecibido(String(b))}

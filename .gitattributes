@@ -1,0 +1,6 @@
+# sqlx valida cada migración aplicada con el checksum de sus bytes, así que los saltos de línea
+# no pueden depender de cómo hace el checkout cada máquina (core.autocrlf).
+# Las migraciones nuevas van con LF. La 0001 quedó aplicada con CRLF en las bases existentes
+# (builds de Windows), así que se fija en CRLF para que esas bases sigan abriendo.
+crates/pos-core/migrations/*.sql text eol=lf
+crates/pos-core/migrations/0001_esquema_inicial.sql text eol=crlf

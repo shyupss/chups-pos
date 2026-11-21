@@ -28,6 +28,9 @@ impl From<sqlx::Error> for Error {
             if db.is_unique_violation() && db.message().contains("codigo_barras") {
                 return Error::Conflicto("Ya existe un producto con ese código de barras".into());
             }
+            if db.is_unique_violation() && db.message().contains("categorias.nombre") {
+                return Error::Conflicto("Ya existe una categoría con ese nombre".into());
+            }
         }
         Error::BaseDatos(e)
     }

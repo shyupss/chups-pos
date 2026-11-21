@@ -1,7 +1,8 @@
-import { Monitor, Moon, Sun, type LucideIcon } from "lucide-react";
+import { Monitor, Moon, Sun } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
-import { api, type EstadoSistema } from "../api";
+import { api, textoError, type EstadoSistema } from "../api";
 import type { ModoBarra } from "../componentes/BarraLateral";
+import Opciones, { type Opcion } from "../componentes/Opciones";
 import { useTema, type Tema } from "../hooks/useTema";
 
 interface Props {
@@ -19,6 +20,11 @@ const MODOS_BARRA: Opcion<ModoBarra>[] = [
   { id: "auto", nombre: "Automática" },
   { id: "expandida", nombre: "Expandida" },
   { id: "colapsada", nombre: "Colapsada" },
+];
+
+const SI_NO: Opcion<"si" | "no">[] = [
+  { id: "si", nombre: "Activado" },
+  { id: "no", nombre: "Desactivado" },
 ];
 
 export default function Configuracion({ modoBarra, onModoBarra }: Props) {
@@ -44,6 +50,10 @@ export default function Configuracion({ modoBarra, onModoBarra }: Props) {
               />
             </Fila>
           </div>
+        </Bloque>
+
+        <Bloque titulo="Caja">
+          <RedondeoEfectivo />
         </Bloque>
 
         <Bloque titulo="Negocio" fase={3}>
@@ -97,46 +107,46 @@ function Fila({ etiqueta, ayuda, children }: { etiqueta: string; ayuda: string; 
   );
 }
 
-interface Opcion<T extends string> {
-  id: T;
-  nombre: string;
-  Icono?: LucideIcon;
-}
+/** Interruptor de la clave redondeo_efectivo de la tabla config. */
+function RedondeoEfectivo() {
+  const [activo, setActivo] = useState<boolean | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-/** Grupo de radios nativos con aspecto de interruptor: las flechas cambian la opción. */
-function Opciones<T extends string>({
-  nombre,
-  etiqueta,
-  opciones,
-  valor,
-  onCambiar,
-}: {
-  nombre: string;
-  etiqueta: string;
-  opciones: Opcion<T>[];
-  valor: T;
-  onCambiar: (valor: T) => void;
-}) {
+  useEffect(() => {
+    api
+      .configCaja()
+      .then((c) => setActivo(c.redondeoEfectivo))
+      .catch((e) => setError(textoError(e)));
+  }, []);
+
+  const cambiar = (valor: "si" | "no") => {
+    const nuevo = valor === "si";
+    setActivo(nuevo);
+    api.cambiarRedondeoEfectivo(nuevo).catch((e) => {
+      setActivo(!nuevo);
+      setError(textoError(e));
+    });
+  };
+
   return (
-    <div role="radiogroup" aria-label={etiqueta} className="inline-flex rounded-lg border border-linea bg-fondo p-0.5">
-      {opciones.map(({ id, nombre: texto, Icono }) => (
-        <label
-          key={id}
-          className="flex h-8 cursor-pointer items-center gap-2 rounded-md px-3 text-tenue hover:text-texto has-checked:bg-texto has-checked:font-medium has-checked:text-superficie has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-texto"
-        >
-          <input
-            type="radio"
-            name={nombre}
-            value={id}
-            checked={valor === id}
-            onChange={() => onCambiar(id)}
-            className="sr-only"
-          />
-          {Icono && <Icono size={16} aria-hidden />}
-          {texto}
-        </label>
-      ))}
-    </div>
+    <Fila
+      etiqueta="Redondeo del efectivo"
+      ayuda="Cobra en efectivo a la decena: 1 a 5 pesos hacia abajo, 6 a 9 hacia arriba. Tarjetas y transferencias no se redondean."
+    >
+      {error ? (
+        <span className="text-peligro">{error}</span>
+      ) : activo === null ? (
+        <span className="text-tenue">Cargando…</span>
+      ) : (
+        <Opciones
+          nombre="redondeo"
+          etiqueta="Redondeo del efectivo"
+          opciones={SI_NO}
+          valor={activo ? "si" : "no"}
+          onCambiar={cambiar}
+        />
+      )}
+    </Fila>
   );
 }
 

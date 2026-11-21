@@ -5,6 +5,8 @@ use crate::Resultado;
 pub struct NuevaCabecera<'a> {
     pub subtotal: i64,
     pub descuento: i64,
+    /// Ajuste del efectivo a la decena; puede ser negativo.
+    pub redondeo: i64,
     pub total: i64,
     pub medio_pago: &'a str,
     pub monto_recibido: Option<i64>,
@@ -27,12 +29,14 @@ pub async fn insertar_cabecera(
 ) -> Resultado<CabeceraGuardada> {
     let (id, folio, fecha_hora): (i64, i64, String) = sqlx::query_as(
         "INSERT INTO ventas
-            (folio, subtotal, descuento, total, medio_pago, monto_recibido, vuelto, estado, cliente_id)
-         VALUES ((SELECT COALESCE(MAX(folio), 0) + 1 FROM ventas), ?, ?, ?, ?, ?, ?, ?, ?)
+            (folio, subtotal, descuento, redondeo, total, medio_pago, monto_recibido, vuelto,
+             estado, cliente_id)
+         VALUES ((SELECT COALESCE(MAX(folio), 0) + 1 FROM ventas), ?, ?, ?, ?, ?, ?, ?, ?, ?)
          RETURNING id, folio, fecha_hora",
     )
     .bind(v.subtotal)
     .bind(v.descuento)
+    .bind(v.redondeo)
     .bind(v.total)
     .bind(v.medio_pago)
     .bind(v.monto_recibido)
@@ -54,18 +58,18 @@ pub async fn insertar_item(
     producto_id: i64,
     nombre: &str,
     precio_unitario: i64,
-    cantidad: i64,
+    cantidad_mil: i64,
     subtotal: i64,
 ) -> Resultado<()> {
     sqlx::query(
-        "INSERT INTO venta_items (venta_id, producto_id, nombre, precio_unitario, cantidad, subtotal)
+        "INSERT INTO venta_items (venta_id, producto_id, nombre, precio_unitario, cantidad_mil, subtotal)
          VALUES (?, ?, ?, ?, ?, ?)",
     )
     .bind(venta_id)
     .bind(producto_id)
     .bind(nombre)
     .bind(precio_unitario)
-    .bind(cantidad)
+    .bind(cantidad_mil)
     .bind(subtotal)
     .execute(conn)
     .await?;

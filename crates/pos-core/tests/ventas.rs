@@ -7,9 +7,9 @@ fn venta(items: &[(i64, i64)], medio: MedioPago, recibido: Option<i64>) -> Nueva
     NuevaVenta {
         items: items
             .iter()
-            .map(|&(producto_id, cantidad)| ItemPedido {
+            .map(|&(producto_id, unidades)| ItemPedido {
                 producto_id,
-                cantidad,
+                cantidad_mil: unidades * 1000,
             })
             .collect(),
         medio_pago: medio,
@@ -42,9 +42,9 @@ async fn venta_en_efectivo_calcula_vuelto_y_descuenta_stock() {
     assert_eq!(v.vuelto, Some(5000 - 3280));
     assert_eq!(v.lineas.len(), 2);
     assert_eq!(v.lineas[0].nombre, "Pan");
-    assert_eq!(v.lineas[0].cantidad, 6);
-    assert_eq!(v.lineas[0].stock_resultante, 94);
-    assert_eq!(v.lineas[1].stock_resultante, 8);
+    assert_eq!(v.lineas[0].cantidad_mil, 6000);
+    assert_eq!(v.lineas[0].stock_resultante_mil, 94_000);
+    assert_eq!(v.lineas[1].stock_resultante_mil, 8000);
 
     let movimientos: i64 = sqlx::query_scalar(
         "SELECT COUNT(*) FROM movimientos_stock WHERE tipo = 'venta' AND venta_id = ?",
@@ -74,7 +74,7 @@ async fn folios_son_correlativos_y_tarjeta_no_da_vuelto() {
     assert_eq!((a.folio, b.folio), (1, 2));
     assert_eq!((b.monto_recibido, b.vuelto), (Some(1000), Some(0)));
     // Sin stock previo, el stock queda negativo en vez de bloquear la venta.
-    assert_eq!(b.lineas[0].stock_resultante, -2);
+    assert_eq!(b.lineas[0].stock_resultante_mil, -2000);
 }
 
 #[tokio::test]
@@ -82,7 +82,7 @@ async fn usa_el_precio_de_la_base_no_el_de_la_interfaz() {
     let pool = db::abrir_en_memoria().await.unwrap();
     let p = comun::crear(&pool, "1", "Queso", 3000, 5).await;
     let mut d = comun::datos(Some("1"), "Queso", 3500, 0);
-    d.stock_minimo = 0;
+    d.stock_minimo_mil = 0;
     pos_core::servicios::productos::editar(&pool, p.id, &d)
         .await
         .unwrap();
@@ -121,12 +121,12 @@ async fn rechazos_no_dejan_nada_guardado() {
         .fetch_one(&pool)
         .await
         .unwrap();
-    let stock: i64 = sqlx::query_scalar("SELECT stock FROM productos WHERE id = ?")
+    let stock: i64 = sqlx::query_scalar("SELECT stock_mil FROM productos WHERE id = ?")
         .bind(p.id)
         .fetch_one(&pool)
         .await
         .unwrap();
-    assert_eq!((ventas_guardadas, stock), (0, 3));
+    assert_eq!((ventas_guardadas, stock), (0, 3000));
 }
 
 #[tokio::test]

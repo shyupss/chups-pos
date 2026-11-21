@@ -16,6 +16,17 @@ o PDF. La prioridad es el rendimiento: debe correr sin lag en PCs modestos.
 Reglas del proyecto:
 
 - Montos en pesos como enteros, nunca `float`.
+- Cantidades y stocks en milésimas, también enteros: 1 unidad = 1000 y 0,532 kg = 532. Las columnas
+  terminan en `_mil` (`stock_mil`, `cantidad_mil`). En productos por kg, `precio_venta` es el precio por
+  kilo. El subtotal de una línea es `(precio × cantidad_mil + 500) / 1000` con división entera, o sea,
+  redondeado al peso más cercano. En la interfaz los decimales solo aparecen al mostrar o al leer lo
+  que escribe el usuario.
+- Redondeo del efectivo: como en Chile no hay monedas de 1 ni 5 pesos, el total que se paga en efectivo
+  se redondea a la decena. Si termina en 1 a 5 baja y si termina en 6 a 9 sube (1.224 → 1.220,
+  1.225 → 1.220, 1.226 → 1.230). Lo aplica el servicio de ventas, no la vista, y queda en
+  `ventas.redondeo` (puede ser negativo), con total = subtotal − descuento + redondeo. Débito, crédito y
+  transferencia no se redondean. Se activa o desactiva con la clave `redondeo_efectivo` de la tabla
+  `config` (activo por defecto), que se cambia en Configuración > Caja.
 - Ventas y movimientos de stock no se borran: se anulan o se compensan.
 - La interfaz nunca carga el catálogo completo; cada comando devuelve solo lo que la pantalla muestra.
 

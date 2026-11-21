@@ -1,26 +1,51 @@
 import { useEffect, useRef, useState } from "react";
-import { api, textoError, type Producto } from "../api";
-import { aEntero, pesos, soloDigitos } from "../formato";
+import { api, textoError, type Categoria, type Producto, type Unidad } from "../api";
+import { aEntero, cantidad, cantidadEditable, parseCantidad, pesos, soloDigitos } from "../formato";
+import Opciones, { type Opcion } from "./Opciones";
 
 interface Props {
   /** null = producto nuevo */
   producto: Producto | null;
   codigoInicial?: string;
+  categorias: Categoria[];
+  /** Categoría para un producto nuevo (la del filtro de la lista, si hay una). */
+  categoriaInicial: number | null;
   onGuardado: (p: Producto) => void;
   onCerrar: () => void;
 }
 
-export default function FormularioProducto({ producto, codigoInicial, onGuardado, onCerrar }: Props) {
+const UNIDADES: Opcion<Unidad>[] = [
+  { id: "unidad", nombre: "Unidad" },
+  { id: "kg", nombre: "Kilo" },
+];
+
+export default function FormularioProducto({
+  producto,
+  codigoInicial,
+  categorias,
+  categoriaInicial,
+  onGuardado,
+  onCerrar,
+}: Props) {
   const nuevo = producto === null;
   const [codigo, setCodigo] = useState(producto?.codigoBarras ?? codigoInicial ?? "");
   const [nombre, setNombre] = useState(producto?.nombre ?? "");
+  const [categoriaId, setCategoriaId] = useState<number | null>(producto ? producto.categoriaId : categoriaInicial);
+  const [unidad, setUnidad] = useState<Unidad>(producto?.unidad ?? "unidad");
   const [precio, setPrecio] = useState(producto ? String(producto.precioVenta) : "");
   const [costo, setCosto] = useState(producto?.costo != null ? String(producto.costo) : "");
-  const [stockMinimo, setStockMinimo] = useState(producto ? String(producto.stockMinimo) : "0");
+  const [stockMinimo, setStockMinimo] = useState(
+    producto ? cantidadEditable(producto.stockMinimoMil, producto.unidad) : "0",
+  );
   const [stockInicial, setStockInicial] = useState("0");
   const [error, setError] = useState<string | null>(null);
   const [guardando, setGuardando] = useState(false);
   const primerCampo = useRef<HTMLInputElement>(null);
+
+  const porKg = unidad === "kg";
+  const enUnidad = porKg ? " (kg)" : "";
+  // En kg se aceptan decimales ("1,5"); en unidades, solo dígitos.
+  const limpiarStock = (texto: string) => (porKg ? texto.replace(/[^\d.,]/g, "") : soloDigitos(texto));
 
   useEffect(() => {
     primerCampo.current?.focus();
@@ -28,16 +53,27 @@ export default function FormularioProducto({ producto, codigoInicial, onGuardado
 
   const guardar = async () => {
     const precioVenta = aEntero(precio);
-    if (precioVenta === null) return setError("Ingresa el precio de venta");
+    if (precioVenta === null) return setError(porKg ? "Ingresa el precio por kg" : "Ingresa el precio de venta");
+    const stockMinimoMil = parseCantidad(stockMinimo || "0", unidad);
+    const stockInicialMil = nuevo ? parseCantidad(stockInicial || "0", unidad) : 0;
+    if (stockMinimoMil === null || stockInicialMil === null) {
+      return setError(
+        porKg
+          ? "El stock va en kg, con hasta 3 decimales (por ejemplo 12,5)"
+          : "El stock va en unidades enteras",
+      );
+    }
     setGuardando(true);
     setError(null);
     const datos = {
       codigoBarras: codigo.trim() || null,
       nombre,
+      categoriaId,
+      unidad,
       precioVenta,
       costo: aEntero(costo),
-      stockMinimo: aEntero(stockMinimo) ?? 0,
-      stockInicial: nuevo ? (aEntero(stockInicial) ?? 0) : 0,
+      stockMinimoMil,
+      stockInicialMil,
     };
     try {
       const guardado = nuevo
@@ -68,7 +104,7 @@ export default function FormularioProducto({ producto, codigoInicial, onGuardado
         void guardar();
       }}
       onKeyDown={(e) => e.key === "Escape" && onCerrar()}
-      className="flex h-full flex-col gap-4 p-6"
+      className="flex h-full flex-col gap-4 overflow-y-auto p-6"
     >
       <h2 className="text-lg font-semibold">{nuevo ? "Nuevo producto" : "Editar producto"}</h2>
 
@@ -99,8 +135,28 @@ export default function FormularioProducto({ producto, codigoInicial, onGuardado
           autoComplete="off"
         />
       </Campo>
+      <Campo etiqueta="Categoría">
+        <select
+          value={categoriaId ?? ""}
+          onChange={(e) => setCategoriaId(e.target.value === "" ? null : Number(e.target.value))}
+          className={claseCampo}
+        >
+          <option value="">Sin categoría</option>
+          {categorias.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.nombre}
+            </option>
+          ))}
+        </select>
+      </Campo>
+      <div>
+        <span className="text-xs text-tenue">Se vende por</span>
+        <div className="mt-1">
+          <Opciones nombre="unidad" etiqueta="Se vende por" opciones={UNIDADES} valor={unidad} onCambiar={setUnidad} />
+        </div>
+      </div>
       <div className="grid grid-cols-2 gap-3">
-        <Campo etiqueta="Precio de venta">
+        <Campo etiqueta={porKg ? "Precio por kg" : "Precio de venta"}>
           <input
             value={precio ? pesos(Number(soloDigitos(precio))) : ""}
             onChange={(e) => setPrecio(soloDigitos(e.target.value))}
@@ -108,7 +164,7 @@ export default function FormularioProducto({ producto, codigoInicial, onGuardado
             inputMode="numeric"
           />
         </Campo>
-        <Campo etiqueta="Costo (opcional)">
+        <Campo etiqueta={porKg ? "Costo por kg (opcional)" : "Costo (opcional)"}>
           <input
             value={costo ? pesos(Number(soloDigitos(costo))) : ""}
             onChange={(e) => setCosto(soloDigitos(e.target.value))}
@@ -117,25 +173,25 @@ export default function FormularioProducto({ producto, codigoInicial, onGuardado
           />
         </Campo>
         {nuevo ? (
-          <Campo etiqueta="Stock inicial">
+          <Campo etiqueta={`Stock inicial${enUnidad}`}>
             <input
               value={stockInicial}
-              onChange={(e) => setStockInicial(soloDigitos(e.target.value))}
+              onChange={(e) => setStockInicial(limpiarStock(e.target.value))}
               className={claseCampo}
-              inputMode="numeric"
+              inputMode="decimal"
             />
           </Campo>
         ) : (
           <Campo etiqueta="Stock actual">
-            <div className="flex h-10 items-center tabular-nums">{producto.stock}</div>
+            <div className="flex h-10 items-center tabular-nums">{cantidad(producto.stockMil, unidad)}</div>
           </Campo>
         )}
-        <Campo etiqueta="Avisar con stock menor o igual a">
+        <Campo etiqueta={`Avisar con stock menor o igual a${enUnidad}`}>
           <input
             value={stockMinimo}
-            onChange={(e) => setStockMinimo(soloDigitos(e.target.value))}
+            onChange={(e) => setStockMinimo(limpiarStock(e.target.value))}
             className={claseCampo}
-            inputMode="numeric"
+            inputMode="decimal"
           />
         </Campo>
       </div>

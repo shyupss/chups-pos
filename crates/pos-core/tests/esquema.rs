@@ -10,7 +10,7 @@ async fn abre_archivo_migra_y_reporta_estado() {
         .await
         .unwrap();
 
-    assert_eq!(estado.version_esquema, 1);
+    assert_eq!(estado.version_esquema, 3);
     assert_eq!(estado.total_productos, 0);
     assert!(ruta.exists());
 
@@ -23,7 +23,7 @@ async fn abre_archivo_migra_y_reporta_estado() {
     // Abrir de nuevo no vuelve a aplicar migraciones ni falla.
     pool.close().await;
     let pool = db::abrir(&ruta).await.unwrap();
-    assert_eq!(db::version_esquema(&pool).await.unwrap(), 1);
+    assert_eq!(db::version_esquema(&pool).await.unwrap(), 3);
 }
 
 #[tokio::test]
