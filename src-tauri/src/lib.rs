@@ -33,7 +33,15 @@ pub fn run() {
             });
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![comandos::sistema::estado_sistema])
+        .invoke_handler(tauri::generate_handler![
+            comandos::sistema::estado_sistema,
+            comandos::productos::buscar_producto_por_codigo,
+            comandos::productos::buscar_productos,
+            comandos::productos::crear_producto,
+            comandos::productos::editar_producto,
+            comandos::productos::cambiar_estado_producto,
+            comandos::ventas::confirmar_venta,
+        ])
         .run(tauri::generate_context!())
         .expect("error al iniciar CHUPS POS");
 }

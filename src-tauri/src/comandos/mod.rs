@@ -3,7 +3,9 @@
 //! Cada comando recibe, valida y delega en un servicio de `pos-core`.
 //! Devuelve solo lo que la pantalla necesita mostrar.
 
+pub mod productos;
 pub mod sistema;
+pub mod ventas;
 
 /// Los errores cruzan a la interfaz como texto legible.
 pub type ResultadoComando<T> = Result<T, String>;
