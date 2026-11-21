@@ -127,6 +127,20 @@ export default function FichaCliente({ clienteId, activa, config, onCambio, onEd
             {[cliente.telefono, cliente.rut && `RUT ${cliente.rut}`, cliente.direccion].filter(Boolean).join(" · ") || "Sin datos de contacto"}
           </p>
           {cliente.nota && <p className="mt-1 text-tenue italic">{cliente.nota}</p>}
+          <div className="mt-1 -ml-2 flex gap-1 text-sm">
+            <button type="button" onClick={onEditar} className="flex h-8 items-center gap-1.5 rounded-lg px-2 text-tenue hover:bg-fondo hover:text-texto">
+              <Pencil size={14} aria-hidden /> Editar
+            </button>
+            <button
+              type="button"
+              onClick={() => void cambiarActivo()}
+              disabled={cliente.activo && cliente.deuda > 0}
+              title={cliente.activo && cliente.deuda > 0 ? "Solo se desactiva un cliente que no debe nada" : undefined}
+              className="h-8 rounded-lg px-2 text-tenue hover:bg-fondo hover:text-texto disabled:opacity-50 disabled:hover:bg-transparent"
+            >
+              {cliente.activo ? "Desactivar" : "Activar"}
+            </button>
+          </div>
         </div>
         <div className="text-right tabular-nums">
           <div className="text-tenue">Debe</div>
@@ -157,19 +171,6 @@ export default function FichaCliente({ clienteId, activa, config, onCambio, onEd
         </button>
         <button type="button" onClick={() => void pdf()} className="flex h-10 items-center gap-2 rounded-lg border border-linea px-3 hover:bg-fondo">
           <FileDown size={16} aria-hidden /> PDF
-        </button>
-        <span className="flex-1" />
-        <button type="button" onClick={onEditar} className="flex h-10 items-center gap-2 rounded-lg px-3 text-tenue hover:bg-fondo hover:text-texto">
-          <Pencil size={16} aria-hidden /> Editar
-        </button>
-        <button
-          type="button"
-          onClick={() => void cambiarActivo()}
-          disabled={cliente.activo && cliente.deuda > 0}
-          title={cliente.activo && cliente.deuda > 0 ? "Solo se desactiva un cliente que no debe nada" : undefined}
-          className="h-10 rounded-lg px-3 text-tenue hover:bg-fondo hover:text-texto disabled:opacity-50 disabled:hover:bg-transparent"
-        >
-          {cliente.activo ? "Desactivar" : "Activar"}
         </button>
       </div>
 
@@ -243,15 +244,19 @@ export default function FichaCliente({ clienteId, activa, config, onCambio, onEd
         ) : (
           <ul className="mt-2 divide-y divide-linea rounded-lg border border-linea">
             {pagos.map((p) => (
-              <li key={p.id} className={`flex flex-wrap items-center gap-x-4 gap-y-1 px-3 py-2 ${p.anuladoEn ? "text-tenue" : ""}`}>
-                <span className="tabular-nums">{fechaHora(p.fecha)}</span>
-                <span>{NOMBRE_MEDIO[p.medioPago]}</span>
-                <span className={`font-semibold tabular-nums ${p.anuladoEn ? "line-through" : ""}`}>{pesos(p.monto)}</span>
-                <span className="min-w-0 flex-1 truncate text-xs text-tenue">
-                  {p.anuladoEn
-                    ? `Anulado: ${p.motivoAnulacion ?? ""}`
-                    : p.abonos.map((a) => `${folio(a.folio)} ${pesos(a.monto)}`).join(" · ")}
-                </span>
+              <li key={p.id} className={`flex items-center gap-4 px-3 py-2 ${p.anuladoEn ? "text-tenue" : ""}`}>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-baseline gap-4">
+                    <span className="tabular-nums">{fechaHora(p.fecha)}</span>
+                    <span>{NOMBRE_MEDIO[p.medioPago]}</span>
+                    <span className={`font-semibold tabular-nums ${p.anuladoEn ? "line-through" : ""}`}>{pesos(p.monto)}</span>
+                  </div>
+                  <div className="truncate text-xs text-tenue tabular-nums">
+                    {p.anuladoEn
+                      ? `Anulado: ${p.motivoAnulacion ?? ""}`
+                      : `Pagó ${p.abonos.map((a) => `${folio(a.folio)} (${pesos(a.monto)})`).join(", ")}`}
+                  </div>
+                </div>
                 <button
                   type="button"
                   onClick={() => imprimir("comprobante de pago", () => api.imprimirPago(p.id))}

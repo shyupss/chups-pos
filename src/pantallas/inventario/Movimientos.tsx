@@ -243,8 +243,9 @@ export default function Movimientos({ activa, producto, onProducto, onIrAVenta, 
                         Compra N° {m.compraId}
                       </button>
                     ) : null}
-                    {(m.folio !== null || m.compraId !== null) && (m.motivo || m.nota) ? " · " : ""}
-                    {m.motivo ?? m.nota}
+                    {/* En una compra la nota es "Compra N° x", que el enlace ya dice. */}
+                    {(m.folio !== null || m.compraId !== null) && (m.compraId !== null ? m.motivo : m.motivo || m.nota) ? " · " : ""}
+                    {m.compraId !== null ? m.motivo : (m.motivo ?? m.nota)}
                   </span>
                 </div>
               );
