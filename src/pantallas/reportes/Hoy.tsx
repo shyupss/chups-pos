@@ -163,7 +163,11 @@ export function Tarjeta({ titulo, valor, pie }: { titulo: string; valor: ReactNo
     <div className="rounded-lg border border-linea bg-superficie p-4">
       <div className="text-xs font-medium uppercase text-tenue">{titulo}</div>
       <div className="mt-1 text-2xl font-semibold tabular-nums">{valor}</div>
-      {pie && <div className="mt-1 truncate text-xs text-tenue">{pie}</div>}
+      {pie && (
+        <div className="mt-1 truncate text-xs text-tenue" title={pie}>
+          {pie}
+        </div>
+      )}
     </div>
   );
 }

@@ -78,3 +78,35 @@ async fn codigo_de_barras_es_unico() {
 fn la_app_trae_el_esquema_7() {
     assert_eq!(db::version_app(), 7);
 }
+
+#[tokio::test]
+async fn el_pool_de_lectura_no_escribe() {
+    let dir = tempfile::tempdir().unwrap();
+    let ruta = dir.path().join("lectura.db");
+    let pool = db::abrir(&ruta).await.unwrap();
+    sqlx::query("INSERT INTO productos (nombre, precio_venta) VALUES ('Leche', 1000)")
+        .execute(&pool)
+        .await
+        .unwrap();
+    let lectura = db::abrir_lectura(&ruta).await.unwrap();
+    let n: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM productos")
+        .fetch_one(&lectura)
+        .await
+        .unwrap();
+    assert_eq!(n, 1);
+    assert!(sqlx::query("UPDATE productos SET precio_venta = 1")
+        .execute(&lectura)
+        .await
+        .is_err());
+    let mmap: i64 = sqlx::query_scalar("PRAGMA mmap_size")
+        .fetch_one(&lectura)
+        .await
+        .unwrap();
+    assert!(mmap > 0);
+    // El pool que vende no usa mmap.
+    let mmap: i64 = sqlx::query_scalar("PRAGMA mmap_size")
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+    assert_eq!(mmap, 0);
+}

@@ -426,8 +426,11 @@ async fn la_pantalla_hoy_resume_el_dia() {
 #[ignore]
 async fn doscientas_mil_ventas() {
     let dir = tempfile::tempdir().unwrap();
-    let pool = db::abrir(&dir.path().join("grande.db")).await.unwrap();
-    generar(&pool, 200_000).await;
+    let ruta = dir.path().join("grande.db");
+    let escritura = db::abrir(&ruta).await.unwrap();
+    generar(&escritura, 200_000).await;
+    // Como en la app: los reportes leen por el pool de lectura (con mmap).
+    let pool = db::abrir_lectura(&ruta).await.unwrap();
 
     let inicio = Instant::now();
     let h = reportes::hoy(&pool, &ZonaLocal, Utc::now()).await.unwrap();
@@ -473,8 +476,10 @@ async fn doscientas_mil_ventas() {
 #[tokio::test]
 async fn hoy_con_cinco_mil_ventas_en_el_anio() {
     let dir = tempfile::tempdir().unwrap();
-    let pool = db::abrir(&dir.path().join("chica.db")).await.unwrap();
-    generar(&pool, 5_000).await;
+    let ruta = dir.path().join("chica.db");
+    let escritura = db::abrir(&ruta).await.unwrap();
+    generar(&escritura, 5_000).await;
+    let pool = db::abrir_lectura(&ruta).await.unwrap();
     let inicio = Instant::now();
     let h = reportes::hoy(&pool, &ZonaLocal, Utc::now()).await.unwrap();
     let t = inicio.elapsed();

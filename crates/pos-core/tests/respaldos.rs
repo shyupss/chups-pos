@@ -82,16 +82,29 @@ async fn respalda_con_la_base_abierta_y_vendiendo() {
 #[tokio::test]
 async fn conserva_los_ultimos_n() {
     let dir = tempfile::tempdir().unwrap();
-    for i in 1..=5 {
-        std::fs::write(
-            dir.path()
-                .join(format!("chups-respaldo-2026-11-0{i}-1200.db")),
-            b"x",
-        )
-        .unwrap();
+    // Cada uno con su fecha de archivo; el quinto y su "-2" son del mismo minuto.
+    let base = std::time::SystemTime::now() - std::time::Duration::from_secs(10 * 86_400);
+    let nombres = [
+        "chups-respaldo-2026-11-01-1200.db",
+        "chups-respaldo-2026-11-02-1200.db",
+        "chups-respaldo-2026-11-03-1200.db",
+        "chups-respaldo-2026-11-04-1200.db",
+        "chups-respaldo-2026-11-05-1200.db",
+        "chups-respaldo-2026-11-05-1200-2.db",
+    ];
+    for (i, n) in nombres.iter().enumerate() {
+        let ruta = dir.path().join(n);
+        std::fs::write(&ruta, b"x").unwrap();
+        let fecha = base + std::time::Duration::from_secs(86_400 * i.min(4) as u64);
+        std::fs::File::options()
+            .write(true)
+            .open(&ruta)
+            .unwrap()
+            .set_modified(fecha)
+            .unwrap();
     }
     std::fs::write(dir.path().join("otro-archivo.db"), b"x").unwrap();
-    assert_eq!(respaldos::rotar(dir.path(), 3).unwrap(), 2);
+    assert_eq!(respaldos::rotar(dir.path(), 3).unwrap(), 3);
     let quedan: Vec<String> = respaldos::listar(dir.path())
         .unwrap()
         .into_iter()
@@ -100,9 +113,9 @@ async fn conserva_los_ultimos_n() {
     assert_eq!(
         quedan,
         [
+            "chups-respaldo-2026-11-05-1200-2.db",
             "chups-respaldo-2026-11-05-1200.db",
-            "chups-respaldo-2026-11-04-1200.db",
-            "chups-respaldo-2026-11-03-1200.db"
+            "chups-respaldo-2026-11-04-1200.db"
         ]
     );
     // Los archivos que no son respaldos no se tocan.

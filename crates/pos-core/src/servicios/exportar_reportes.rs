@@ -204,7 +204,7 @@ pub async fn libro(
                     Columna::new("Costo", 13),
                     Columna::new("Ganancia", 13),
                     Columna::new("Margen", 9),
-                    Columna::new("Costo estimado", 9),
+                    Columna::new("Estimado", 9),
                 ],
             );
             for p in &r.productos {

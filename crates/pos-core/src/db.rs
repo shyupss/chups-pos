@@ -17,9 +17,6 @@ pub static MIGRACIONES: Migrator = sqlx::migrate!("./migrations");
 /// - WAL: las lecturas no bloquean a la escritura de una venta.
 /// - `synchronous=NORMAL`: seguro con WAL y mucho más rápido que FULL.
 /// - Pool chico: SQLite admite un solo escritor, más conexiones solo gastan memoria.
-/// - mmap de hasta 256 MB: los reportes leen la base mapeada en memoria. Con solo la caché de
-///   páginas (8 MB) y lecturas por el sistema de archivos de Windows, un reporte anual tardaba
-///   a veces 5 veces más.
 pub async fn abrir(ruta: &Path) -> Resultado<SqlitePool> {
     let opciones = SqliteConnectOptions::new()
         .filename(ruta)
@@ -30,7 +27,6 @@ pub async fn abrir(ruta: &Path) -> Resultado<SqlitePool> {
         .busy_timeout(Duration::from_secs(5))
         // ~8 MB de caché de páginas por conexión.
         .pragma("cache_size", "-8000")
-        .pragma("mmap_size", "268435456")
         .pragma("temp_store", "MEMORY");
 
     let pool = SqlitePoolOptions::new()
@@ -40,6 +36,28 @@ pub async fn abrir(ruta: &Path) -> Resultado<SqlitePool> {
 
     migrar(&pool).await?;
     Ok(pool)
+}
+
+/// Un pool aparte, solo para leer, para los reportes y las exportaciones (la base ya debe estar
+/// abierta y migrada con [`abrir`]). Lee la base mapeada en memoria (mmap de hasta 256 MB): con
+/// solo la caché de páginas y lecturas por el sistema de archivos de Windows, un reporte anual
+/// tardaba a veces 5 veces más. Va aparte porque el mmap hace un 5 a 10 % más lenta cada venta:
+/// el pool que vende no lo usa. `query_only` impide escribir por error desde aquí.
+pub async fn abrir_lectura(ruta: &Path) -> Resultado<SqlitePool> {
+    let opciones = SqliteConnectOptions::new()
+        .filename(ruta)
+        .create_if_missing(false)
+        .journal_mode(SqliteJournalMode::Wal)
+        .foreign_keys(true)
+        .busy_timeout(Duration::from_secs(5))
+        .pragma("cache_size", "-8000")
+        .pragma("temp_store", "MEMORY")
+        .pragma("mmap_size", "268435456")
+        .pragma("query_only", "1");
+    Ok(SqlitePoolOptions::new()
+        .max_connections(2)
+        .connect_with(opciones)
+        .await?)
 }
 
 /// Base de datos en memoria, para pruebas.

@@ -183,7 +183,7 @@ pub async fn exportar_datos(
         return Ok(None);
     };
     exportaciones::exportar(
-        &estado.pool,
+        &estado.lectura,
         &ZonaLocal,
         que,
         rango,

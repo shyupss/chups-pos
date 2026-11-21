@@ -142,8 +142,8 @@ export default function Respaldos({ cfg }: { cfg: ConfigEditable }) {
           disabled={trabajando}
           onClick={() =>
             void accion(async () => {
-              const info = await api.elegirRespaldo();
-              if (info) setRestaurar(info);
+              const ruta = await api.elegirRespaldo();
+              if (ruta) setRestaurar(await api.inspeccionarRespaldo(ruta));
               return null;
             })
           }

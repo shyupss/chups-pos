@@ -21,7 +21,7 @@ fn rango(desde: &str, hasta: &str) -> ResultadoComando<Rango> {
 /// Todo lo de la pantalla Hoy en una llamada.
 #[tauri::command]
 pub async fn reporte_hoy(estado: State<'_, EstadoApp>) -> ResultadoComando<ResumenHoy> {
-    srv::hoy(&estado.pool, &ZonaLocal, Utc::now())
+    srv::hoy(&estado.lectura, &ZonaLocal, Utc::now())
         .await
         .map_err(a_texto)
 }
@@ -32,7 +32,7 @@ pub async fn reporte_ventas(
     desde: String,
     hasta: String,
 ) -> ResultadoComando<ReporteVentas> {
-    srv::ventas(&estado.pool, &ZonaLocal, rango(&desde, &hasta)?)
+    srv::ventas(&estado.lectura, &ZonaLocal, rango(&desde, &hasta)?)
         .await
         .map_err(a_texto)
 }
@@ -45,9 +45,14 @@ pub async fn reporte_productos(
     hasta: String,
     categoria: Option<i64>,
 ) -> ResultadoComando<ReporteProductos> {
-    srv::productos_vendidos(&estado.pool, &ZonaLocal, rango(&desde, &hasta)?, categoria)
-        .await
-        .map_err(a_texto)
+    srv::productos_vendidos(
+        &estado.lectura,
+        &ZonaLocal,
+        rango(&desde, &hasta)?,
+        categoria,
+    )
+    .await
+    .map_err(a_texto)
 }
 
 #[tauri::command]
@@ -56,7 +61,7 @@ pub async fn reporte_ganancia(
     desde: String,
     hasta: String,
 ) -> ResultadoComando<ReporteGanancia> {
-    srv::ganancia(&estado.pool, &ZonaLocal, rango(&desde, &hasta)?)
+    srv::ganancia(&estado.lectura, &ZonaLocal, rango(&desde, &hasta)?)
         .await
         .map_err(a_texto)
 }
@@ -67,7 +72,7 @@ pub async fn reporte_turnos(
     desde: String,
     hasta: String,
 ) -> ResultadoComando<ReporteTurnos> {
-    srv::turnos(&estado.pool, &ZonaLocal, rango(&desde, &hasta)?)
+    srv::turnos(&estado.lectura, &ZonaLocal, rango(&desde, &hasta)?)
         .await
         .map_err(a_texto)
 }
@@ -78,9 +83,14 @@ pub async fn reporte_fiados(
     desde: String,
     hasta: String,
 ) -> ResultadoComando<ReporteFiados> {
-    srv::fiados(&estado.pool, &ZonaLocal, rango(&desde, &hasta)?, Utc::now())
-        .await
-        .map_err(a_texto)
+    srv::fiados(
+        &estado.lectura,
+        &ZonaLocal,
+        rango(&desde, &hasta)?,
+        Utc::now(),
+    )
+    .await
+    .map_err(a_texto)
 }
 
 /// Formato de una exportación.
@@ -170,7 +180,7 @@ pub async fn exportar_reporte(
     formato: Formato,
 ) -> ResultadoComando<Option<String>> {
     let (libro, nombre) = exportar::libro(
-        &estado.pool,
+        &estado.lectura,
         &ZonaLocal,
         tipo,
         rango(&desde, &hasta)?,

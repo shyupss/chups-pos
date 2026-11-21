@@ -1018,8 +1018,9 @@ export const api = {
   respaldarEn: () => invoke<Respaldo | null>("respaldar_en"),
   elegirCarpetaRespaldos: () => invoke<string | null>("elegir_carpeta_respaldos"),
   abrirCarpetaRespaldos: () => invoke<void>("abrir_carpeta_respaldos"),
-  /** Elige y revisa el archivo; null si se cancela. */
-  elegirRespaldo: () => invoke<InfoRespaldo | null>("elegir_respaldo"),
+  /** null si se cancela. */
+  elegirRespaldo: () => invoke<string | null>("elegir_respaldo"),
+  inspeccionarRespaldo: (ruta: string) => invoke<InfoRespaldo>("inspeccionar_respaldo", { ruta }),
   /** Siempre pide el PIN (si hay uno). Si sale bien, la app se reinicia. */
   restaurarRespaldo: (ruta: string, pin: string | null) => invoke<void>("restaurar_respaldo", { ruta, pin }),
   elegirPlanilla: () => invoke<string | null>("elegir_planilla"),

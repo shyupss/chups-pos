@@ -40,7 +40,8 @@ fn a_utc(t: SystemTime) -> DateTime<Utc> {
     DateTime::<Utc>::from(t)
 }
 
-/// Los respaldos de la carpeta, del más nuevo al más antiguo (por nombre, que lleva la fecha).
+/// Los respaldos de la carpeta, del más nuevo al más antiguo: por la fecha del archivo y, si es
+/// la misma, por el nombre sin ".db" (así "…-1942-3" va antes que "…-1942").
 pub fn listar(carpeta: &Path) -> Resultado<Vec<Respaldo>> {
     let Ok(entradas) = std::fs::read_dir(carpeta) else {
         return Ok(Vec::new());
@@ -61,7 +62,12 @@ pub fn listar(carpeta: &Path) -> Resultado<Vec<Respaldo>> {
             })
         })
         .collect();
-    v.sort_by(|a, b| b.nombre.cmp(&a.nombre));
+    let tronco = |r: &Respaldo| r.nombre.trim_end_matches(".db").to_owned();
+    v.sort_by(|a, b| {
+        b.fecha
+            .cmp(&a.fecha)
+            .then_with(|| tronco(b).cmp(&tronco(a)))
+    });
     Ok(v)
 }
 

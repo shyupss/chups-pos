@@ -163,12 +163,12 @@ pub async fn abrir_carpeta_respaldos(
         .map_err(|e| format!("No se pudo abrir la carpeta: {e}"))
 }
 
-/// Elige el archivo a restaurar y lo revisa. `None` si se cancela.
+/// Elige el archivo a restaurar. `None` si se cancela.
 #[tauri::command]
 pub async fn elegir_respaldo(
     app: AppHandle,
     estado: State<'_, EstadoApp>,
-) -> ResultadoComando<Option<InfoRespaldo>> {
+) -> ResultadoComando<Option<String>> {
     let (c, _) = carpeta(&estado).await?;
     let elegida = tauri::async_runtime::spawn_blocking(move || {
         app.dialog()
@@ -180,10 +180,17 @@ pub async fn elegir_respaldo(
     })
     .await
     .map_err(|e| e.to_string())?;
-    let Some(ruta) = elegida.and_then(|r| r.into_path().ok()) else {
-        return Ok(None);
-    };
-    Ok(Some(srv::inspeccionar(&ruta).await.map_err(a_texto)?))
+    Ok(elegida
+        .and_then(|r| r.into_path().ok())
+        .map(|r| r.to_string_lossy().into_owned()))
+}
+
+/// Revisa el archivo antes de restaurar: fecha, versión, productos y última venta.
+#[tauri::command]
+pub async fn inspeccionar_respaldo(ruta: String) -> ResultadoComando<InfoRespaldo> {
+    srv::inspeccionar(&PathBuf::from(ruta))
+        .await
+        .map_err(a_texto)
 }
 
 /// Restaura el respaldo (PIN "restaurar respaldo", siempre activado): lo revisa de nuevo,
@@ -216,6 +223,7 @@ pub async fn restaurar_respaldo(
     .await?;
 
     // Desde aquí la app se reinicia pase lo que pase: sin pool no puede seguir.
+    estado.lectura.close().await;
     estado.pool.close().await;
     let destino = estado.ruta_db.clone();
     let reemplazo =

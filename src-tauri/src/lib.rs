@@ -32,6 +32,7 @@ pub fn run() {
             let ruta_db = carpeta.join(NOMBRE_ARCHIVO_DB);
 
             let pool = tauri::async_runtime::block_on(pos_core::db::abrir(&ruta_db))?;
+            let lectura = tauri::async_runtime::block_on(pos_core::db::abrir_lectura(&ruta_db))?;
             let aviso = carpeta.join(ARCHIVO_RESTAURACION_FALLIDA);
             let restauracion_fallida = std::fs::read_to_string(&aviso).ok();
             let _ = std::fs::remove_file(&aviso);
@@ -46,6 +47,7 @@ pub fn run() {
 
             app.manage(EstadoApp {
                 pool,
+                lectura,
                 ruta_db,
                 ms_inicio: inicio.elapsed().as_millis() as u64,
                 carpeta_pdf,
@@ -159,6 +161,7 @@ pub fn run() {
             comandos::respaldos::elegir_carpeta_respaldos,
             comandos::respaldos::abrir_carpeta_respaldos,
             comandos::respaldos::elegir_respaldo,
+            comandos::respaldos::inspeccionar_respaldo,
             comandos::respaldos::restaurar_respaldo,
             comandos::fiados::listar_deudores,
             comandos::fiados::ficha_cliente,
