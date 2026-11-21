@@ -182,7 +182,7 @@ pub async fn buscar(
 
 /// Convierte "coca 1.5" en `"coca"* "1"* "5"*`: cada palabra como prefijo, todas obligatorias.
 /// Se descartan los signos para que el texto del usuario nunca rompa la sintaxis de FTS5.
-fn consulta_fts(texto: &str) -> Option<String> {
+pub(crate) fn consulta_fts(texto: &str) -> Option<String> {
     let terminos: Vec<String> = texto
         .split(|c: char| !c.is_alphanumeric())
         .filter(|t| !t.is_empty())
@@ -191,7 +191,7 @@ fn consulta_fts(texto: &str) -> Option<String> {
     (!terminos.is_empty()).then(|| terminos.join(" "))
 }
 
-fn parece_codigo(texto: &str) -> bool {
+pub(crate) fn parece_codigo(texto: &str) -> bool {
     !texto.is_empty()
         && texto.chars().all(|c| c.is_ascii_alphanumeric() || c == '-')
         && texto.chars().any(|c| c.is_ascii_digit())

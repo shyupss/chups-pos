@@ -138,7 +138,7 @@ pub struct CuadreEfectivo {
     pub abonos: i64,
     pub ingresos: i64,
     pub retiros: i64,
-    /// Lo que salió en efectivo por anulaciones y devoluciones.
+    /// Lo que salió en efectivo por anulaciones, devoluciones y pagos de fiados anulados.
     pub reembolsos: i64,
     pub esperado: i64,
 }
@@ -156,6 +156,8 @@ pub struct ResumenTurno {
     pub abonos: Vec<TotalMedio>,
     pub anulaciones: Vec<TotalMedio>,
     pub devoluciones: Vec<TotalMedio>,
+    /// Pagos de clientes anulados en el turno: su dinero se devolvió desde aquí.
+    pub pagos_anulados: Vec<TotalMedio>,
     /// Ajuste a la decena de los reembolsos en efectivo (negativo: se devolvió de menos).
     pub redondeo_reembolsos: i64,
     pub movimientos: Vec<MovimientoCaja>,
@@ -205,6 +207,7 @@ async fn armar_resumen(conn: &mut SqliteConnection, fila: FilaTurno) -> Resultad
     let abonos = totales(repo::abonos_por_medio(conn, id).await?);
     let anulaciones = totales(repo::anulaciones_por_medio(conn, id).await?);
     let devoluciones = totales(repo::devoluciones_por_medio(conn, id).await?);
+    let pagos_anulados = totales(repo::pagos_anulados_por_medio(conn, id).await?);
     let movimientos: Vec<MovimientoCaja> = repo::movimientos(conn, id)
         .await?
         .into_iter()
@@ -219,7 +222,9 @@ async fn armar_resumen(conn: &mut SqliteConnection, fila: FilaTurno) -> Resultad
             .sum::<i64>()
     };
     let efectivo = MedioPago::Efectivo;
-    let reembolsos = de(&anulaciones, efectivo).monto + de(&devoluciones, efectivo).monto;
+    let reembolsos = de(&anulaciones, efectivo).monto
+        + de(&devoluciones, efectivo).monto
+        + de(&pagos_anulados, efectivo).monto;
     let mut cuadre = CuadreEfectivo {
         monto_inicial: fila.monto_inicial,
         ventas: de(&vendidas, efectivo).monto,
@@ -246,6 +251,7 @@ async fn armar_resumen(conn: &mut SqliteConnection, fila: FilaTurno) -> Resultad
         abonos,
         anulaciones,
         devoluciones,
+        pagos_anulados,
         movimientos,
         efectivo: cuadre,
         turno: Turno::from(fila),
@@ -289,7 +295,7 @@ pub async fn abrir(pool: &SqlitePool, monto_inicial: i64) -> Resultado<Turno> {
 }
 
 /// Error para lo que necesita la caja abierta.
-fn sin_caja(que: &str) -> Error {
+pub(crate) fn sin_caja(que: &str) -> Error {
     Error::Validacion(format!("Abre la caja para {que}"))
 }
 
@@ -321,12 +327,32 @@ pub async fn registrar_movimiento(
     }
 
     let mut tx = pool.begin().await?;
-    let fila = repo::abierto(&mut tx)
-        .await?
-        .ok_or_else(|| sin_caja("registrar ingresos o retiros"))?;
+    let m = movimiento_en(
+        &mut tx,
+        tipo,
+        monto,
+        &motivo,
+        "registrar ingresos o retiros",
+    )
+    .await?;
+    tx.commit().await?;
+    Ok(m)
+}
+
+/// Ingreso o retiro en el turno abierto, dentro de la transacción de quien llama (una compra
+/// pagada con la caja, su anulación). Un retiro no puede superar el efectivo esperado. El PIN lo
+/// revisa quien llama, antes de abrir la transacción.
+pub(crate) async fn movimiento_en(
+    conn: &mut SqliteConnection,
+    tipo: TipoMovimiento,
+    monto: i64,
+    motivo: &str,
+    para: &str,
+) -> Resultado<MovimientoCaja> {
+    let fila = repo::abierto(conn).await?.ok_or_else(|| sin_caja(para))?;
     let turno_id = fila.id;
     if tipo == TipoMovimiento::Retiro {
-        let esperado = armar_resumen(&mut tx, fila).await?.efectivo.esperado;
+        let esperado = armar_resumen(conn, fila).await?.efectivo.esperado;
         if monto > esperado {
             return validacion(format!(
                 "En la caja debería haber {}: no se puede retirar más que eso",
@@ -334,9 +360,11 @@ pub async fn registrar_movimiento(
             ));
         }
     }
-    let m = repo::insertar_movimiento(&mut tx, turno_id, tipo.como_texto(), monto, &motivo).await?;
-    tx.commit().await?;
-    Ok(m.into())
+    Ok(
+        repo::insertar_movimiento(conn, turno_id, tipo.como_texto(), monto, motivo)
+            .await?
+            .into(),
+    )
 }
 
 pub async fn resumen(pool: &SqlitePool, turno_id: i64) -> Resultado<ResumenTurno> {

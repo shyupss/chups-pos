@@ -101,6 +101,10 @@ pub struct Config {
     pub balanza_formato: FormatoBalanza,
     /// Dígitos del código de producto dentro de la etiqueta (4 a 6).
     pub balanza_largo_codigo: u8,
+
+    // Fiados
+    /// Días desde la venta fiada más antigua a partir de los que la deuda se resalta.
+    pub fiado_dias_alerta: u16,
 }
 
 impl Default for Config {
@@ -124,6 +128,7 @@ impl Default for Config {
             balanza_prefijos: "20-29".into(),
             balanza_formato: FormatoBalanza::Peso,
             balanza_largo_codigo: 5,
+            fiado_dias_alerta: 30,
         }
     }
 }
@@ -153,6 +158,10 @@ pub struct AccionesProtegidas {
     pub retiro_efectivo: bool,
     pub cerrar_caja: bool,
     pub cambiar_configuracion: bool,
+    /// Ajustes de stock por conteo, mermas y anular compras.
+    pub ajustar_inventario: bool,
+    /// Vender fiado por sobre el límite de crédito del cliente.
+    pub fiar_sobre_limite: bool,
 }
 
 impl Default for AccionesProtegidas {
@@ -163,6 +172,8 @@ impl Default for AccionesProtegidas {
             retiro_efectivo: true,
             cerrar_caja: false,
             cambiar_configuracion: true,
+            ajustar_inventario: true,
+            fiar_sobre_limite: true,
         }
     }
 }
@@ -218,6 +229,7 @@ const BALANZA_ACTIVA: &str = "balanza_activa";
 const BALANZA_PREFIJOS: &str = "balanza_prefijos";
 const BALANZA_FORMATO: &str = "balanza_formato";
 const BALANZA_LARGO_CODIGO: &str = "balanza_largo_codigo";
+const FIADO_DIAS_ALERTA: &str = "fiado_dias_alerta";
 // Seguridad: fuera de `Config`.
 const PIN_HASH: &str = "pin_hash";
 const RECUPERACION_HASH: &str = "pin_recuperacion_hash";
@@ -226,6 +238,8 @@ const PROTEGER_DEVOLUCION: &str = "proteger_devolucion";
 const PROTEGER_RETIRO: &str = "proteger_retiro_efectivo";
 const PROTEGER_CIERRE: &str = "proteger_cerrar_caja";
 const PROTEGER_CONFIG: &str = "proteger_cambiar_configuracion";
+const PROTEGER_INVENTARIO: &str = "proteger_ajustar_inventario";
+const PROTEGER_LIMITE: &str = "proteger_fiar_sobre_limite";
 
 fn si_no(valor: bool) -> String {
     if valor { "1" } else { "0" }.into()
@@ -252,11 +266,13 @@ impl Seguridad {
                 retiro_efectivo: bool_de(claves, PROTEGER_RETIRO, d.retiro_efectivo),
                 cerrar_caja: bool_de(claves, PROTEGER_CIERRE, d.cerrar_caja),
                 cambiar_configuracion: bool_de(claves, PROTEGER_CONFIG, d.cambiar_configuracion),
+                ajustar_inventario: bool_de(claves, PROTEGER_INVENTARIO, d.ajustar_inventario),
+                fiar_sobre_limite: bool_de(claves, PROTEGER_LIMITE, d.fiar_sobre_limite),
             },
         }
     }
 
-    fn a_claves(&self) -> [(&'static str, String); 7] {
+    fn a_claves(&self) -> [(&'static str, String); 9] {
         let p = &self.protegidas;
         [
             (PIN_HASH, self.pin_hash.clone().unwrap_or_default()),
@@ -269,6 +285,8 @@ impl Seguridad {
             (PROTEGER_RETIRO, si_no(p.retiro_efectivo)),
             (PROTEGER_CIERRE, si_no(p.cerrar_caja)),
             (PROTEGER_CONFIG, si_no(p.cambiar_configuracion)),
+            (PROTEGER_INVENTARIO, si_no(p.ajustar_inventario)),
+            (PROTEGER_LIMITE, si_no(p.fiar_sobre_limite)),
         ]
     }
 }
@@ -325,6 +343,10 @@ impl Config {
                 .and_then(|v| v.parse().ok())
                 .filter(|n| (4..=6).contains(n))
                 .unwrap_or(d.balanza_largo_codigo),
+            fiado_dias_alerta: texto(FIADO_DIAS_ALERTA)
+                .and_then(|v| v.parse().ok())
+                .filter(|n| (1..=365).contains(n))
+                .unwrap_or(d.fiado_dias_alerta),
         }
     }
 
@@ -348,6 +370,7 @@ impl Config {
             (BALANZA_PREFIJOS, self.balanza_prefijos.clone()),
             (BALANZA_FORMATO, self.balanza_formato.como_texto().into()),
             (BALANZA_LARGO_CODIGO, self.balanza_largo_codigo.to_string()),
+            (FIADO_DIAS_ALERTA, self.fiado_dias_alerta.to_string()),
         ]
     }
 
@@ -364,6 +387,9 @@ impl Config {
         }
         if !(10..=500).contains(&self.cajon_pulso_ms) {
             return validacion("El pulso del cajón debe durar entre 10 y 500 ms");
+        }
+        if !(1..=365).contains(&self.fiado_dias_alerta) {
+            return validacion("La alerta de fiados debe estar entre 1 y 365 días");
         }
         if !(4..=6).contains(&self.balanza_largo_codigo) {
             return validacion(

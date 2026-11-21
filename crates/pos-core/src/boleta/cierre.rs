@@ -77,12 +77,13 @@ pub fn renderizar(c: &CierreCaja, columnas: usize) -> Vec<LineaTexto> {
         );
     }
 
-    if !r.anulaciones.is_empty() || !r.devoluciones.is_empty() {
+    if !r.anulaciones.is_empty() || !r.devoluciones.is_empty() || !r.pagos_anulados.is_empty() {
         a.push(LineaTexto::Separador);
         // Por medio de reembolso. "Fiado (sin reembolso)": se anuló deuda, no salió dinero.
         for (titulo, lista) in [
             ("ANULACIONES", &r.anulaciones),
             ("DEVOLUCIONES", &r.devoluciones),
+            ("PAGOS DE FIADOS ANULADOS", &r.pagos_anulados),
         ] {
             if lista.is_empty() {
                 continue;

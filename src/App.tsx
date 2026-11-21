@@ -3,8 +3,11 @@ import { api, type EstadoCaja, type EstadoConfigurada } from "./api";
 import BarraLateral, { type ModoBarra } from "./componentes/BarraLateral";
 import Caja from "./pantallas/Caja";
 import { ProveedorPin } from "./componentes/PedirPin";
+import { escucharCambioStock } from "./eventos";
 import Configuracion from "./pantallas/Configuracion";
+import Inventario, { type PestanaInventario } from "./pantallas/Inventario";
 import Productos from "./pantallas/Productos";
+import Fiados from "./pantallas/Fiados";
 import Proximamente from "./pantallas/Proximamente";
 import Ventas from "./pantallas/Ventas";
 import { guardarPreferencia, leerPreferencia } from "./preferencias";
@@ -45,6 +48,32 @@ export default function App() {
     const intervalo = setInterval(refrescarCaja, 60_000);
     return () => clearInterval(intervalo);
   }, [refrescarCaja]);
+  // Inventario: pestaña, producto filtrado en Movimientos y la insignia de productos bajo el mínimo,
+  // que se vuelve a contar cuando alguien avisa que cambió el stock (sin sondeo).
+  const [pestanaInventario, setPestanaInventario] = useState<PestanaInventario>("stock");
+  const [productoMovimientos, setProductoMovimientos] = useState<{ id: number; nombre: string } | null>(null);
+  const [bajoMinimo, setBajoMinimo] = useState(0);
+  useEffect(() => {
+    const contar = () => {
+      api
+        .contarBajoMinimo()
+        .then(setBajoMinimo)
+        .catch(() => {});
+    };
+    contar();
+    return escucharCambioStock(contar);
+  }, []);
+  // Venta que se abre al llegar a Ventas (enlace desde un movimiento de stock).
+  const [folioVentas, setFolioVentas] = useState<number | null>(null);
+  const verMovimientos = useCallback((p: { id: number; nombre: string }) => {
+    setProductoMovimientos(p);
+    setPestanaInventario("movimientos");
+    setSeccion("inventario");
+  }, []);
+  const irAVenta = useCallback((folio: number) => {
+    setFolioVentas(folio);
+    setSeccion("ventas");
+  }, []);
   const [modoBarra, setModoBarra] = useState<ModoBarra>(() =>
     leerPreferencia<ModoBarra>(CLAVE_BARRA, ["auto", "expandida", "colapsada"], "auto"),
   );
@@ -88,11 +117,19 @@ export default function App() {
           onAlternar={() => cambiarModoBarra(expandida ? "colapsada" : "expandida")}
           impresora={impresora}
           turno={caja === null ? undefined : caja.turno}
-          insignias={
-            enEspera > 0
+          insignias={{
+            ...(enEspera > 0
               ? { caja: { valor: enEspera, descripcion: enEspera === 1 ? "1 venta en espera" : `${enEspera} ventas en espera` } }
-              : {}
-          }
+              : {}),
+            ...(bajoMinimo > 0
+              ? {
+                  inventario: {
+                    valor: bajoMinimo,
+                    descripcion: bajoMinimo === 1 ? "1 producto bajo el mínimo" : `${bajoMinimo} productos bajo el mínimo`,
+                  },
+                }
+              : {}),
+          }}
         />
         <main className="min-w-0 flex-1">
           {/* Caja queda montada siempre: cambiar de sección no borra el carrito. */}
@@ -107,9 +144,27 @@ export default function App() {
             />
           </div>
           {seccion === "productos" && (
-            <Productos codigoNuevo={codigoNuevo} onCodigoUsado={() => setCodigoNuevo(null)} />
+            <Productos codigoNuevo={codigoNuevo} onCodigoUsado={() => setCodigoNuevo(null)} onVerMovimientos={verMovimientos} />
           )}
-          {seccion === "ventas" && <Ventas activa onImpresion={refrescarImpresora} />}
+          {seccion === "inventario" && (
+            <Inventario
+              activa
+              pestana={pestanaInventario}
+              onPestana={setPestanaInventario}
+              producto={productoMovimientos}
+              onProducto={setProductoMovimientos}
+              onIrAVenta={irAVenta}
+            />
+          )}
+          {seccion === "fiados" && <Fiados activa onIrAVenta={irAVenta} onImpresion={refrescarImpresora} />}
+          {seccion === "ventas" && (
+            <Ventas
+              activa
+              onImpresion={refrescarImpresora}
+              folioInicial={folioVentas}
+              onFolioUsado={() => setFolioVentas(null)}
+            />
+          )}
           {seccion === "configuracion" && (
             <Configuracion
               modoBarra={modoBarra}

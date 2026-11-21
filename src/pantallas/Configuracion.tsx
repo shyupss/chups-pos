@@ -73,6 +73,10 @@ export default function Configuracion({ modoBarra, onModoBarra, onCambioImpresor
           <RedondeoEfectivo cfg={cfg} />
         </Bloque>
 
+        <Bloque titulo="Fiados">
+          <DiasAlerta cfg={cfg} />
+        </Bloque>
+
         <Bloque titulo="Negocio">
           <NegocioConfig conPin={conPin} />
         </Bloque>
@@ -115,6 +119,31 @@ function RedondeoEfectivo({ cfg }: { cfg: ConfigEditable }) {
           opciones={SI_NO}
           valor={config.redondeoEfectivo ? "si" : "no"}
           onCambiar={(v) => void cambiar({ redondeoEfectivo: v === "si" })}
+        />
+      )}
+    </Fila>
+  );
+}
+
+const DIAS_ALERTA: Opcion<string>[] = ["7", "15", "30", "60", "90"].map((d) => ({ id: d, nombre: `${d} días` }));
+
+/** Clave fiado_dias_alerta: desde cuántos días de deuda se resalta al cliente en Fiados. */
+function DiasAlerta({ cfg }: { cfg: ConfigEditable }) {
+  const { config, cambiar } = cfg;
+  return (
+    <Fila
+      etiqueta="Resaltar deudas antiguas"
+      ayuda="En Fiados se marca al cliente cuya venta pendiente más antigua tiene al menos estos días."
+    >
+      {config === null ? (
+        <span className="text-tenue">Cargando…</span>
+      ) : (
+        <Opciones
+          nombre="dias-alerta"
+          etiqueta="Días para resaltar una deuda"
+          opciones={DIAS_ALERTA.some((o) => o.id === String(config.fiadoDiasAlerta)) ? DIAS_ALERTA : [...DIAS_ALERTA, { id: String(config.fiadoDiasAlerta), nombre: `${config.fiadoDiasAlerta} días` }]}
+          valor={String(config.fiadoDiasAlerta)}
+          onCambiar={(v) => void cambiar({ fiadoDiasAlerta: Number(v) })}
         />
       )}
     </Fila>

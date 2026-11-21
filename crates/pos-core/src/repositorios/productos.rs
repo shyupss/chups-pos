@@ -197,25 +197,74 @@ pub async fn mover_stock(
     venta_id: Option<i64>,
     nota: Option<&str>,
 ) -> Resultado<i64> {
+    registrar_movimiento(
+        conn,
+        &Movimiento {
+            producto_id,
+            delta_mil,
+            tipo,
+            venta_id,
+            compra_id: None,
+            nota,
+            motivo: None,
+        },
+    )
+    .await
+}
+
+/// Un cambio de stock con todo su origen: venta, compra, nota y motivo (ajustes y mermas).
+pub struct Movimiento<'a> {
+    pub producto_id: i64,
+    /// Positivo entra, negativo sale; cero deja la merma anotada sin mover el stock.
+    pub delta_mil: i64,
+    pub tipo: &'a str,
+    pub venta_id: Option<i64>,
+    pub compra_id: Option<i64>,
+    pub nota: Option<&'a str>,
+    pub motivo: Option<&'a str>,
+}
+
+/// Aplica el movimiento al stock y lo deja en el historial. Devuelve el stock resultante.
+pub async fn registrar_movimiento(
+    conn: &mut SqliteConnection,
+    m: &Movimiento<'_>,
+) -> Resultado<i64> {
     let stock_mil: i64 = sqlx::query_scalar(
         "UPDATE productos SET stock_mil = stock_mil + ? WHERE id = ? RETURNING stock_mil",
     )
-    .bind(delta_mil)
-    .bind(producto_id)
+    .bind(m.delta_mil)
+    .bind(m.producto_id)
     .fetch_one(&mut *conn)
     .await?;
     sqlx::query(
         "INSERT INTO movimientos_stock
-            (producto_id, tipo, cantidad_mil, stock_resultante_mil, venta_id, nota)
-         VALUES (?, ?, ?, ?, ?, ?)",
+            (producto_id, tipo, cantidad_mil, stock_resultante_mil, venta_id, compra_id, nota,
+             motivo)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
     )
-    .bind(producto_id)
-    .bind(tipo)
-    .bind(delta_mil)
+    .bind(m.producto_id)
+    .bind(m.tipo)
+    .bind(m.delta_mil)
     .bind(stock_mil)
-    .bind(venta_id)
-    .bind(nota)
+    .bind(m.venta_id)
+    .bind(m.compra_id)
+    .bind(m.nota)
+    .bind(m.motivo)
     .execute(conn)
     .await?;
     Ok(stock_mil)
+}
+
+/// El último costo unitario (por unidad o por kg), al registrar una compra.
+pub async fn actualizar_costo(
+    conn: &mut SqliteConnection,
+    producto_id: i64,
+    costo: i64,
+) -> Resultado<()> {
+    sqlx::query("UPDATE productos SET costo = ? WHERE id = ?")
+        .bind(costo)
+        .bind(producto_id)
+        .execute(conn)
+        .await?;
+    Ok(())
 }

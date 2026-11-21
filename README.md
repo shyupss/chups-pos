@@ -53,6 +53,9 @@ efectivo esperado = monto inicial + ventas en efectivo + abonos en efectivo
                     + ingresos − retiros − reembolsos en efectivo
 ```
 
+Una compra a proveedor pagada con la caja es un retiro del turno; los reembolsos incluyen los pagos de
+fiados anulados en efectivo. Las ventas fiadas no suman efectivo: entra cuando el cliente paga.
+
 Una venta cuenta en el turno en que se cobró, aunque después se anule: ese dinero entró. La anulación o la
 devolución cuentan en el turno en que se hacen. Así, el resumen de un turno cerrado nunca cambia. Las
 ventas anteriores a los turnos (bases de la fase 3) quedan sin turno.
@@ -66,7 +69,8 @@ reimprime (Ctrl+P; la copia dice "COPIA"), se guarda el PDF, se devuelven produc
 
 - **Anular** deja la venta como "anulada" (no se borra; su boleta dice "ANULADA"), repone el stock de todo
   lo vendido y registra el reembolso con motivo. Solo se anulan ventas sin devoluciones; si ya tiene, se
-  devuelve el resto. Una venta fiada anulada deja de contar como deuda (si tiene abonos, todavía no).
+  devuelve el resto. Una venta fiada anulada deja de contar como deuda; si el cliente ya había abonado,
+  eso pasa como saldo a favor a sus otras deudas y, si no tiene, se le devuelve desde el turno actual.
 - **Devolver** es parcial: se elige cuánto de cada línea (por unidad, unidades enteras; por kg, con el
   diálogo de peso), sin pasar de lo vendido menos lo ya devuelto. Cada línea vale
   `subtotal × cantidad devuelta / cantidad vendida`, redondeado al peso, calculado sobre lo acumulado para
@@ -75,14 +79,75 @@ reimprime (Ctrl+P; la copia dice "COPIA"), se guarda el PDF, se devuelven produc
   la venta pasa a "devuelta". Se imprime una "NOTA DE DEVOLUCIÓN".
 - **El reembolso**: en efectivo sale de la caja abierta (la exige) y se redondea a la decena como al
   cobrar; con tarjeta o transferencia solo se registra el medio. En una venta fiada no se devuelve dinero:
-  baja la deuda.
+  baja la deuda de esa venta, nunca por debajo de cero. Si devuelve más de lo que debe (porque ya había
+  abonado), lo que sobra pasa a sus otras deudas y lo que no cabe se le devuelve.
+
+## Inventario y ajustes
+
+**Inventario** (F3) tiene cuatro pestañas:
+
+- **Stock**: cada producto con su stock, mínimo y valor a costo, con filtros (buscar, categoría, bajo el
+  mínimo, sin stock, negativo). Arriba, el inventario valorizado a costo y a precio de venta. La barra
+  lateral muestra cuántos productos están bajo el mínimo; se actualiza cuando cambia el stock, sin sondeo.
+- **Movimientos**: todo cambio de stock (venta, compra, ajuste, merma, anulación, devolución) con fecha,
+  cantidad, stock resultante y origen (la venta o compra abre su detalle). Filtra por producto, tipo y
+  fechas, y pagina por fecha e id para seguir fluida con cientos de miles de filas.
+- **Compras** y **Proveedores** (ver abajo).
+
+El stock nunca se edita a mano: queda un movimiento. El **ajuste por conteo** recibe lo que se contó (de
+uno o de muchos productos a la vez) y muestra antes de confirmar el resumen de diferencias, en cantidad y
+valorizadas a costo; la diferencia se calcula contra el stock al confirmar y todo va en una sola
+transacción. La **merma** saca lo que se perdió con su motivo (vencido, dañado, robo, consumo interno u
+otro). Ambos piden el PIN si "Ajustar inventario" está protegida (sí por defecto).
+
+## Compras y proveedores
+
+**Registrar compra** (Ctrl+N en Inventario): proveedor (opcional), número de factura o guía, productos con
+cantidad y costo unitario (por kg en productos por peso). Suma el stock, deja en cada producto el último
+costo y, si se marca "Pagada con efectivo de la caja", registra el retiro en el turno abierto (con el PIN de retiros).
+El historial de compras filtra por proveedor y fechas. **Anular** una compra no la borra: la compensa con
+movimientos negativos (avisa antes si algún producto quedaría con stock negativo) y, si se pagó con la caja,
+devuelve el dinero al turno actual. Pide el PIN de "Ajustar inventario". Los proveedores se crean, editan y
+desactivan; nunca se borran.
+
+## Fiados
+
+En el cobro, **Fiado** es la tecla 5 (Alt+5 con el cursor en un campo). Se busca al cliente por nombre,
+teléfono o RUT, o se crea con "Nuevo cliente" (nombre y teléfono) sin salir del cobro. Se ve lo que debe,
+lo que deberá con esta compra y su crédito disponible. Si la venta pasa el límite de crédito del cliente,
+Rust la rechaza; "Fiar sobre el límite" la autoriza con el PIN (acción protegida, sí por defecto). Una venta
+fiada no se redondea ni suma efectivo. La boleta dice "FIADO a <cliente>" y la deuda total del cliente
+después de esa compra.
+
+**Fiados** (F4) lista a quien debe, de la deuda mayor a la menor, con el total por cobrar. Se resalta al
+cliente cuya venta pendiente más antigua tiene más días que "Resaltar deudas antiguas" (Configuración >
+Fiados, 30 por defecto). La ficha del cliente muestra sus ventas pendientes (total, lo pagado y lo que
+debe de cada una), sus pagos y las ventas ya pagadas. Un cliente se desactiva solo si no debe nada.
+
+## Pagos y estado de cuenta
+
+**Registrar pago** (Ctrl+P en la ficha): monto parcial, "Paga todo" o lo de las ventas marcadas, y medio de
+pago. Sin ventas marcadas se aplica de la más antigua a la más nueva; con marcadas, primero a esas. Nunca
+puede superar la deuda. En efectivo exige la caja abierta, se redondea a la decena como al cobrar y calcula
+el vuelto. Cada venta que llega a cero queda "pagada" con su fecha. Se imprime un "COMPROBANTE DE PAGO" con
+las ventas que paga y la deuda restante.
+
+**Anular un pago** mal ingresado pide el PIN de "Anular venta": no se borra, sus ventas vuelven a deberse y,
+si fue en efectivo, el dinero sale del turno actual. No se puede si alguna venta que pagó se anuló o
+devolvió dinero después.
+
+**Estado de cuenta**: ventas pendientes con lo que se debe de cada una, deuda total, límite y últimos pagos;
+se imprime en la térmica o se guarda en PDF (`estado-cuenta-000007.pdf`).
+
+La deuda siempre se calcula en SQL: total de cada venta fiada − lo que bajaron sus devoluciones − sus
+abonos vigentes. Nada se borra: pagos y abonos anulados quedan con su motivo.
 
 ## PIN de administrador
 
 En Configuración > Seguridad se crea un PIN de 4 a 6 dígitos. Se guarda solo su hash (Argon2id), nunca el
 PIN. Protege, según lo que se marque ahí: anular ventas (sí por defecto), devoluciones (sí), retiros de
-efectivo (sí), cerrar la caja (no) y cambiar la configuración (sí; se pide una vez mientras Configuración
-está abierta). Sin PIN creado, nada se protege. Cambiar la lista de acciones protegidas siempre lo pide.
+efectivo (sí), cerrar la caja (no), ajustar inventario (sí), fiar sobre el límite (sí) y cambiar la
+configuración (sí; se pide una vez mientras Configuración está abierta). Sin PIN creado, nada se protege. Cambiar la lista de acciones protegidas siempre lo pide.
 
 La verificación ocurre en Rust: cada comando protegido recibe el PIN y el servicio lo valida, así que llamar
 al comando directamente sin PIN no sirve. Tras 5 intentos fallidos se bloquea 30 segundos.

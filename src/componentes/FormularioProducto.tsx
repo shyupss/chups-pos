@@ -11,6 +11,8 @@ interface Props {
   /** Categoría para un producto nuevo (la del filtro de la lista, si hay una). */
   categoriaInicial: number | null;
   onGuardado: (p: Producto) => void;
+  /** Abre su historial de stock en Inventario > Movimientos. */
+  onVerMovimientos?: (p: Producto) => void;
   onCerrar: () => void;
 }
 
@@ -25,6 +27,7 @@ export default function FormularioProducto({
   categorias,
   categoriaInicial,
   onGuardado,
+  onVerMovimientos,
   onCerrar,
 }: Props) {
   const nuevo = producto === null;
@@ -209,6 +212,15 @@ export default function FormularioProducto({
         <button type="button" onClick={onCerrar} className="h-11 rounded-lg px-4 text-tenue hover:bg-fondo hover:text-texto">
           Cerrar
         </button>
+        {!nuevo && onVerMovimientos && (
+          <button
+            type="button"
+            onClick={() => onVerMovimientos(producto)}
+            className="h-10 w-full rounded-lg border border-linea hover:bg-fondo"
+          >
+            Ver movimientos
+          </button>
+        )}
         {!nuevo && (
           <button
             type="button"

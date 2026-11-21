@@ -38,14 +38,12 @@ export const SECCIONES: DatosSeccion[] = [
     nombre: "Inventario",
     tecla: "F3",
     Icono: Boxes,
-    pendiente: "Ingreso de mercadería, ajustes, mermas, historial por producto y proveedores. Llega en la fase 5.",
   },
   {
     id: "fiados",
     nombre: "Fiados",
     tecla: "F4",
     Icono: NotebookPen,
-    pendiente: "Clientes, deudas y registro de pagos parciales. Llega en la fase 5.",
   },
   { id: "ventas", nombre: "Ventas", tecla: "F5", Icono: Receipt },
   {

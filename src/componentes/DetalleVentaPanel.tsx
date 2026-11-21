@@ -2,6 +2,7 @@ import { Ban, FileDown, Printer, Undo2, X } from "lucide-react";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { api, textoError, type Config, type DetalleVenta, type LineaDetalle, type MedioPago } from "../api";
 import { cantidad, fechaHora, folio, NOMBRE_MEDIO, pesos, pesosConSigno } from "../formato";
+import { avisarCambioStock } from "../eventos";
 import { useSalidasVenta } from "../hooks/useSalidasVenta";
 import AvisoVenta from "./AvisoVenta";
 import DialogoAnular from "./DialogoAnular";
@@ -35,7 +36,6 @@ function motivoSinAnular(v: DetalleVenta): string | null {
   if (v.estado === "anulada") return "La venta ya está anulada";
   if (v.estado === "conDevolucion" || v.estado === "devuelta")
     return "Tiene devoluciones: devuelve el resto de los productos";
-  if (v.estado === "fiada" && v.tieneAbonos) return "La venta fiada tiene abonos: todavía no se puede anular";
   return null;
 }
 
@@ -43,7 +43,6 @@ function motivoSinAnular(v: DetalleVenta): string | null {
 function motivoSinDevolver(v: DetalleVenta): string | null {
   if (v.estado === "anulada") return "La venta está anulada";
   if (v.estado === "devuelta") return "Ya se devolvió todo lo vendido";
-  if (v.medioPago === "fiado" && v.tieneAbonos) return "La venta fiada tiene abonos: todavía no se puede devolver";
   return null;
 }
 
@@ -88,6 +87,7 @@ export default function DetalleVentaPanel({ ventaId, activa, onImpresion, onCamb
     setVenta(d);
     setDialogo(null);
     onCambio();
+    avisarCambioStock();
     if (config?.impresora) imprimirComprobante(que, enviar);
   };
   const { salida, iniciar, imprimir, reintentar, guardarPdf, cerrar } = useSalidasVenta(onImpresion);
@@ -195,6 +195,12 @@ export default function DetalleVentaPanel({ ventaId, activa, onImpresion, onCamb
                   </>
                 )}
                 {venta.montoDevuelto > 0 && <Par etiqueta="Devuelto" valor={pesosConSigno(-venta.montoDevuelto)} />}
+                {venta.medioPago === "fiado" && (
+                  <>
+                    <Par etiqueta="Abonado" valor={pesos(venta.abonado)} />
+                    {venta.saldo !== null && <Par etiqueta="Debe de esta venta" valor={pesos(venta.saldo)} fuerte />}
+                  </>
+                )}
               </dl>
             </Bloque>
 

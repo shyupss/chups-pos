@@ -20,14 +20,15 @@ use sqlx::SqlitePool;
 use crate::boleta::formato::{cantidad, folio};
 use crate::error::validacion;
 use crate::repositorios::devoluciones::{self as repo, NuevaDevolucion};
+use crate::repositorios::fiados as fiados_repo;
 use crate::repositorios::productos::Unidad;
 use crate::repositorios::{productos, turnos, ventas};
-use crate::servicios::anulacion::{medio_valido, motivo_valido, sin_caja};
+use crate::servicios::anulacion::{medio_valido, motivo_valido, reembolso_en, sin_caja};
 use crate::servicios::cantidades::MIL;
-use crate::servicios::config;
+use crate::servicios::fiados;
 use crate::servicios::historial::{self, DetalleVenta, EstadoVenta};
 use crate::servicios::seguridad::{self, Accion, ControlPin};
-use crate::servicios::ventas::{redondeo_a_decena, MedioPago};
+use crate::servicios::ventas::MedioPago;
 use crate::{Error, Resultado};
 
 /// Una línea a devolver. La cantidad va en milésimas, como al vender.
@@ -101,14 +102,11 @@ pub async fn registrar(
         _ => {}
     }
     let fiada = v.medio_pago == MedioPago::Fiado;
-    if fiada && v.tiene_abonos {
-        return validacion("La venta fiada tiene abonos: todavía no se puede devolver");
-    }
-    let medio = medio_valido(if fiada { "fiada" } else { "pagada" }, medio_reembolso)?;
-    let efectivo = medio == Some(MedioPago::Efectivo);
+    let medio = medio_valido(fiada, medio_reembolso)?;
     validar_cantidades(&v, items)?;
-    // Antes del PIN, para no pedirlo en vano.
-    if efectivo
+    // Antes del PIN, para no pedirlo en vano (en una fiada, recién se sabe dentro si hay reembolso).
+    if !fiada
+        && medio == Some(MedioPago::Efectivo)
         && crate::servicios::turnos::estado_caja(pool)
             .await?
             .turno
@@ -120,9 +118,6 @@ pub async fn registrar(
 
     let mut tx = pool.begin().await?;
     let turno_id = turnos::id_abierto(&mut tx).await?;
-    if efectivo && turno_id.is_none() {
-        return Err(sin_caja());
-    }
     // Las cantidades se vuelven a leer dentro de la transacción: otra devolución pudo llegar antes.
     let lineas = ventas::items_con_devuelto(&mut tx, venta_id).await?;
     let mut por_linea = Vec::with_capacity(items.len());
@@ -150,10 +145,37 @@ pub async fn registrar(
     } else {
         suma_lineas
     };
-    let redondeo = if efectivo && config::redondeo_efectivo_activo(&mut tx).await? {
-        redondeo_a_decena(neto)
+    // Pagada: se devuelve todo en el medio elegido. Fiada: baja la deuda de esta venta hasta su
+    // saldo (nunca queda negativo); lo que sobra (ya lo había abonado) pasa como saldo a favor a
+    // sus otras deudas y, si no cabe, se le devuelve en el medio elegido.
+    let (a_devolver, rebaja_deuda) = if fiada {
+        let f = fiados_repo::venta(&mut tx, venta_id)
+            .await?
+            .ok_or_else(|| Error::NoEncontrado("La venta no existe".into()))?;
+        let rebaja = neto.min(f.saldo.max(0));
+        let exceso = neto - rebaja;
+        let trasladado = match f.cliente_id {
+            Some(cliente) => {
+                fiados::trasladar_saldo_a_favor(&mut tx, cliente, venta_id, exceso, turno_id)
+                    .await?
+            }
+            None => 0,
+        };
+        (exceso - trasladado, rebaja + trasladado)
     } else {
-        0
+        (neto, 0)
+    };
+    let (medio, redondeo) = if a_devolver > 0 {
+        let Some(m) = medio else {
+            return validacion(format!(
+                "Sobran {} que el cliente ya había abonado: elige cómo se le devuelven",
+                crate::boleta::formato::pesos(a_devolver)
+            ));
+        };
+        let (_, redondeo) = reembolso_en(&mut tx, m, a_devolver, turno_id).await?;
+        (Some(m), redondeo)
+    } else {
+        (None, 0)
     };
     let monto = neto + redondeo;
 
@@ -166,6 +188,7 @@ pub async fn registrar(
             redondeo,
             medio_reembolso: medio.map(MedioPago::como_texto),
             motivo: &motivo,
+            rebaja_deuda,
         },
     )
     .await?;
@@ -218,6 +241,9 @@ pub async fn registrar(
         return Err(Error::Conflicto(
             "La venta cambió mientras se devolvía: vuelve a abrirla".into(),
         ));
+    }
+    if fiada {
+        fiados::marcar_si_saldada(&mut tx, venta_id).await?;
     }
     tx.commit().await?;
 

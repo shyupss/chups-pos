@@ -11,7 +11,9 @@ pub mod anulacion;
 pub mod cierre;
 pub mod devolucion;
 pub mod escpos;
+pub mod estado_cuenta;
 pub mod formato;
+pub mod pago;
 pub mod pdf;
 pub mod texto;
 
@@ -121,6 +123,8 @@ pub struct Boleta {
     pub copia: bool,
     /// Venta anulada: fecha local de la anulación. Dice "ANULADA" bajo la fecha.
     pub anulada: Option<String>,
+    /// Fiado: la deuda total del cliente justo después de esta venta.
+    pub deuda_cliente: Option<i64>,
 }
 
 impl Boleta {
@@ -172,6 +176,7 @@ pub async fn armar(pool: &SqlitePool, venta_id: i64) -> Resultado<Boleta> {
         codigo_barras: cfg.boleta_codigo,
         copia: false,
         anulada: v.anulada_en.as_deref().map(formato::fecha_local),
+        deuda_cliente: v.deuda_tras_venta,
     })
 }
 

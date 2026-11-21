@@ -86,6 +86,9 @@ export interface VentaConfirmada {
   montoRecibido: number | null;
   vuelto: number | null;
   lineas: LineaVendida[];
+  /** Fiado: el cliente y su deuda total después de esta venta. */
+  cliente: string | null;
+  deudaCliente: number | null;
 }
 
 export type TablaCaracteres = "cp858" | "cp850" | "wpc1252";
@@ -112,6 +115,8 @@ export interface Config {
   balanzaPrefijos: string;
   balanzaFormato: FormatoBalanza;
   balanzaLargoCodigo: number;
+  /** Días desde la fiada pendiente más antigua a partir de los que la deuda se resalta. */
+  fiadoDiasAlerta: number;
 }
 
 /** Una venta en espera en la lista. El total usa los precios actuales de los productos activos. */
@@ -171,6 +176,10 @@ export interface AccionesProtegidas {
   retiroEfectivo: boolean;
   cerrarCaja: boolean;
   cambiarConfiguracion: boolean;
+  /** Ajustes por conteo, mermas y anular compras. */
+  ajustarInventario: boolean;
+  /** Vender fiado por sobre el límite de crédito del cliente. */
+  fiarSobreLimite: boolean;
 }
 
 export interface EstadoSeguridad {
@@ -255,6 +264,8 @@ export interface ResumenTurno {
   abonos: TotalMedio[];
   anulaciones: TotalMedio[];
   devoluciones: TotalMedio[];
+  /** Pagos de fiados anulados en el turno: su dinero salió de aquí. */
+  pagosAnulados: TotalMedio[];
   redondeoReembolsos: number;
   movimientos: MovimientoCaja[];
   efectivo: CuadreEfectivo;
@@ -362,6 +373,10 @@ export interface DetalleVenta {
   devoluciones: Devolucion[];
   montoDevuelto: number;
   tieneAbonos: boolean;
+  /** Fiado: el cliente, lo abonado y lo que todavía debe de esta venta (lo calcula Rust). */
+  clienteId: number | null;
+  abonado: number;
+  saldo: number | null;
 }
 
 /** Una línea a devolver; la cantidad en milésimas, como al vender. */
@@ -378,6 +393,264 @@ export interface DevolucionRegistrada {
   monto: number;
   redondeo: number;
   venta: DetalleVenta;
+}
+
+/** Qué productos mostrar en Inventario > Stock. */
+export type FiltroEstadoStock = "todos" | "bajoMinimo" | "sinStock" | "negativo";
+
+export interface FiltrosStock {
+  texto: string;
+  categoriaId: number | null;
+  sinCategoria: boolean;
+  estado: FiltroEstadoStock;
+}
+
+export interface ProductoStock {
+  id: number;
+  codigoBarras: string | null;
+  nombre: string;
+  categoriaId: number | null;
+  unidad: Unidad;
+  precioVenta: number;
+  costo: number | null;
+  stockMil: number;
+  stockMinimoMil: number;
+  /** Stock × costo (lo calcula Rust); null si no tiene costo. */
+  valor: number | null;
+  bajoMinimo: boolean;
+}
+
+export interface ResumenInventario {
+  valorCosto: number;
+  valorVenta: number;
+  /** Productos con stock y sin costo: cuentan como $0 en valorCosto. */
+  sinCosto: number;
+  bajoMinimo: number;
+  productos: number;
+}
+
+export type TipoMovimientoStock = "venta" | "compra" | "ajuste" | "merma" | "devolucion";
+
+/** Fechas como días locales "aaaa-mm-dd" (hasta incluido). */
+export interface FiltrosMovimientos {
+  productoId: number | null;
+  tipo: TipoMovimientoStock | null;
+  desde: string | null;
+  hasta: string | null;
+}
+
+/** Dónde sigue la lista: fecha e id del último movimiento mostrado. */
+export interface CursorMovimientos {
+  fecha: string;
+  id: number;
+}
+
+export interface MovimientoStock {
+  id: number;
+  fecha: string;
+  productoId: number;
+  producto: string;
+  unidad: Unidad;
+  tipo: TipoMovimientoStock;
+  /** Positivo entra, negativo sale (milésimas). */
+  cantidadMil: number;
+  stockResultanteMil: number;
+  motivo: string | null;
+  nota: string | null;
+  ventaId: number | null;
+  folio: number | null;
+  compraId: number | null;
+}
+
+export interface PaginaMovimientos {
+  movimientos: MovimientoStock[];
+  siguiente: CursorMovimientos | null;
+}
+
+export interface Contado {
+  productoId: number;
+  contadoMil: number;
+}
+
+/** Diferencia de un conteo contra el stock del momento (la calcula Rust). */
+export interface Diferencia {
+  productoId: number;
+  nombre: string;
+  unidad: Unidad;
+  stockMil: number;
+  contadoMil: number;
+  diferenciaMil: number;
+  /** La diferencia a costo; null si no tiene costo. */
+  valor: number | null;
+}
+
+export type MotivoMerma = "vencido" | "danado" | "robo" | "consumoInterno" | "otro";
+
+export interface Proveedor {
+  id: number;
+  nombre: string;
+  rut: string | null;
+  telefono: string | null;
+  contacto: string | null;
+  nota: string | null;
+  activo: boolean;
+  /** Compras vigentes (sin las anuladas) y la fecha de la última. */
+  compras: number;
+  ultimaCompra: string | null;
+}
+
+export type DatosProveedor = Pick<Proveedor, "nombre" | "rut" | "telefono" | "contacto" | "nota">;
+
+/** Costo por unidad o, en productos por kg, por kilo. */
+export interface LineaCompra {
+  productoId: number;
+  cantidadMil: number;
+  costoUnitario: number;
+}
+
+export interface NuevaCompra {
+  proveedorId: number | null;
+  documento: string | null;
+  nota: string | null;
+  lineas: LineaCompra[];
+  /** Se pagó con efectivo de la caja: un retiro en el turno abierto. */
+  pagadaConCaja: boolean;
+}
+
+export interface Compra {
+  id: number;
+  fecha: string;
+  proveedorId: number | null;
+  proveedor: string | null;
+  documento: string | null;
+  total: number;
+  nota: string | null;
+  pagadaConCaja: boolean;
+  anuladaEn: string | null;
+  motivoAnulacion: string | null;
+  lineas: number;
+}
+
+export interface ItemCompra {
+  productoId: number;
+  nombre: string;
+  unidad: Unidad;
+  cantidadMil: number;
+  costoUnitario: number;
+  subtotal: number;
+  stockMil: number;
+}
+
+export interface DetalleCompra {
+  compra: Compra;
+  items: ItemCompra[];
+  /** Productos que quedarían con stock negativo si se anulara ahora. */
+  quedarianNegativos: string[];
+}
+
+/** Fechas como días locales "aaaa-mm-dd" (hasta incluido). */
+export interface FiltrosCompras {
+  proveedorId: number | null;
+  desde: string | null;
+  hasta: string | null;
+}
+
+export interface Cliente {
+  id: number;
+  nombre: string;
+  telefono: string | null;
+  rut: string | null;
+  direccion: string | null;
+  nota: string | null;
+  /** null = sin límite. */
+  limiteCredito: number | null;
+  activo: boolean;
+  creadoEn: string | null;
+  /** Lo que debe hoy (lo calcula Rust). */
+  deuda: number;
+  /** Cuánto más se le puede fiar; null si no tiene límite. */
+  disponible: number | null;
+}
+
+export type DatosCliente = Pick<Cliente, "nombre" | "telefono" | "rut" | "direccion" | "nota" | "limiteCredito">;
+
+export interface Deudor {
+  id: number;
+  nombre: string;
+  telefono: string | null;
+  limiteCredito: number | null;
+  activo: boolean;
+  deuda: number;
+  /** Fecha (UTC) de la fiada pendiente más antigua. */
+  fiadaMasAntigua: string | null;
+  ultimoPago: string | null;
+}
+
+export interface PaginaDeudores {
+  clientes: Deudor[];
+  /** Solo en la primera página. */
+  totalAdeudado: number | null;
+  clientesConDeuda: number | null;
+}
+
+/** Una venta fiada con lo que se debe de ella. */
+export interface VentaFiada {
+  ventaId: number;
+  folio: number;
+  fechaHora: string;
+  total: number;
+  /** Lo que bajaron sus devoluciones. */
+  devuelto: number;
+  abonado: number;
+  saldo: number;
+  pagadaEn: string | null;
+}
+
+export interface AbonoDePago {
+  ventaId: number;
+  folio: number;
+  monto: number;
+}
+
+export interface Pago {
+  id: number;
+  clienteId: number;
+  fecha: string;
+  /** Lo que bajó la deuda; en efectivo entró monto + redondeo. */
+  monto: number;
+  redondeo: number;
+  montoRecibido: number | null;
+  vuelto: number | null;
+  medioPago: MedioPago;
+  turnoId: number | null;
+  nota: string | null;
+  anuladoEn: string | null;
+  motivoAnulacion: string | null;
+  abonos: AbonoDePago[];
+}
+
+export interface FichaCliente {
+  cliente: Cliente;
+  /** De la más antigua a la más nueva. */
+  pendientes: VentaFiada[];
+  pagadas: VentaFiada[];
+  pagos: Pago[];
+}
+
+/** Sin ventas: de la más antigua a la más nueva; con ventas: primero esas. */
+export interface NuevoPagoCliente {
+  clienteId: number;
+  monto: number;
+  medioPago: Exclude<MedioPago, "fiado">;
+  ventas: number[];
+  /** Solo en efectivo; null = justo. */
+  montoRecibido: number | null;
+  nota: string | null;
+}
+
+export interface PagoRegistrado {
+  pago: Pago;
+  deudaRestante: number;
 }
 
 /** Etiqueta de balanza leída: producto por kg y los gramos de la etiqueta. */
@@ -444,7 +717,27 @@ export const api = {
     invoke<Categoria>("renombrar_categoria", { id, nombre }),
   eliminarCategoria: (id: number) => invoke<void>("eliminar_categoria", { id }),
 
-  confirmarVenta: (venta: NuevaVenta) => invoke<VentaConfirmada>("confirmar_venta", { venta }),
+  /** Una fiada sobre el límite se rechaza salvo con `sobreLimite` (pide PIN si está protegido). */
+  confirmarVenta: (venta: NuevaVenta, sobreLimite = false, pin: string | null = null) =>
+    invoke<VentaConfirmada>("confirmar_venta", { venta, sobreLimite, pin }),
+
+  buscarClientes: (texto: string, limite: number) => invoke<Cliente[]>("buscar_clientes", { texto, limite }),
+  obtenerCliente: (id: number) => invoke<Cliente>("obtener_cliente", { id }),
+  crearCliente: (datos: DatosCliente) => invoke<Cliente>("crear_cliente", { datos }),
+  editarCliente: (id: number, datos: DatosCliente) => invoke<Cliente>("editar_cliente", { id, datos }),
+  /** Desactivar solo si no debe nada. */
+  cambiarEstadoCliente: (id: number, activo: boolean) => invoke<Cliente>("cambiar_estado_cliente", { id, activo }),
+  listarDeudores: (texto: string, todos: boolean, limite: number, desplazamiento: number) =>
+    invoke<PaginaDeudores>("listar_deudores", { texto, todos, limite, desplazamiento }),
+  fichaCliente: (id: number) => invoke<FichaCliente>("ficha_cliente", { id }),
+  registrarPago: (pago: NuevoPagoCliente) => invoke<PagoRegistrado>("registrar_pago", { pago }),
+  /** Protegido con el PIN de anular venta. */
+  anularPago: (id: number, motivo: string, pin: string | null) =>
+    invoke<PagoRegistrado>("anular_pago", { id, motivo, pin }),
+  imprimirPago: (pagoId: number) => invoke<void>("imprimir_pago", { pagoId }),
+  imprimirEstadoCuenta: (clienteId: number) => invoke<void>("imprimir_estado_cuenta", { clienteId }),
+  guardarEstadoCuentaPdf: (clienteId: number, abrir: boolean) =>
+    invoke<string>("guardar_estado_cuenta_pdf", { clienteId, abrir }),
   listarVentas: (filtros: FiltrosVentas, limite: number, desplazamiento: number) =>
     invoke<PaginaVentas>("listar_ventas", { filtros, limite, desplazamiento }),
   detalleVenta: (id: number) => invoke<DetalleVenta>("detalle_venta", { id }),
@@ -466,6 +759,41 @@ export const api = {
 
   obtenerConfig: () => invoke<Config>("obtener_config"),
   guardarConfig: (config: Config, pin: string | null) => invoke<Config>("guardar_config", { config, pin }),
+
+  listarStock: (filtros: FiltrosStock, limite: number, desplazamiento: number) =>
+    invoke<ProductoStock[]>("listar_stock", { filtros, limite, desplazamiento }),
+  resumenInventario: () => invoke<ResumenInventario>("resumen_inventario"),
+  contarBajoMinimo: () => invoke<number>("contar_bajo_minimo"),
+  listarMovimientos: (filtros: FiltrosMovimientos, despuesDe: CursorMovimientos | null, limite: number) =>
+    invoke<PaginaMovimientos>("listar_movimientos", { filtros, despuesDe, limite }),
+  previsualizarConteo: (items: Contado[]) => invoke<Diferencia[]>("previsualizar_conteo", { items }),
+  /** Deja el stock en lo contado, todo en una transacción. Protegido con PIN. */
+  ajustarConteo: (items: Contado[], motivo: string, pin: string | null) =>
+    invoke<Diferencia[]>("ajustar_conteo", { items, motivo, pin }),
+  /** Devuelve el stock que quedó. Protegido con PIN. */
+  registrarMerma: (
+    productoId: number,
+    cantidadMil: number,
+    motivo: MotivoMerma,
+    detalle: string | null,
+    pin: string | null,
+  ) => invoke<number>("registrar_merma", { productoId, cantidadMil, motivo, detalle, pin }),
+
+  listarProveedores: (texto: string, incluirInactivos: boolean, limite: number, desplazamiento: number) =>
+    invoke<Proveedor[]>("listar_proveedores", { texto, incluirInactivos, limite, desplazamiento }),
+  crearProveedor: (datos: DatosProveedor) => invoke<Proveedor>("crear_proveedor", { datos }),
+  editarProveedor: (id: number, datos: DatosProveedor) => invoke<Proveedor>("editar_proveedor", { id, datos }),
+  cambiarEstadoProveedor: (id: number, activo: boolean) =>
+    invoke<Proveedor>("cambiar_estado_proveedor", { id, activo }),
+  /** Si se paga con la caja, pide el PIN de los retiros cuando está protegido. */
+  registrarCompra: (compra: NuevaCompra, pin: string | null) =>
+    invoke<DetalleCompra>("registrar_compra", { compra, pin }),
+  detalleCompra: (id: number) => invoke<DetalleCompra>("detalle_compra", { id }),
+  listarCompras: (filtros: FiltrosCompras, limite: number, desplazamiento: number) =>
+    invoke<Compra[]>("listar_compras", { filtros, limite, desplazamiento }),
+  /** Compensa stock y caja. Protegido con el PIN de ajustar inventario. */
+  anularCompra: (id: number, motivo: string, pin: string | null) =>
+    invoke<DetalleCompra>("anular_compra", { id, motivo, pin }),
 
   estadoCaja: () => invoke<EstadoCaja>("estado_caja"),
   abrirTurno: (montoInicial: number) => invoke<Turno>("abrir_turno", { montoInicial }),

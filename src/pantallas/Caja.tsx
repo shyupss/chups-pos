@@ -19,6 +19,7 @@ import DialogoPeso from "../componentes/DialogoPeso";
 import ListaEspera from "../componentes/ListaEspera";
 import PonerEnEspera from "../componentes/PonerEnEspera";
 import { cantidad, MAX_KG_MIL, MAX_UNIDADES_MIL, parseKg, pesos, subtotalLinea } from "../formato";
+import { avisarCambioStock } from "../eventos";
 import { useSalidasVenta } from "../hooks/useSalidasVenta";
 
 interface Linea {
@@ -337,6 +338,7 @@ export default function Caja({ activa, onCrearProducto, onEnEspera, onImpresion,
     setAviso({ tipo: "venta", venta });
     setUltimaVentaId(venta.id);
     iniciar(venta.id, venta.folio);
+    avisarCambioStock();
     if (!config?.impresora) return;
     if (config.cajonActivo && (venta.medioPago === "efectivo" || !config.cajonSoloEfectivo)) {
       void abrirCajon(venta.id);

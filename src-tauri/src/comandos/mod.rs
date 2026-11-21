@@ -5,9 +5,13 @@
 
 pub mod boletas;
 pub mod categorias;
+pub mod clientes;
+pub mod compras;
 pub mod config;
 pub mod espera;
+pub mod fiados;
 pub mod impresion;
+pub mod inventario;
 pub mod negocio;
 pub mod productos;
 pub mod seguridad;

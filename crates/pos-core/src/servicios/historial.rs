@@ -92,7 +92,7 @@ pub struct PaginaVentas {
 
 /// Medianoche local de `dia` en UTC, como la guarda la base. Si esa medianoche no existe
 /// (en Chile el cambio de hora de septiembre se salta las 00:00), la primera hora que sí.
-fn inicio_del_dia(dia: NaiveDate) -> String {
+pub(crate) fn inicio_del_dia(dia: NaiveDate) -> String {
     let medianoche: NaiveDateTime = dia.and_hms_opt(0, 0, 0).expect("00:00 es una hora válida");
     let local = (0..=2)
         .find_map(|h| {
@@ -107,7 +107,7 @@ fn inicio_del_dia(dia: NaiveDate) -> String {
         .to_string()
 }
 
-fn dia(texto: &str) -> Resultado<NaiveDate> {
+pub(crate) fn dia(texto: &str) -> Resultado<NaiveDate> {
     NaiveDate::parse_from_str(texto.trim(), "%Y-%m-%d")
         .map_err(|_| Error::Validacion(format!("La fecha «{texto}» no es válida")))
 }
@@ -246,8 +246,11 @@ pub struct DetalleVenta {
     pub anulacion: Option<Anulacion>,
     pub devoluciones: Vec<Devolucion>,
     pub monto_devuelto: i64,
-    /// Una fiada con abonos no se anula ni se devuelve todavía (los abonos llegan en la fase 5).
     pub tiene_abonos: bool,
+    /// Fiado: el cliente, lo abonado y lo que todavía debe de esta venta.
+    pub cliente_id: Option<i64>,
+    pub abonado: i64,
+    pub saldo: Option<i64>,
 }
 
 pub async fn detalle(pool: &SqlitePool, id: i64) -> Resultado<DetalleVenta> {
@@ -295,6 +298,11 @@ pub async fn detalle(pool: &SqlitePool, id: i64) -> Resultado<DetalleVenta> {
             motivo: d.motivo,
         })
         .collect();
+    let fiada = if v.medio_pago == "fiado" {
+        crate::repositorios::fiados::venta(&mut conn, id).await?
+    } else {
+        None
+    };
     let anulacion = v.anulada_en.clone().map(|fecha| Anulacion {
         fecha,
         motivo: v.motivo_anulacion.clone().unwrap_or_default(),
@@ -321,6 +329,11 @@ pub async fn detalle(pool: &SqlitePool, id: i64) -> Resultado<DetalleVenta> {
         devoluciones,
         monto_devuelto: v.monto_devuelto,
         tiene_abonos: v.abonos > 0,
+        cliente_id: fiada.as_ref().and_then(|f| f.cliente_id),
+        abonado: fiada.as_ref().map_or(0, |f| f.abonado),
+        saldo: fiada
+            .filter(|_| v.estado != "anulada")
+            .map(|f| f.saldo.max(0)),
     })
 }
 

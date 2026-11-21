@@ -3,7 +3,9 @@
 
 use sqlx::SqlitePool;
 
-use crate::boleta::{self, anulacion, cierre, devolucion, escpos, pdf, Documento};
+use crate::boleta::{
+    self, anulacion, cierre, devolucion, escpos, estado_cuenta, pago, pdf, Documento,
+};
 use crate::servicios::config::{self, FormatoPdf};
 use crate::Resultado;
 
@@ -88,6 +90,28 @@ pub async fn trabajo_cierre(pool: &SqlitePool, turno_id: i64) -> Resultado<Traba
 /// El comprobante de anulación de una venta anulada.
 pub async fn trabajo_anulacion(pool: &SqlitePool, venta_id: i64) -> Resultado<Trabajo> {
     trabajo(pool, &anulacion::armar(pool, venta_id).await?).await
+}
+
+/// El comprobante de un pago de fiado.
+pub async fn trabajo_pago(pool: &SqlitePool, pago_id: i64) -> Resultado<Trabajo> {
+    trabajo(pool, &pago::armar(pool, pago_id).await?).await
+}
+
+/// El estado de cuenta de un cliente.
+pub async fn trabajo_estado_cuenta(pool: &SqlitePool, cliente_id: i64) -> Resultado<Trabajo> {
+    trabajo(pool, &estado_cuenta::armar(pool, cliente_id).await?).await
+}
+
+/// PDF del estado de cuenta de un cliente.
+pub async fn preparar_pdf_estado_cuenta(
+    pool: &SqlitePool,
+    cliente_id: i64,
+) -> Resultado<PdfPendiente> {
+    pendiente(
+        pool,
+        Box::new(estado_cuenta::armar(pool, cliente_id).await?),
+    )
+    .await
 }
 
 /// La nota de una devolución.

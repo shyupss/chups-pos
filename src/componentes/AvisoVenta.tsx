@@ -35,6 +35,12 @@ export default function AvisoVenta({ venta, salida, ...acciones }: Props) {
           {venta.medioPago === "efectivo" && venta.vuelto !== null && (
             <span className="text-lg font-semibold">Vuelto {pesos(venta.vuelto)}</span>
           )}
+          {venta.medioPago === "fiado" && venta.cliente && (
+            <span className="font-semibold">
+              Fiado a {venta.cliente}
+              {venta.deudaCliente !== null && ` · ahora debe ${pesos(venta.deudaCliente)}`}
+            </span>
+          )}
           <span className="ml-auto flex gap-2">
             <button type="button" onClick={acciones.reimprimir} disabled={imprimiendo} className={claseBoton} title="Reimprimir (Ctrl+P)">
               Reimprimir

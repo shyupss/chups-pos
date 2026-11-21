@@ -256,17 +256,16 @@ async fn la_anulacion_sin_caja_con_tarjeta_queda_sin_turno() {
 }
 
 #[tokio::test]
-async fn la_fiada_anulada_deja_de_ser_deuda_y_con_abonos_no_se_anula() {
+async fn la_fiada_anulada_deja_de_ser_deuda_y_con_abonos_se_reembolsa() {
     let pool = comun::con_caja().await;
     let p = comun::crear(&pool, "B", "Bebida", 1500, 10).await;
     let a = vender(&pool, &[(p.id, 2000)], MedioPago::Fiado).await;
     let b = vender(&pool, &[(p.id, 1000)], MedioPago::Fiado).await;
 
-    // Una fiada no se reembolsa.
-    assert!(anular(&pool, a.id, Some(MedioPago::Efectivo))
+    // Sin abonos no hay nada que devolver: el medio elegido no se usa.
+    let d = anular(&pool, a.id, Some(MedioPago::Efectivo))
         .await
-        .is_err());
-    let d = anular(&pool, a.id, None).await.unwrap();
+        .unwrap();
     let anulacion = d.anulacion.unwrap();
     assert_eq!(
         (anulacion.medio_reembolso, anulacion.reembolso),
@@ -278,6 +277,7 @@ async fn la_fiada_anulada_deja_de_ser_deuda_y_con_abonos_no_se_anula() {
         .unwrap();
     assert_eq!(deudas, 1);
 
+    // Con $500 abonados y sin otras deudas, hay que elegir cómo devolverlos.
     sqlx::query("INSERT INTO abonos (venta_id, monto, medio_pago) VALUES (?, 500, 'efectivo')")
         .bind(b.id)
         .execute(&pool)
@@ -285,8 +285,16 @@ async fn la_fiada_anulada_deja_de_ser_deuda_y_con_abonos_no_se_anula() {
         .unwrap();
     assert!(matches!(
         anular(&pool, b.id, None).await,
-        Err(Error::Validacion(m)) if m.contains("abonos")
+        Err(Error::Validacion(m)) if m.contains("$500")
     ));
+    let d = anular(&pool, b.id, Some(MedioPago::Efectivo))
+        .await
+        .unwrap();
+    let anulacion = d.anulacion.unwrap();
+    assert_eq!(
+        (anulacion.medio_reembolso, anulacion.reembolso),
+        (Some(MedioPago::Efectivo), Some(500))
+    );
 }
 
 #[tokio::test]

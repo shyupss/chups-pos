@@ -3,9 +3,11 @@ use std::collections::BTreeMap;
 use serde::{Deserialize, Serialize};
 use sqlx::SqlitePool;
 
+use crate::boleta::formato::pesos;
 use crate::error::validacion;
 use crate::repositorios::productos::Unidad;
-use crate::repositorios::{productos, turnos, ventas};
+use crate::repositorios::{clientes, fiados, productos, turnos, ventas};
+use crate::servicios::seguridad::{self, Accion, ControlPin};
 use crate::servicios::{cantidades, config};
 use crate::{Error, Resultado};
 
@@ -102,6 +104,9 @@ pub struct VentaConfirmada {
     pub monto_recibido: Option<i64>,
     pub vuelto: Option<i64>,
     pub lineas: Vec<LineaVendida>,
+    /// Fiado: el cliente y su deuda total después de esta venta.
+    pub cliente: Option<String>,
+    pub deuda_cliente: Option<i64>,
 }
 
 fn desborde() -> Error {
@@ -127,6 +132,19 @@ pub fn redondeo_a_decena(monto: i64) -> i64 {
 /// El stock puede quedar negativo: en un negocio real no se debe bloquear una venta
 /// porque el inventario esté desactualizado. Se corrige con un ajuste.
 pub async fn confirmar(pool: &SqlitePool, v: &NuevaVenta) -> Resultado<VentaConfirmada> {
+    confirmar_autorizada(pool, &ControlPin::new(), v, false, None).await
+}
+
+/// Como [`confirmar`], para el cobro. Una venta fiada que pasa el límite de crédito del cliente
+/// se rechaza, salvo que se autorice (`sobre_limite`): eso pide el PIN si "fiar sobre el límite"
+/// está protegida. El PIN se revisa antes de abrir la transacción.
+pub async fn confirmar_autorizada(
+    pool: &SqlitePool,
+    control: &ControlPin,
+    v: &NuevaVenta,
+    sobre_limite: bool,
+    pin: Option<&str>,
+) -> Resultado<VentaConfirmada> {
     if v.items.is_empty() {
         return validacion("La venta no tiene productos");
     }
@@ -151,6 +169,10 @@ pub async fn confirmar(pool: &SqlitePool, v: &NuevaVenta) -> Resultado<VentaConf
     }
     if v.medio_pago != MedioPago::Fiado && v.cliente_id.is_some() {
         return validacion("Solo las ventas fiadas llevan cliente");
+    }
+    let fiado = v.medio_pago == MedioPago::Fiado;
+    if fiado && sobre_limite {
+        seguridad::exigir(pool, control, Accion::FiarSobreLimite, pin).await?;
     }
 
     let mut tx = pool.begin().await?;
@@ -207,10 +229,34 @@ pub async fn confirmar(pool: &SqlitePool, v: &NuevaVenta) -> Resultado<VentaConf
         MedioPago::Fiado => (None, None),
         _ => (Some(total), Some(0)),
     };
-    let estado = if v.medio_pago == MedioPago::Fiado {
-        "fiada"
-    } else {
-        "pagada"
+    let estado = if fiado { "fiada" } else { "pagada" };
+
+    // Fiado: cliente activo y límite de crédito. Estas consultas solo corren al fiar.
+    let (cliente, deuda_tras_venta) = match v.cliente_id {
+        Some(id) if fiado => {
+            let c = clientes::por_id(&mut tx, id)
+                .await?
+                .filter(|c| c.activo)
+                .ok_or_else(|| {
+                    Error::Validacion("El cliente no existe o está desactivado".into())
+                })?;
+            let deuda = fiados::deuda(&mut tx, id).await?;
+            let despues = deuda.checked_add(total).ok_or_else(desborde)?;
+            if let Some(limite) = c.limite_credito {
+                if despues > limite && !sobre_limite {
+                    return validacion(format!(
+                        "La venta supera el límite de crédito de {}: debe {} de un límite de {} \
+                         (le quedan {}). Se puede fiar igual con autorización",
+                        c.nombre,
+                        pesos(deuda),
+                        pesos(limite),
+                        pesos((limite - deuda).max(0))
+                    ));
+                }
+            }
+            (Some(c.nombre), Some(despues))
+        }
+        _ => (None, None),
     };
 
     let cabecera = ventas::insertar_cabecera(
@@ -226,6 +272,7 @@ pub async fn confirmar(pool: &SqlitePool, v: &NuevaVenta) -> Resultado<VentaConf
             vuelto,
             estado,
             cliente_id: v.cliente_id,
+            deuda_tras_venta,
         },
     )
     .await?;
@@ -269,6 +316,8 @@ pub async fn confirmar(pool: &SqlitePool, v: &NuevaVenta) -> Resultado<VentaConf
         monto_recibido,
         vuelto,
         lineas,
+        cliente,
+        deuda_cliente: deuda_tras_venta,
     })
 }
 

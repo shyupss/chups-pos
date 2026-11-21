@@ -3,11 +3,14 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api, textoError, type Categoria, type FiltroCategoria, type Producto } from "../api";
 import FormularioProducto from "../componentes/FormularioProducto";
 import PanelCategorias from "../componentes/PanelCategorias";
+import { avisarCambioStock } from "../eventos";
 import { cantidad, pesos } from "../formato";
 
 interface Props {
   codigoNuevo: string | null;
   onCodigoUsado: () => void;
+  /** Abre Inventario > Movimientos filtrado por el producto. */
+  onVerMovimientos: (p: { id: number; nombre: string }) => void;
 }
 
 const POR_PAGINA = 100;
@@ -28,7 +31,7 @@ type Panel =
 /** Valor del <select> de categoría: "todas", "sin" o el id como texto. */
 const aFiltro = (valor: string): FiltroCategoria => (valor === "todas" || valor === "sin" ? valor : Number(valor));
 
-export default function Productos({ codigoNuevo, onCodigoUsado }: Props) {
+export default function Productos({ codigoNuevo, onCodigoUsado, onVerMovimientos }: Props) {
   const [texto, setTexto] = useState("");
   const [busqueda, setBusqueda] = useState("");
   const [inactivos, setInactivos] = useState(false);
@@ -121,8 +124,9 @@ export default function Productos({ codigoNuevo, onCodigoUsado }: Props) {
       return copia;
     });
     setPanel({ tipo: "editar", producto: p });
-    // Los contadores de productos por categoría pueden haber cambiado.
+    // Los contadores de productos por categoría pueden haber cambiado, y el mínimo o el stock inicial.
     void cargarCategorias();
+    avisarCambioStock();
   };
 
   return (
@@ -233,6 +237,7 @@ export default function Productos({ codigoNuevo, onCodigoUsado }: Props) {
               categorias={categorias}
               categoriaInicial={typeof filtro === "number" ? filtro : null}
               onGuardado={alGuardar}
+              onVerMovimientos={onVerMovimientos}
               onCerrar={() => setPanel(null)}
             />
           )}

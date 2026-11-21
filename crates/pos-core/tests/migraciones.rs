@@ -77,7 +77,7 @@ async fn migracion_0002_convierte_datos_de_la_fase_1() {
 
     // La versión nueva abre el mismo archivo y aplica el resto de las migraciones.
     let pool = db::abrir(&ruta).await.unwrap();
-    assert_eq!(db::version_esquema(&pool).await.unwrap(), 5);
+    assert_eq!(db::version_esquema(&pool).await.unwrap(), 6);
 
     let (unidad, stock_mil, minimo_mil): (String, i64, i64) =
         sqlx::query_as("SELECT unidad, stock_mil, stock_minimo_mil FROM productos WHERE id = 1")
@@ -170,7 +170,7 @@ async fn migracion_0005_conserva_la_base_de_la_fase_3() {
     pool.close().await;
 
     let pool = db::abrir(&dir.path().join("base.db")).await.unwrap();
-    assert_eq!(db::version_esquema(&pool).await.unwrap(), 5);
+    assert_eq!(db::version_esquema(&pool).await.unwrap(), 6);
 
     let (turno, devuelto, devolucion, anulada): (Option<i64>, i64, Option<String>, Option<String>) =
         sqlx::query_as("SELECT turno_id, monto_devuelto, devolucion, anulada_en FROM ventas")
@@ -218,6 +218,102 @@ async fn migracion_0005_conserva_la_base_de_la_fase_3() {
         .await
         .is_err());
     assert!(sqlx::query("DELETE FROM movimientos_stock")
+        .execute(&pool)
+        .await
+        .is_err());
+}
+
+// Una base de la fase 4 (0001 a 0005) con turnos, una fiada con devolución y una anulación en
+// efectivo abre con la fase 5 sin perder nada, y los datos nuevos quedan coherentes.
+#[tokio::test]
+async fn migracion_0006_conserva_la_base_de_la_fase_4() {
+    let dir = tempfile::tempdir().unwrap();
+    let pool = base_hasta(dir.path(), "0005_turnos_y_devoluciones.sql").await;
+    sqlx::query(
+        "INSERT INTO productos (id, codigo_barras, nombre, precio_venta, stock_mil, stock_minimo_mil)
+             VALUES (1, 'L', 'Leche', 1000, 8000, 2000);
+         INSERT INTO clientes (id, nombre, telefono) VALUES (1, 'Rosa', '+56 9 1111 2222');
+         INSERT INTO turnos (id, monto_inicial, estado, cerrado_en, efectivo_esperado,
+                             efectivo_contado, diferencia)
+             VALUES (1, 10000, 'cerrado', '2026-11-20T23:00:00.000Z', 8780, 8780, 0);
+         INSERT INTO turnos (id, monto_inicial) VALUES (2, 5000);
+         INSERT INTO ventas (id, folio, subtotal, total, medio_pago, estado, cliente_id, turno_id,
+                             devolucion, monto_devuelto)
+             VALUES (1, 1, 3000, 3000, 'fiado', 'fiada', 1, 1, 'parcial', 1000);
+         INSERT INTO venta_items (id, venta_id, producto_id, nombre, precio_unitario, cantidad_mil,
+                                  subtotal)
+             VALUES (1, 1, 1, 'Leche', 1000, 3000, 3000);
+         INSERT INTO devoluciones (id, venta_id, turno_id, monto, motivo)
+             VALUES (1, 1, 2, 1000, 'Venía mala');
+         INSERT INTO devolucion_items (devolucion_id, venta_item_id, cantidad_mil, monto)
+             VALUES (1, 1, 1000, 1000);
+         INSERT INTO ventas (id, folio, subtotal, total, medio_pago, estado, turno_id, anulada_en,
+                             motivo_anulacion, turno_anulacion_id, medio_reembolso_anulacion,
+                             reembolso_anulacion)
+             VALUES (2, 2, 1224, 1224, 'debito', 'anulada', 1, '2026-11-20T22:00:00.000Z',
+                     'Error', 1, 'efectivo', 1220);
+         INSERT INTO movimientos_caja (turno_id, tipo, monto, motivo)
+             VALUES (2, 'retiro', 500, 'Bolsas');",
+    )
+    .execute(&pool)
+    .await
+    .unwrap();
+    pool.close().await;
+
+    let pool = db::abrir(&dir.path().join("base.db")).await.unwrap();
+    assert_eq!(db::version_esquema(&pool).await.unwrap(), 6);
+
+    // La devolución de la fiada bajó la deuda completa; el reembolso de la anulación quedó a la decena.
+    let rebaja: i64 = sqlx::query_scalar("SELECT rebaja_deuda FROM devoluciones WHERE id = 1")
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+    assert_eq!(rebaja, 1000);
+    let redondeo: Option<i64> =
+        sqlx::query_scalar("SELECT redondeo_anulacion FROM ventas WHERE id = 2")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+    assert_eq!(redondeo, Some(-4));
+    let (creado, limite): (Option<String>, Option<i64>) =
+        sqlx::query_as("SELECT creado_en, limite_credito FROM clientes WHERE id = 1")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+    assert!(creado.is_some());
+    assert_eq!(limite, None);
+
+    // El turno cerrado no cambió y el abierto sigue abierto con su retiro.
+    use pos_core::servicios::turnos;
+    let cerrado = turnos::resumen(&pool, 1).await.unwrap();
+    assert_eq!(cerrado.turno.efectivo_esperado, Some(8780));
+    assert_eq!(cerrado.redondeo_reembolsos, -4);
+    let abierto = turnos::estado_caja(&pool).await.unwrap().turno.unwrap();
+    assert_eq!(abierto.id, 2);
+    assert_eq!(
+        turnos::resumen(&pool, 2).await.unwrap().efectivo.retiros,
+        500
+    );
+
+    // Historial y detalle de la venta fiada se siguen leyendo.
+    let d = pos_core::servicios::historial::detalle(&pool, 1)
+        .await
+        .unwrap();
+    assert_eq!(
+        (d.folio, d.monto_devuelto, d.devoluciones.len()),
+        (1, 1000, 1)
+    );
+
+    // Los abonos y los clientes con ventas no se pueden borrar.
+    sqlx::query("INSERT INTO abonos (venta_id, monto, medio_pago) VALUES (1, 100, 'efectivo')")
+        .execute(&pool)
+        .await
+        .unwrap();
+    assert!(sqlx::query("DELETE FROM abonos")
+        .execute(&pool)
+        .await
+        .is_err());
+    assert!(sqlx::query("DELETE FROM clientes WHERE id = 1")
         .execute(&pool)
         .await
         .is_err());

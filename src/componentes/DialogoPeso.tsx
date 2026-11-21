@@ -9,25 +9,35 @@ interface Props {
   inicialMil?: number;
   /** Tope en gramos; por defecto 100 kg. En una devolución, lo que queda por devolver. */
   maximoMil?: number;
+  /** Mínimo en gramos; por defecto 1. Un conteo de inventario acepta 0. */
+  minimoMil?: number;
   /** Texto del botón (por defecto "Agregar" o "Cambiar peso"). */
   accion?: string;
   onConfirmar: (cantidadMil: number) => void;
   onCancelar: () => void;
 }
 
-export default function DialogoPeso({ producto, inicialMil, maximoMil, accion, onConfirmar, onCancelar }: Props) {
+export default function DialogoPeso({
+  producto,
+  inicialMil,
+  maximoMil,
+  minimoMil = 1,
+  accion,
+  onConfirmar,
+  onCancelar,
+}: Props) {
   const [texto, setTexto] = useState(inicialMil ? cantidadEditable(inicialMil, "kg") : "");
   const maximo = maximoMil ?? MAX_KG_MIL;
   const mil = parseKg(texto);
-  const valido = mil !== null && mil >= 1 && mil <= maximo;
+  const valido = mil !== null && mil >= minimoMil && mil <= maximo;
   const error =
     texto.trim() === "" || valido
       ? null
       : mil === null
         ? "Escribe el peso en kg (0,532) o en gramos (532 g)"
         : maximoMil !== undefined
-          ? `El peso debe estar entre 1 g y ${cantidad(maximo, "kg")}`
-          : "El peso debe estar entre 1 g y 100 kg";
+          ? `El peso debe estar entre ${minimoMil} g y ${cantidad(maximo, "kg")}`
+          : `El peso debe estar entre ${minimoMil} g y 100 kg`;
 
   return (
     <Dialogo titulo={`Peso de ${producto.nombre}`} onCerrar={onCancelar}>

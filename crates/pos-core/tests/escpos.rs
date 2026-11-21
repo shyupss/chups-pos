@@ -94,6 +94,7 @@ fn boleta(con_logo: bool) -> Boleta {
         codigo_barras: true,
         copia: false,
         anulada: None,
+        deuda_cliente: None,
     }
 }
 

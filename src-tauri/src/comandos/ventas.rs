@@ -7,12 +7,23 @@ use tauri::State;
 use super::{a_texto, ResultadoComando, ResultadoProtegido};
 use crate::estado::EstadoApp;
 
+/// Confirma la venta. Una fiada sobre el límite de crédito se rechaza, salvo con
+/// `sobre_limite`, que pide el PIN si "fiar sobre el límite" está protegida.
 #[tauri::command]
 pub async fn confirmar_venta(
     estado: State<'_, EstadoApp>,
     venta: NuevaVenta,
-) -> ResultadoComando<VentaConfirmada> {
-    srv::confirmar(&estado.pool, &venta).await.map_err(a_texto)
+    sobre_limite: Option<bool>,
+    pin: Option<String>,
+) -> ResultadoProtegido<VentaConfirmada> {
+    Ok(srv::confirmar_autorizada(
+        &estado.pool,
+        &estado.pin,
+        &venta,
+        sobre_limite.unwrap_or(false),
+        pin.as_deref(),
+    )
+    .await?)
 }
 
 /// Una página del historial con los filtros de la pantalla Ventas (y los totales en la primera).

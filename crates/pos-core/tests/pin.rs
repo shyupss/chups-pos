@@ -8,12 +8,14 @@ use pos_core::servicios::seguridad::{self, Accion, ControlPin, MAX_INTENTOS};
 use pos_core::{db, Error, FalloPin};
 use sqlx::SqlitePool;
 
-const TODAS: [Accion; 5] = [
+const TODAS: [Accion; 7] = [
     Accion::AnularVenta,
     Accion::Devolucion,
     Accion::RetiroEfectivo,
     Accion::CerrarCaja,
     Accion::CambiarConfiguracion,
+    Accion::AjustarInventario,
+    Accion::FiarSobreLimite,
 ];
 
 fn fallo(r: Result<impl std::fmt::Debug, Error>) -> FalloPin {
@@ -188,6 +190,8 @@ async fn protege_solo_las_acciones_marcadas() {
         retiro_efectivo: true,
         cerrar_caja: true,
         cambiar_configuracion: false,
+        ajustar_inventario: true,
+        fiar_sobre_limite: true,
     };
     assert_eq!(
         fallo(seguridad::guardar_protegidas(&pool, &control, nuevas, None).await),

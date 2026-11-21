@@ -13,8 +13,8 @@ Subtotal                                  $3.180
 Descuento                                  -$180
 TOTAL                                     $3.000
 ------------------------------------------------
-                  F I A D O
-Cliente: Rosa Martínez
+             FIADO a Rosa Martínez
+Deuda total del cliente                  $12.480
 ------------------------------------------------
 Productos: 2
 

@@ -1,0 +1,23 @@
+A l m a c é n   D o n   P e p e
+        RUT 12.345.678-5
+  Av. Siempre Viva 742, Talca
+--------------------------------
+        ESTADO DE CUENTA
+        21-11-2026 19:00
+--------------------------------
+Cliente: María González
+RUT 11.111.111-1
+Tel. +56 9 8765 4321
+--------------------------------
+VENTAS PENDIENTES
+N° 000115  02-11-2026     $3.855
+Total $8.000, ya pagado $4.145
+N° 000131  18-11-2026    $12.990
+--------------------------------
+DEUDA TOTAL              $16.845
+Límite de crédito        $30.000
+Disponible               $13.155
+--------------------------------
+ÚLTIMOS PAGOS
+21-11-2026  Efectivo     $12.345
+

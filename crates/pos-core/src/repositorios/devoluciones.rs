@@ -65,12 +65,16 @@ pub struct NuevaDevolucion<'a> {
     pub redondeo: i64,
     pub medio_reembolso: Option<&'a str>,
     pub motivo: &'a str,
+    /// Lo que no salió en dinero: lo que bajó la deuda de esta fiada y lo que pasó como saldo a
+    /// favor a otras deudas del cliente. Lo que salió en dinero es monto − rebaja_deuda.
+    pub rebaja_deuda: i64,
 }
 
 pub async fn insertar(conn: &mut SqliteConnection, d: &NuevaDevolucion<'_>) -> Resultado<i64> {
     Ok(sqlx::query_scalar(
-        "INSERT INTO devoluciones (venta_id, turno_id, monto, redondeo, medio_reembolso, motivo)
-         VALUES (?, ?, ?, ?, ?, ?) RETURNING id",
+        "INSERT INTO devoluciones
+            (venta_id, turno_id, monto, redondeo, medio_reembolso, motivo, rebaja_deuda)
+         VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING id",
     )
     .bind(d.venta_id)
     .bind(d.turno_id)
@@ -78,6 +82,7 @@ pub async fn insertar(conn: &mut SqliteConnection, d: &NuevaDevolucion<'_>) -> R
     .bind(d.redondeo)
     .bind(d.medio_reembolso)
     .bind(d.motivo)
+    .bind(d.rebaja_deuda)
     .fetch_one(conn)
     .await?)
 }

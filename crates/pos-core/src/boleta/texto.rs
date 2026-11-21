@@ -231,9 +231,12 @@ pub fn renderizar(b: &Boleta, columnas: usize) -> Vec<LineaTexto> {
     // 5. Pago.
     a.push(LineaTexto::Separador);
     if b.medio_pago == MedioPago::Fiado {
-        a.texto("FIADO", Centro, Estilo::TITULO);
-        if let Some(cliente) = &b.cliente {
-            a.texto(&format!("Cliente: {cliente}"), Izquierda, Estilo::NORMAL);
+        match &b.cliente {
+            Some(cliente) => a.texto(&format!("FIADO a {cliente}"), Centro, Estilo::TOTAL),
+            None => a.texto("FIADO", Centro, Estilo::TITULO),
+        }
+        if let Some(deuda) = b.deuda_cliente {
+            a.par("Deuda total del cliente", &pesos(deuda), Estilo::NEGRITA);
         }
     } else {
         a.par("Pago", b.medio_pago.nombre(), Estilo::NORMAL);
