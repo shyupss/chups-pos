@@ -1,27 +1,30 @@
 import { useCallback, useEffect, useState } from "react";
+import BarraLateral, { type ModoBarra } from "./componentes/BarraLateral";
 import Caja from "./pantallas/Caja";
+import Configuracion from "./pantallas/Configuracion";
 import Productos from "./pantallas/Productos";
-import Inicio from "./pantallas/Inicio";
+import Proximamente from "./pantallas/Proximamente";
+import { guardarPreferencia, leerPreferencia } from "./preferencias";
+import { SECCIONES, type Seccion } from "./secciones";
 
-type Pantalla = "caja" | "productos" | "sistema";
-
-const PESTANAS: { id: Pantalla; nombre: string; tecla: string }[] = [
-  { id: "caja", nombre: "Caja", tecla: "F1" },
-  { id: "productos", nombre: "Productos", tecla: "F2" },
-  { id: "sistema", nombre: "Sistema", tecla: "F9" },
-];
+const CLAVE_BARRA = "chups-pos.barra-lateral";
 
 export default function App() {
-  const [pantalla, setPantalla] = useState<Pantalla>("caja");
+  const [seccion, setSeccion] = useState<Seccion>("caja");
   // Código escaneado en la caja que no existe: se abre Productos con el formulario listo.
   const [codigoNuevo, setCodigoNuevo] = useState<string | null>(null);
+  const [modoBarra, setModoBarra] = useState<ModoBarra>(() =>
+    leerPreferencia<ModoBarra>(CLAVE_BARRA, ["auto", "expandida", "colapsada"], "auto"),
+  );
 
+  // Atajos globales F1–F6 y F9. Con modificadores no se tocan (Alt+F4 debe cerrar la ventana).
   useEffect(() => {
     const alPresionar = (e: KeyboardEvent) => {
-      const p = PESTANAS.find((t) => t.tecla === e.key);
-      if (p) {
+      if (e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
+      const s = SECCIONES.find((x) => x.tecla === e.key);
+      if (s) {
         e.preventDefault();
-        setPantalla(p.id);
+        setSeccion(s.id);
       }
     };
     window.addEventListener("keydown", alPresionar);
@@ -30,42 +33,35 @@ export default function App() {
 
   const crearDesdeCaja = useCallback((codigo: string) => {
     setCodigoNuevo(codigo);
-    setPantalla("productos");
+    setSeccion("productos");
   }, []);
 
+  const cambiarModoBarra = useCallback((modo: ModoBarra) => {
+    setModoBarra(modo);
+    guardarPreferencia(CLAVE_BARRA, modo);
+  }, []);
+
+  const expandida = modoBarra === "expandida" || (modoBarra === "auto" && seccion !== "caja");
+  const pendiente = SECCIONES.find((s) => s.id === seccion && s.pendiente);
+
   return (
-    <div className="flex h-full flex-col">
-      <header className="flex items-center gap-6 border-b border-slate-200 bg-white px-6">
-        <h1 className="py-3 text-lg font-semibold">CHUPS POS</h1>
-        <nav className="flex gap-1">
-          {PESTANAS.map((t) => (
-            <button
-              key={t.id}
-              onClick={() => setPantalla(t.id)}
-              className={`border-b-2 px-4 py-3 text-sm ${
-                pantalla === t.id
-                  ? "border-slate-900 font-semibold"
-                  : "border-transparent text-slate-500 hover:text-slate-900"
-              }`}
-            >
-              {t.nombre} <span className="ml-1 text-xs text-slate-400">{t.tecla}</span>
-            </button>
-          ))}
-        </nav>
-      </header>
-      <main className="min-h-0 flex-1">
-        {/* Caja queda montada siempre: cambiar de pestaña no borra el carrito. */}
-        <div className={pantalla === "caja" ? "h-full" : "hidden"}>
-          <Caja activa={pantalla === "caja"} onCrearProducto={crearDesdeCaja} />
+    <div className="flex h-full">
+      <BarraLateral
+        actual={seccion}
+        expandida={expandida}
+        onIr={setSeccion}
+        onAlternar={() => cambiarModoBarra(expandida ? "colapsada" : "expandida")}
+      />
+      <main className="min-w-0 flex-1">
+        {/* Caja queda montada siempre: cambiar de sección no borra el carrito. */}
+        <div className={seccion === "caja" ? "h-full" : "hidden"}>
+          <Caja activa={seccion === "caja"} onCrearProducto={crearDesdeCaja} />
         </div>
-        {pantalla === "productos" && (
+        {seccion === "productos" && (
           <Productos codigoNuevo={codigoNuevo} onCodigoUsado={() => setCodigoNuevo(null)} />
         )}
-        {pantalla === "sistema" && (
-          <div className="h-full overflow-auto p-6">
-            <Inicio />
-          </div>
-        )}
+        {seccion === "configuracion" && <Configuracion modoBarra={modoBarra} onModoBarra={cambiarModoBarra} />}
+        {pendiente && <Proximamente seccion={pendiente} />}
       </main>
     </div>
   );

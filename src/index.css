@@ -1,5 +1,65 @@
 @import "tailwindcss";
 
+/*
+ * Tokens de diseño. Los componentes usan solo estas clases (bg-fondo, text-tenue, border-linea…),
+ * nunca colores fijos de Tailwind, para que ambos temas se lean bien en todas las pantallas.
+ * useTema pone data-theme="light" o "dark" en <html> antes del primer render.
+ */
+:root {
+  color-scheme: light;
+  --fondo: #f4f6f8;
+  --superficie: #ffffff;
+  --texto: #14181d;
+  --tenue: #657080;
+  --linea: #e1e5ea;
+  --acento: #1d5bd6;
+  --sobre-acento: #ffffff;
+  --exito-fondo: #e6f4ec;
+  --exito: #12613b;
+  --peligro: #b42318;
+  --aviso-fondo: #fff4e5;
+  --aviso: #8a4b00;
+  --velo: rgb(20 24 29 / 0.4);
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --fondo: #0f1216;
+  --superficie: #181c22;
+  --texto: #eef1f4;
+  --tenue: #8b95a2;
+  --linea: #29303a;
+  --acento: #6f9dff;
+  --sobre-acento: #0b1630;
+  --exito-fondo: #13301f;
+  --exito: #7fe0a8;
+  --peligro: #f97066;
+  --aviso-fondo: #33240a;
+  --aviso: #f5c46b;
+  --velo: rgb(0 0 0 / 0.6);
+}
+
+@theme inline {
+  /* Sin la paleta por defecto de Tailwind: solo existen los colores de arriba. */
+  --color-*: initial;
+  --color-fondo: var(--fondo);
+  --color-superficie: var(--superficie);
+  --color-texto: var(--texto);
+  --color-tenue: var(--tenue);
+  --color-linea: var(--linea);
+  --color-acento: var(--acento);
+  --color-sobre-acento: var(--sobre-acento);
+  --color-exito-fondo: var(--exito-fondo);
+  --color-exito: var(--exito);
+  --color-peligro: var(--peligro);
+  --color-aviso-fondo: var(--aviso-fondo);
+  --color-aviso: var(--aviso);
+  --color-velo: var(--velo);
+
+  --font-sans: "Inter Variable", "Segoe UI", system-ui, sans-serif;
+  --default-transition-duration: 100ms;
+}
+
 /* Sin animaciones costosas: el POS debe sentirse instantáneo en PCs modestos. */
 html,
 body,
@@ -8,11 +68,31 @@ body,
 }
 
 body {
-  @apply bg-slate-50 text-slate-900 antialiased;
+  @apply bg-fondo text-texto antialiased;
+  font-size: 14px;
   user-select: none;
 }
 
 input,
 textarea {
   user-select: text;
+}
+
+table {
+  font-variant-numeric: tabular-nums;
+}
+
+:where(button, a, label, [tabindex]):focus-visible {
+  outline: 2px solid var(--texto);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0s !important;
+    transition-duration: 0s !important;
+    scroll-behavior: auto !important;
+  }
 }
