@@ -67,7 +67,7 @@ export default function CampoCantidad({ producto, valorMil, onCambiar, minimoMil
       inputMode="numeric"
       placeholder="0"
       aria-label={etiqueta}
-      className="h-11 w-full rounded-lg border border-linea bg-fondo px-3 text-lg tabular-nums outline-none focus:border-texto"
+      className="h-11 w-full rounded-lg border border-borde-control bg-superficie px-3 text-lg tabular-nums focus:border-acento"
     />
   );
 }

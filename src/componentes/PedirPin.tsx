@@ -215,7 +215,7 @@ export default function PedirPin({ accion, inicial, onConfirmar, onCancelar }: P
           aria-invalid={error !== null && error.pin !== "bloqueado"}
           aria-describedby="mensaje-pin"
           placeholder="4 a 6 dígitos"
-          className="mt-4 h-13 w-full rounded-lg border border-linea bg-fondo px-4 text-center text-2xl tracking-[0.5em] tabular-nums outline-none [-webkit-text-security:disc] placeholder:tracking-normal placeholder:[-webkit-text-security:none] focus:border-texto disabled:opacity-60"
+          className="mt-4 h-13 w-full rounded-lg border border-borde-control bg-superficie px-4 text-center text-2xl tracking-[0.5em] tabular-nums [-webkit-text-security:disc] placeholder:tracking-normal placeholder:[-webkit-text-security:none] focus:border-acento disabled:opacity-60"
         />
         <p
           id="mensaje-pin"

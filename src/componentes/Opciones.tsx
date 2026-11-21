@@ -6,7 +6,10 @@ export interface Opcion<T extends string> {
   Icono?: LucideIcon;
 }
 
-/** Grupo de radios nativos con aspecto de interruptor: las flechas cambian la opción. */
+/**
+ * Grupo de radios nativos con aspecto de segmentos: las flechas cambian la opción. Lo elegido va en
+ * el estilo de selección (fondo --seleccion, texto --acento). Para ajustes de sí/no se usa Interruptor.
+ */
 export default function Opciones<T extends string>({
   nombre,
   etiqueta,
@@ -21,11 +24,11 @@ export default function Opciones<T extends string>({
   onCambiar: (valor: T) => void;
 }) {
   return (
-    <div role="radiogroup" aria-label={etiqueta} className="inline-flex rounded-lg border border-linea bg-fondo p-0.5">
+    <div role="radiogroup" aria-label={etiqueta} className="inline-flex rounded-lg border border-borde-control bg-suave p-0.5">
       {opciones.map(({ id, nombre: texto, Icono }) => (
         <label
           key={id}
-          className="relative flex h-8 cursor-pointer items-center gap-2 rounded-md px-3 text-tenue hover:text-texto has-checked:bg-texto has-checked:font-medium has-checked:text-superficie has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-texto"
+          className="relative flex h-8 cursor-pointer items-center gap-2 rounded-md px-3 text-tenue hover:text-texto has-checked:bg-seleccion has-checked:font-semibold has-checked:text-acento has-checked:shadow-s1 has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-acento"
         >
           <input
             type="radio"

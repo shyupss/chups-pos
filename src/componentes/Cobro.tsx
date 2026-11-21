@@ -96,7 +96,7 @@ export default function Cobro({ items, totalEstimado, redondeoActivo, onCancelar
 
   return (
     <div className="fixed inset-0 z-20 flex items-center justify-center bg-velo">
-      <div className="w-[34rem] rounded-lg border border-linea bg-superficie p-6 shadow-xl">
+      <div className="w-[34rem] tarjeta p-6 shadow-s3">
         <div className="flex items-baseline justify-between">
           <h2 className="text-lg font-semibold">Cobrar</h2>
           <span className="text-3xl font-semibold tabular-nums">{pesos(aPagar)}</span>
@@ -139,7 +139,7 @@ export default function Cobro({ items, totalEstimado, redondeoActivo, onCancelar
               ref={campoRecibido}
               value={recibido ? pesos(aEntero(recibido) ?? 0) : ""}
               onChange={(e) => setRecibido(e.target.value)}
-              className="mt-1 h-13 w-full rounded-lg border border-linea bg-fondo px-4 text-2xl tabular-nums outline-none focus:border-texto"
+              className="mt-1 h-13 w-full rounded-lg border border-borde-control bg-superficie px-4 text-2xl tabular-nums focus:border-acento"
               inputMode="numeric"
               placeholder={pesos(aPagar)}
             />
@@ -278,7 +278,7 @@ function ElegirCliente({ cliente, onElegir, aPagar }: { cliente: Cliente | null;
           onKeyDown={(e) => e.key === "Enter" && void crear()}
           placeholder="Nombre"
           maxLength={80}
-          className="h-10 w-full rounded-lg border border-linea bg-fondo px-3 outline-none focus:border-texto"
+          className="h-10 w-full rounded-lg border border-borde-control bg-superficie px-3 focus:border-acento"
         />
         <input
           data-cliente
@@ -287,7 +287,7 @@ function ElegirCliente({ cliente, onElegir, aPagar }: { cliente: Cliente | null;
           onKeyDown={(e) => e.key === "Enter" && void crear()}
           placeholder="Teléfono (opcional)"
           maxLength={30}
-          className="h-10 w-full rounded-lg border border-linea bg-fondo px-3 outline-none focus:border-texto"
+          className="h-10 w-full rounded-lg border border-borde-control bg-superficie px-3 focus:border-acento"
         />
         {error && <p className="text-peligro">{error}</p>}
         <div className="flex gap-2">
@@ -320,7 +320,7 @@ function ElegirCliente({ cliente, onElegir, aPagar }: { cliente: Cliente | null;
           }}
           placeholder="Cliente: nombre, teléfono o RUT"
           aria-label="Buscar cliente"
-          className="h-11 min-w-0 flex-1 rounded-lg border border-linea bg-fondo px-3 outline-none focus:border-texto"
+          className="h-11 min-w-0 flex-1 rounded-lg border border-borde-control bg-superficie px-3 focus:border-acento"
         />
         <button
           type="button"

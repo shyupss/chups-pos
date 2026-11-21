@@ -16,7 +16,7 @@ interface Props {
 }
 
 const claseCampo =
-  "h-12 w-full rounded-lg border border-linea bg-fondo px-4 text-2xl tabular-nums outline-none focus:border-texto";
+  "h-12 w-full rounded-lg border border-borde-control bg-superficie px-4 text-2xl tabular-nums focus:border-acento";
 
 /** Registrar lo que entrega el cliente: parcial, lo marcado o "Paga todo". Nunca más que la deuda. */
 export default function RegistrarPago({ cliente, marcadas, redondeoActivo, onRegistrado, onCerrar }: Props) {
@@ -135,7 +135,7 @@ export default function RegistrarPago({ cliente, marcadas, redondeoActivo, onReg
                 onChange={(e) => setRecibido(e.target.value)}
                 inputMode="numeric"
                 placeholder={pesos(entra)}
-                className="h-10 w-40 rounded-lg border border-linea bg-fondo px-3 text-right outline-none focus:border-texto"
+                className="h-10 w-40 rounded-lg border border-borde-control bg-superficie px-3 text-right focus:border-acento"
               />
             </label>
             <div className="flex items-baseline justify-between">
@@ -153,7 +153,7 @@ export default function RegistrarPago({ cliente, marcadas, redondeoActivo, onReg
             value={nota}
             onChange={(e) => setNota(e.target.value)}
             maxLength={200}
-            className="mt-1 h-10 w-full rounded-lg border border-linea bg-fondo px-3 outline-none focus:border-texto"
+            className="mt-1 h-10 w-full rounded-lg border border-borde-control bg-superficie px-3 focus:border-acento"
           />
         </label>
 

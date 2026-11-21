@@ -55,7 +55,7 @@ export default function DialogoPeso({
           placeholder="0,532 o 532 g"
           aria-label="Peso en kg o en gramos"
           aria-invalid={error !== null}
-          className="mt-4 h-13 w-full rounded-lg border border-linea bg-fondo px-4 text-2xl tabular-nums outline-none focus:border-texto"
+          className="mt-4 h-13 w-full rounded-lg border border-borde-control bg-superficie px-4 text-2xl tabular-nums focus:border-acento"
           autoComplete="off"
           spellCheck={false}
         />

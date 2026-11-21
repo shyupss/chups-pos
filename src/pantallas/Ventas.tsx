@@ -71,7 +71,7 @@ const periodoDe = (desde: string | null, hasta: string | null): Periodo | null =
     return r.desde === desde && r.hasta === hasta;
   })?.id ?? null;
 
-const claseCampo = "h-10 rounded-lg border border-linea bg-superficie px-3 outline-none focus:border-texto";
+const claseCampo = "h-10 rounded-lg border border-borde-control bg-superficie px-3 focus:border-acento";
 
 /** Ventas (F5): historial con filtros, detalle, reimpresión, anulación y devoluciones. */
 export default function Ventas({ activa, onImpresion, folioInicial = null, onFolioUsado }: Props) {
@@ -320,7 +320,7 @@ export default function Ventas({ activa, onImpresion, folioInicial = null, onFol
         </div>
         <div
           ref={contenedor}
-          className="mt-1 min-h-0 flex-1 overflow-auto rounded-lg border border-linea bg-superficie tabular-nums"
+          className="mt-1 min-h-0 flex-1 overflow-auto tarjeta tabular-nums"
         >
           {filas.length === 0 ? (
             <p className="p-8 text-center text-tenue">

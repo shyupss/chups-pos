@@ -39,7 +39,7 @@ export default function AbrirCaja({ sugerido, enEspera, onAbierta }: Props) {
           e.preventDefault();
           void abrir();
         }}
-        className="w-[32rem] max-w-full rounded-lg border border-linea bg-superficie p-8"
+        className="w-[32rem] max-w-full tarjeta p-8"
       >
         <div className="flex items-center gap-3">
           <span className="flex size-10 items-center justify-center rounded-lg bg-acento/12 text-acento">
@@ -68,7 +68,7 @@ export default function AbrirCaja({ sugerido, enEspera, onAbierta }: Props) {
           placeholder="$0"
           inputMode="numeric"
           aria-describedby="sugerido-caja"
-          className="mt-1 h-14 w-full rounded-lg border border-linea bg-fondo px-4 text-3xl font-semibold tabular-nums outline-none focus:border-texto"
+          className="mt-1 h-14 w-full rounded-lg border border-borde-control bg-superficie px-4 text-3xl font-semibold tabular-nums focus:border-acento"
         />
         <div className="mt-2 flex flex-wrap gap-2">
           {BILLETES.map((b) => (

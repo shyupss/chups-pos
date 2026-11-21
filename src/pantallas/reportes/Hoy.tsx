@@ -160,7 +160,7 @@ export default function Hoy({ activa, onVerBajoMinimo, onVerCliente, onVerProduc
 
 export function Tarjeta({ titulo, valor, pie }: { titulo: string; valor: ReactNode; pie?: string }) {
   return (
-    <div className="rounded-lg border border-linea bg-superficie p-4">
+    <div className="tarjeta p-4">
       <div className="text-xs font-medium uppercase text-tenue">{titulo}</div>
       <div className="mt-1 text-2xl font-semibold tabular-nums">{valor}</div>
       {pie && (
@@ -184,7 +184,7 @@ export function Panel({
   accion?: { texto: string; alHacer: () => void };
 }) {
   return (
-    <section className={`rounded-lg border border-linea bg-superficie p-4 ${className}`}>
+    <section className={`tarjeta p-4 ${className}`}>
       <div className="mb-3 flex items-baseline justify-between gap-3">
         <h2 className="font-semibold">{titulo}</h2>
         {accion && (

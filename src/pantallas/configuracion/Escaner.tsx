@@ -23,7 +23,7 @@ const LARGOS: Opcion<"4" | "5" | "6">[] = [
   { id: "6", nombre: "6" },
 ];
 
-const claseCampo = "h-10 w-full rounded-lg border border-linea bg-fondo px-3 outline-none focus:border-texto";
+const claseCampo = "h-10 w-full rounded-lg border border-borde-control bg-superficie px-3 focus:border-acento";
 
 interface Lectura {
   codigo: string;
@@ -144,7 +144,7 @@ function Prefijos({ valor, onGuardar }: { valor: string; onGuardar: (v: string) 
       onBlur={() => texto !== valor && onGuardar(texto)}
       onKeyDown={(e) => e.key === "Enter" && texto !== valor && onGuardar(texto)}
       aria-label="Prefijos de balanza"
-      className="h-10 w-32 rounded-lg border border-linea bg-fondo px-3 tabular-nums outline-none focus:border-texto"
+      className="h-10 w-32 rounded-lg border border-borde-control bg-superficie px-3 tabular-nums focus:border-acento"
     />
   );
 }

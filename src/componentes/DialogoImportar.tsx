@@ -182,7 +182,7 @@ export default function DialogoImportar({ tipo, onCerrar, onImportado }: Props) 
                         aria-label={`Campo de la columna ${h}`}
                         value={mapeo[i] ?? ""}
                         onChange={(e) => asignar(i, e.target.value || null)}
-                        className="h-9 w-56 rounded-lg border border-linea bg-superficie px-2"
+                        className="h-9 w-56 tarjeta px-2"
                       >
                         <option value="">No importar</option>
                         {campos.map((c) => (

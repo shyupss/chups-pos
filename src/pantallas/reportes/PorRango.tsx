@@ -123,7 +123,7 @@ export function ReporteProductos({
             aria-label="Categoría"
             value={categoria === null ? "todas" : String(categoria)}
             onChange={(e) => setCategoria(e.target.value === "todas" ? null : Number(e.target.value))}
-            className="h-9 rounded-lg border border-linea bg-superficie px-3"
+            className="h-9 tarjeta px-3"
           >
             <option value="todas">Todas las categorías</option>
             {categorias.map((c) => (

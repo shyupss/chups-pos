@@ -379,7 +379,7 @@ export default function Caja({ activa, onCrearProducto, onEnEspera, onImpresion,
             spellCheck={false}
           />
           {resultados.length > 0 && (
-            <ul className="absolute z-10 mt-1 w-full overflow-hidden rounded-lg border border-linea bg-superficie">
+            <ul className="absolute z-10 mt-1 w-full overflow-hidden tarjeta shadow-s2">
               {resultados.map((p) => (
                 <li key={p.id}>
                   <button
@@ -435,7 +435,7 @@ export default function Caja({ activa, onCrearProducto, onEnEspera, onImpresion,
           </>
         )}
 
-        <div className="mt-4 min-h-0 flex-1 overflow-auto rounded-lg border border-linea bg-superficie">
+        <div className="mt-4 min-h-0 flex-1 overflow-auto tarjeta">
           {lineas.length === 0 ? (
             <p className="p-8 text-center text-tenue">Escanea productos para empezar una venta</p>
           ) : (
@@ -476,7 +476,7 @@ export default function Caja({ activa, onCrearProducto, onEnEspera, onImpresion,
                             value={l.cantidadMil / 1000}
                             onChange={(e) => cambiarUnidades(l.producto.id, Number(e.target.value.replace(/\D/g, "")) || 1)}
                             onKeyDown={(e) => e.key === "Enter" && enfocar()}
-                            className="h-7 w-14 rounded-lg border border-linea bg-superficie px-1 text-center outline-none focus:border-texto"
+                            className="h-7 w-14 rounded-lg border border-borde-control bg-superficie px-1 text-center focus:border-acento"
                             inputMode="numeric"
                             aria-label={`Cantidad de ${l.producto.nombre}`}
                           />

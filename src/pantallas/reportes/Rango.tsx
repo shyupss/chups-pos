@@ -75,7 +75,7 @@ export function SelectorRango({ rango, onCambiar }: { rango: Rango; onCambiar: (
               value={rango.desde}
               max={rango.hasta}
               onChange={(e) => e.target.value && onCambiar({ ...rango, desde: e.target.value })}
-              className="h-8 rounded-lg border border-linea bg-superficie px-2 text-texto"
+              className="h-8 tarjeta px-2 text-texto"
             />
           </label>
           <label className="flex items-center gap-1 text-tenue">
@@ -85,7 +85,7 @@ export function SelectorRango({ rango, onCambiar }: { rango: Rango; onCambiar: (
               value={rango.hasta}
               min={rango.desde}
               onChange={(e) => e.target.value && onCambiar({ ...rango, hasta: e.target.value })}
-              className="h-8 rounded-lg border border-linea bg-superficie px-2 text-texto"
+              className="h-8 tarjeta px-2 text-texto"
             />
           </label>
         </span>

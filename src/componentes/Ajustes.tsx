@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 /** Sección de Configuración. Con `fase`, es un marcador de algo que llega más adelante. */
 export function Bloque({ titulo, fase, children }: { titulo: string; fase?: number; children: ReactNode }) {
   return (
-    <section className="rounded-lg border border-linea bg-superficie p-5">
+    <section className="tarjeta p-5">
       <h2 className="font-semibold">{titulo}</h2>
       {fase === undefined ? (
         <div className="mt-3">{children}</div>

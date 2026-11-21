@@ -79,7 +79,7 @@ export default function DialogoMerma({ producto, onRegistrada, onCerrar }: Props
             onChange={(e) => setDetalle(e.target.value)}
             maxLength={200}
             placeholder="Por ejemplo, se rompió al reponer"
-            className="mt-1 h-10 w-full rounded-lg border border-linea bg-fondo px-3 outline-none focus:border-texto"
+            className="mt-1 h-10 w-full rounded-lg border border-borde-control bg-superficie px-3 focus:border-acento"
           />
         </label>
         {error && <p className="rounded-lg bg-peligro/10 px-3 py-2 text-peligro">{error}</p>}

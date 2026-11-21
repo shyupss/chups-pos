@@ -8,7 +8,7 @@ interface Props {
   onCerrar: () => void;
 }
 
-const claseCampo = "h-10 min-w-0 flex-1 rounded-lg border border-linea bg-fondo px-3 outline-none focus:border-texto";
+const claseCampo = "h-10 min-w-0 flex-1 rounded-lg border border-borde-control bg-superficie px-3 focus:border-acento";
 const claseBoton = "h-8 rounded-lg px-2 text-tenue hover:bg-fondo hover:text-texto";
 
 /** Crear, renombrar y eliminar categorías. Vive en el panel derecho de Productos. */

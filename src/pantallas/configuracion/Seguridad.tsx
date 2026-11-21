@@ -39,7 +39,7 @@ const ACCIONES: { clave: keyof AccionesProtegidas; nombre: string; ayuda: string
 ];
 
 const claseCampo =
-  "h-10 w-full rounded-lg border border-linea bg-fondo px-3 text-center text-lg tracking-[0.4em] tabular-nums outline-none [-webkit-text-security:disc] focus:border-texto";
+  "h-10 w-full rounded-lg border border-borde-control bg-superficie px-3 text-center text-lg tracking-[0.4em] tabular-nums [-webkit-text-security:disc] focus:border-acento";
 const claseBoton = "h-10 rounded-lg border border-linea px-4 hover:bg-fondo disabled:opacity-50";
 const clasePrincipal =
   "h-10 rounded-lg bg-acento px-5 font-semibold text-sobre-acento disabled:bg-linea disabled:text-tenue";
@@ -362,7 +362,7 @@ function RecuperarPin({ onCancelar, onRecuperado }: { onCancelar: () => void; on
           placeholder="ABCDE-12345"
           autoComplete="off"
           spellCheck={false}
-          className="mt-1 h-10 w-full rounded-lg border border-linea bg-fondo px-3 text-center font-mono text-lg tracking-widest outline-none focus:border-texto"
+          className="mt-1 h-10 w-full rounded-lg border border-borde-control bg-superficie px-3 text-center font-mono text-lg tracking-widest focus:border-acento"
         />
       </label>
       <CampoPin etiqueta="PIN nuevo (4 a 6 dígitos)" valor={p.nuevo} onCambiar={p.setNuevo} />

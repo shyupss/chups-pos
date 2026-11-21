@@ -148,7 +148,7 @@ export default function DialogoDevolucion({ venta, redondeoActivo, onDevuelta, o
                           onFocus={(ev) => ev.currentTarget.select()}
                           inputMode="numeric"
                           aria-label={`Unidades de ${l.nombre} a devolver`}
-                          className="h-8 w-12 rounded-lg border border-linea bg-fondo px-1 text-center tabular-nums outline-none focus:border-texto"
+                          className="h-8 w-12 rounded-lg border border-borde-control bg-superficie px-1 text-center tabular-nums focus:border-acento"
                         />
                         <BotonChico onClick={() => fijar(l, { mil: Math.min(resto, e.mil + 1000) })}>+</BotonChico>
                       </div>
@@ -204,7 +204,7 @@ export default function DialogoDevolucion({ venta, redondeoActivo, onDevuelta, o
                 onChange={(e) => setMotivo(e.target.value)}
                 maxLength={200}
                 placeholder="Por ejemplo, venía vencido"
-                className="mt-1 h-10 w-full rounded-lg border border-linea bg-fondo px-3 outline-none focus:border-texto"
+                className="mt-1 h-10 w-full rounded-lg border border-borde-control bg-superficie px-3 focus:border-acento"
               />
             </label>
           </div>

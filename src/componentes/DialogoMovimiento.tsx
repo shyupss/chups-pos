@@ -69,7 +69,7 @@ export default function DialogoMovimiento({ turnoId, onRegistrado, onCerrar }: P
             onChange={(e) => setMonto(e.target.value)}
             placeholder="$0"
             inputMode="numeric"
-            className="mt-1 h-13 w-full rounded-lg border border-linea bg-fondo px-4 text-2xl tabular-nums outline-none focus:border-texto"
+            className="mt-1 h-13 w-full rounded-lg border border-borde-control bg-superficie px-4 text-2xl tabular-nums focus:border-acento"
           />
         </label>
         <label className="block">
@@ -79,7 +79,7 @@ export default function DialogoMovimiento({ turnoId, onRegistrado, onCerrar }: P
             onChange={(e) => setMotivo(e.target.value)}
             maxLength={200}
             placeholder={tipo === "ingreso" ? "Sencillo del banco" : "Pago al proveedor de pan"}
-            className="mt-1 h-10 w-full rounded-lg border border-linea bg-fondo px-3 outline-none focus:border-texto"
+            className="mt-1 h-10 w-full rounded-lg border border-borde-control bg-superficie px-3 focus:border-acento"
           />
         </label>
         {esperado !== null && (

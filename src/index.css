@@ -4,60 +4,121 @@
  * Tokens de diseño. Los componentes usan solo estas clases (bg-fondo, text-tenue, border-linea…),
  * nunca colores fijos de Tailwind, para que ambos temas se lean bien en todas las pantallas.
  * useTema pone data-theme="light" o "dark" en <html> antes del primer render.
+ *
+ * Cada color tiene un solo trabajo (ver "Sistema de color" en el README):
+ *   Acción (--acento): botón primario, enlaces, borde del escáner y anillo de foco.
+ *   Selección (--seleccion + texto --acento): lo activo o elegido.
+ *   Resaltado (--resalte + barra --aviso): lo que acaba de pasar.
+ *   Éxito, aviso, peligro e info: texto y fondo suave.
+ *   Neutros: fondo, superficie, suave, línea, borde-control, texto, tenue.
  */
 :root {
   color-scheme: light;
-  --fondo: #f4f6f8;
+  --fondo: #f3f5f8;
   --superficie: #ffffff;
+  --suave: #f6f8fa;
   --texto: #14181d;
-  --tenue: #657080;
-  --linea: #e1e5ea;
+  --tenue: #5f6b7a;
+  --linea: #e3e7ec;
+  --borde-control: #cbd2db;
   --acento: #1d5bd6;
+  --acento-hover: #174bb3;
   --sobre-acento: #ffffff;
-  --exito-fondo: #e6f4ec;
+  --seleccion: #e8effc;
+  --resalte: #fff4c7;
   --exito: #12613b;
-  --peligro: #b42318;
-  --aviso-fondo: #fff4e5;
+  --exito-fondo: #e6f4ec;
   --aviso: #8a4b00;
+  --aviso-fondo: #fff4e5;
+  --peligro: #b42318;
+  --peligro-fondo: #fdecea;
+  --info: #0b5a8a;
+  --info-fondo: #e6f2fa;
+  --visor-bg: #0e1620;
+  --visor-texto: #e9f3ff;
+  --visor-tenue: #8aa0ba;
   --velo: rgb(20 24 29 / 0.4);
-  /* El papel de la boleta: blanco en ambos temas, para las vistas previas. */
+  /* El papel de la boleta: blanco y tinta oscura en ambos temas, para las vistas previas. */
   --papel: #ffffff;
+  --tinta: #14181d;
+
+  /* Elevación: solo tarjetas y botones, nunca filas, y sin blur grande. */
+  --s1: 0 1px 2px rgb(16 24 40 / 0.07);
+  --s2: 0 2px 8px rgb(16 24 40 / 0.1);
+  --s3: 0 12px 32px rgb(16 24 40 / 0.16);
+  --s-pri: 0 1px 2px rgb(16 24 40 / 0.22), 0 5px 12px rgb(29 91 214 / 0.3);
+  --brillo: inset 0 1px 0 rgb(255 255 255 / 0.2);
 }
 
 :root[data-theme="dark"] {
   color-scheme: dark;
   --fondo: #0f1216;
   --superficie: #181c22;
+  --suave: #14181d;
   --texto: #eef1f4;
   --tenue: #8b95a2;
   --linea: #29303a;
+  --borde-control: #3b4553;
   --acento: #6f9dff;
+  --acento-hover: #8db2ff;
   --sobre-acento: #0b1630;
-  --exito-fondo: #13301f;
+  --seleccion: #1b2740;
+  --resalte: #3b3213;
   --exito: #7fe0a8;
-  --peligro: #f97066;
-  --aviso-fondo: #33240a;
+  --exito-fondo: #13301f;
   --aviso: #f5c46b;
+  --aviso-fondo: #33240a;
+  --peligro: #f97066;
+  --peligro-fondo: #3a1613;
+  --info: #7cc4f0;
+  --info-fondo: #10283a;
+  --visor-bg: #07090d;
   --velo: rgb(0 0 0 / 0.6);
+
+  --s1: 0 1px 2px rgb(0 0 0 / 0.45);
+  --s2: 0 2px 8px rgb(0 0 0 / 0.5);
+  --s3: 0 12px 32px rgb(0 0 0 / 0.6);
+  --s-pri: 0 1px 2px rgb(0 0 0 / 0.5), 0 5px 14px rgb(111 157 255 / 0.16);
+  --brillo: inset 0 1px 0 rgb(255 255 255 / 0.35);
 }
 
 @theme inline {
-  /* Sin la paleta por defecto de Tailwind: solo existen los colores de arriba. */
+  /* Sin la paleta ni las sombras por defecto de Tailwind: solo existen las de arriba. */
   --color-*: initial;
+  --shadow-*: initial;
   --color-fondo: var(--fondo);
   --color-superficie: var(--superficie);
+  --color-suave: var(--suave);
   --color-texto: var(--texto);
   --color-tenue: var(--tenue);
   --color-linea: var(--linea);
+  --color-borde-control: var(--borde-control);
   --color-acento: var(--acento);
+  --color-acento-hover: var(--acento-hover);
   --color-sobre-acento: var(--sobre-acento);
-  --color-exito-fondo: var(--exito-fondo);
+  --color-seleccion: var(--seleccion);
+  --color-resalte: var(--resalte);
   --color-exito: var(--exito);
-  --color-peligro: var(--peligro);
-  --color-aviso-fondo: var(--aviso-fondo);
+  --color-exito-fondo: var(--exito-fondo);
   --color-aviso: var(--aviso);
+  --color-aviso-fondo: var(--aviso-fondo);
+  --color-peligro: var(--peligro);
+  --color-peligro-fondo: var(--peligro-fondo);
+  --color-info: var(--info);
+  --color-info-fondo: var(--info-fondo);
+  --color-visor-bg: var(--visor-bg);
+  --color-visor-texto: var(--visor-texto);
+  --color-visor-tenue: var(--visor-tenue);
   --color-velo: var(--velo);
   --color-papel: var(--papel);
+  --color-tinta: var(--tinta);
+
+  --shadow-s1: var(--s1);
+  --shadow-s2: var(--s2);
+  --shadow-s3: var(--s3);
+  --shadow-pri: var(--s-pri);
+
+  --radius-panel: 0.75rem;
 
   --font-sans: "Inter Variable", "Segoe UI", system-ui, sans-serif;
   --default-transition-duration: 100ms;
@@ -85,9 +146,175 @@ table {
   font-variant-numeric: tabular-nums;
 }
 
-:where(button, a, label, [tabindex]):focus-visible {
-  outline: 2px solid var(--texto);
+/* Foco de teclado: el mismo contorno en todo lo que se alcanza con Tab. */
+:where(button, a, label, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 2px solid var(--acento);
   outline-offset: 2px;
+}
+
+/* Campos de texto: superficie, borde de control y una sombra interior leve. */
+:where(input:not([type="checkbox"], [type="radio"], [type="range"], [type="file"]), select, textarea) {
+  background-color: var(--superficie);
+  border-color: var(--borde-control);
+  box-shadow: inset 0 1px 2px rgb(16 24 40 / 0.06);
+}
+
+@layer components {
+  /* Tarjeta: el contenedor de tablas, paneles y bloques de Configuración. */
+  .tarjeta {
+    background: var(--superficie);
+    border: 1px solid var(--linea);
+    border-radius: var(--radius-panel);
+    box-shadow: var(--s1);
+  }
+
+  /* Botones: ver src/componentes/Boton.tsx. Solo transiciones de color, sin animaciones. */
+  .boton {
+    display: inline-flex;
+    height: 40px;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 0 14px;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    font-weight: 500;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background-color 100ms, border-color 100ms, color 100ms;
+  }
+  .boton-chico {
+    height: 32px;
+    padding: 0 10px;
+    font-size: 13px;
+  }
+  .boton-grande {
+    height: 56px;
+    padding: 0 20px;
+    border-radius: 10px;
+    font-size: 18px;
+  }
+  .boton-icono {
+    width: 32px;
+    height: 32px;
+    padding: 0;
+  }
+  .boton-bloque {
+    width: 100%;
+    justify-content: flex-start;
+  }
+  .boton-primario {
+    background: var(--acento);
+    color: var(--sobre-acento);
+    font-weight: 600;
+    box-shadow: var(--brillo), var(--s-pri);
+  }
+  .boton-secundario,
+  .boton-peligro {
+    background: var(--superficie);
+    border-color: var(--borde-control);
+    box-shadow: var(--s1);
+  }
+  .boton-peligro {
+    color: var(--peligro);
+    border-color: color-mix(in srgb, var(--peligro) 38%, transparent);
+  }
+  .boton-terciario {
+    color: var(--tenue);
+  }
+  .boton:hover:not(:disabled) {
+    background: var(--suave);
+  }
+  .boton-secundario:hover:not(:disabled) {
+    border-color: color-mix(in srgb, var(--borde-control), var(--texto) 30%);
+    box-shadow: var(--s2);
+  }
+  .boton-primario:hover:not(:disabled) {
+    background: var(--acento-hover);
+  }
+  .boton-terciario:hover:not(:disabled) {
+    color: var(--texto);
+  }
+  .boton-peligro:hover:not(:disabled) {
+    background: var(--peligro-fondo);
+    border-color: var(--peligro);
+  }
+  .boton:active:not(:disabled) {
+    transform: translateY(1px);
+    box-shadow: inset 0 1px 3px rgb(0 0 0 / 0.2);
+  }
+  .boton:disabled {
+    background: var(--suave);
+    border-color: var(--linea);
+    color: var(--tenue);
+    box-shadow: none;
+    opacity: 0.75;
+    cursor: not-allowed;
+  }
+  .boton-terciario:disabled {
+    background: transparent;
+    border-color: transparent;
+  }
+  .boton .tecla {
+    margin-left: auto;
+  }
+
+  /* Tecla de atajo. */
+  .tecla {
+    display: inline-flex;
+    min-width: 20px;
+    align-items: center;
+    justify-content: center;
+    padding: 0 5px;
+    border: 1px solid var(--linea);
+    border-bottom-width: 2px;
+    border-radius: 4px;
+    background: var(--suave);
+    color: var(--tenue);
+    font: inherit;
+    font-size: 11px;
+    font-weight: 500;
+    line-height: 16px;
+  }
+  .boton-primario .tecla {
+    background: color-mix(in srgb, var(--sobre-acento) 18%, transparent);
+    border-color: color-mix(in srgb, var(--sobre-acento) 38%, transparent);
+    color: var(--sobre-acento);
+  }
+
+  /* Interruptor de sí/no: un checkbox real con role="switch". */
+  .interruptor {
+    appearance: none;
+    position: relative;
+    width: 40px;
+    height: 24px;
+    flex-shrink: 0;
+    border-radius: 12px;
+    background: var(--borde-control);
+    cursor: pointer;
+  }
+  .interruptor::after {
+    content: "";
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--papel);
+    box-shadow: var(--s1);
+  }
+  .interruptor:checked {
+    background: var(--acento);
+  }
+  .interruptor:checked::after {
+    transform: translateX(16px);
+  }
+  .interruptor:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -7,7 +7,7 @@ import FichaCliente, { diasDesde } from "./fiados/FichaCliente";
 
 const POR_PAGINA = 100;
 const ALTO_FILA = 60;
-const claseCampo = "h-10 w-full rounded-lg border border-linea bg-fondo px-3 outline-none focus:border-texto";
+const claseCampo = "h-10 w-full rounded-lg border border-borde-control bg-superficie px-3 focus:border-acento";
 
 type Panel = { tipo: "ficha"; id: number } | { tipo: "nuevo" } | { tipo: "editar"; cliente: Cliente } | null;
 
@@ -99,7 +99,7 @@ export default function Fiados({ activa, onIrAVenta, onImpresion, clienteInicial
             onChange={(e) => setTexto(e.target.value)}
             placeholder="Buscar por nombre o teléfono"
             aria-label="Buscar cliente"
-            className="h-10 min-w-0 flex-1 rounded-lg border border-linea bg-superficie px-4 outline-none focus:border-texto"
+            className="h-10 min-w-0 flex-1 rounded-lg border border-borde-control bg-superficie px-4 focus:border-acento"
           />
           <button
             type="button"
@@ -117,7 +117,7 @@ export default function Fiados({ activa, onIrAVenta, onImpresion, clienteInicial
           <BotonExportar que="clientes" etiqueta="Exportar clientes y deudas" />
         </div>
         {error && <p className="mt-3 rounded-lg bg-peligro/10 px-3 py-2 text-peligro">{error}</p>}
-        <div ref={contenedor} className="mt-3 min-h-0 flex-1 overflow-auto rounded-lg border border-linea bg-superficie">
+        <div ref={contenedor} className="mt-3 min-h-0 flex-1 overflow-auto tarjeta">
           {filas.length === 0 ? (
             <p className="p-8 text-center text-tenue">
               {busqueda ? "Sin resultados" : todos ? "Todavía no hay clientes." : "Nadie debe nada."}
@@ -161,7 +161,7 @@ export default function Fiados({ activa, onIrAVenta, onImpresion, clienteInicial
         </div>
       </section>
 
-      <section className="min-w-0 flex-1 rounded-lg border border-linea bg-superficie">
+      <section className="min-w-0 flex-1 tarjeta">
         {panel === null && (
           <p className="p-8 text-center text-tenue">Elige un cliente para ver su cuenta y registrar pagos.</p>
         )}

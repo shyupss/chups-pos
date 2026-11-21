@@ -47,7 +47,7 @@ export default function PonerEnEspera({ productos, total, onConfirmar, onCancela
             onChange={(e) => setNombre(e.target.value)}
             placeholder="Señora del pan"
             maxLength={60}
-            className="mt-1 h-11 w-full rounded-lg border border-linea bg-fondo px-3 outline-none focus:border-texto"
+            className="mt-1 h-11 w-full rounded-lg border border-borde-control bg-superficie px-3 focus:border-acento"
             autoComplete="off"
           />
         </label>

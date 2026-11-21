@@ -3,7 +3,7 @@ import { api, textoError, type DatosNegocio, type Negocio } from "../../api";
 import { esCancelado, type ConPin } from "../../componentes/PedirPin";
 
 const claseCampo =
-  "h-10 w-full rounded-lg border border-linea bg-fondo px-3 outline-none focus:border-texto";
+  "h-10 w-full rounded-lg border border-borde-control bg-superficie px-3 focus:border-acento";
 
 const VACIO: DatosNegocio = { nombre: "", rut: "", direccion: "", telefono: "", mensajePie: "" };
 

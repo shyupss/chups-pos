@@ -18,7 +18,7 @@ interface Props {
 }
 
 const PARECE_CODIGO = /^[A-Za-z0-9-]+$/;
-const claseCampo = "h-10 w-full rounded-lg border border-linea bg-fondo px-3 outline-none focus:border-texto";
+const claseCampo = "h-10 w-full rounded-lg border border-borde-control bg-superficie px-3 focus:border-acento";
 
 /**
  * Registrar una compra: proveedor y documento, y las líneas escaneando o buscando, cada una con
@@ -150,10 +150,10 @@ export default function RegistrarCompra({ onRegistrada, onCerrar }: Props) {
           placeholder="Escanea o busca un producto y Enter"
           aria-label="Agregar producto a la compra"
           autoComplete="off"
-          className="h-11 w-full rounded-lg border-2 border-acento bg-superficie px-4 outline-none"
+          className="h-11 w-full rounded-lg border-2 border-acento bg-superficie px-4"
         />
         {resultados.length > 0 && (
-          <ul className="absolute z-10 mt-1 w-full overflow-hidden rounded-lg border border-linea bg-superficie">
+          <ul className="absolute z-10 mt-1 w-full overflow-hidden tarjeta shadow-s2">
             {resultados.map((p) => (
               <li key={p.id}>
                 <button type="button" onClick={() => agregar(p)} className="h-10 w-full px-4 text-left hover:bg-fondo">
@@ -220,7 +220,7 @@ export default function RegistrarCompra({ onRegistrada, onCerrar }: Props) {
                         placeholder={kg ? "kg" : "unidades"}
                         aria-label={`Cantidad de ${l.producto.nombre}`}
                         aria-invalid={l.cantidad !== "" && (mil === null || mil <= 0)}
-                        className="h-9 w-full rounded-lg border border-linea bg-fondo px-2 text-right tabular-nums outline-none focus:border-texto aria-invalid:border-peligro"
+                        className="h-9 w-full rounded-lg border border-borde-control bg-superficie px-2 text-right tabular-nums focus:border-acento aria-invalid:border-peligro"
                       />
                     </td>
                     <td className="px-3">
@@ -237,7 +237,7 @@ export default function RegistrarCompra({ onRegistrada, onCerrar }: Props) {
                           inputMode="numeric"
                           placeholder="$0"
                           aria-label={`Costo de ${l.producto.nombre}`}
-                          className="h-9 w-full rounded-lg border border-linea bg-fondo px-2 text-right tabular-nums outline-none focus:border-texto"
+                          className="h-9 w-full rounded-lg border border-borde-control bg-superficie px-2 text-right tabular-nums focus:border-acento"
                         />
                         <span className="w-6 text-xs text-tenue">{kg ? "/kg" : "c/u"}</span>
                       </div>
@@ -304,7 +304,7 @@ export default function RegistrarCompra({ onRegistrada, onCerrar }: Props) {
           className="fixed inset-0 z-30 flex items-center justify-center bg-velo p-4"
           onKeyDown={(e) => e.key === "Escape" && e.stopPropagation()}
         >
-          <div role="dialog" aria-modal="true" className="h-[42rem] max-h-full w-[28rem] rounded-lg border border-linea bg-superficie">
+          <div role="dialog" aria-modal="true" className="h-[42rem] max-h-full w-[28rem] tarjeta">
             <FormularioProducto
               producto={null}
               codigoInicial={creando}

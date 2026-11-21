@@ -86,7 +86,7 @@ export default function Compras({ activa, elegida, onElegir, onNueva, version }:
             value={proveedorId}
             onChange={(e) => setProveedorId(e.target.value)}
             aria-label="Proveedor"
-            className="h-10 max-w-64 rounded-lg border border-linea bg-superficie px-3 outline-none focus:border-texto"
+            className="h-10 max-w-64 rounded-lg border border-borde-control bg-superficie px-3 focus:border-acento"
           >
             <option value="">Todos los proveedores</option>
             {proveedores.map((p) => (
@@ -103,7 +103,7 @@ export default function Compras({ activa, elegida, onElegir, onNueva, version }:
               value={desde}
               max={hasta || undefined}
               onChange={(e) => setDesde(e.target.value)}
-              className="h-10 rounded-lg border border-linea bg-superficie px-3 text-texto outline-none focus:border-texto"
+              className="h-10 rounded-lg border border-borde-control bg-superficie px-3 text-texto focus:border-acento"
             />
           </label>
           <label className="flex items-center gap-2 text-tenue">
@@ -113,7 +113,7 @@ export default function Compras({ activa, elegida, onElegir, onNueva, version }:
               value={hasta}
               min={desde || undefined}
               onChange={(e) => setHasta(e.target.value)}
-              className="h-10 rounded-lg border border-linea bg-superficie px-3 text-texto outline-none focus:border-texto"
+              className="h-10 rounded-lg border border-borde-control bg-superficie px-3 text-texto focus:border-acento"
             />
           </label>
           <button
@@ -135,7 +135,7 @@ export default function Compras({ activa, elegida, onElegir, onNueva, version }:
           <span className={`${COL_ANCHA} text-right`}>Líneas</span>
           <span className="text-right">Total</span>
         </div>
-        <div ref={contenedor} className="mt-1 min-h-0 flex-1 overflow-auto rounded-lg border border-linea bg-superficie tabular-nums">
+        <div ref={contenedor} className="mt-1 min-h-0 flex-1 overflow-auto tarjeta tabular-nums">
           {filas.length === 0 ? (
             <p className="p-8 text-center text-tenue">Todavía no hay compras con estos filtros.</p>
           ) : (
@@ -170,7 +170,7 @@ export default function Compras({ activa, elegida, onElegir, onNueva, version }:
         </div>
       </section>
       {elegida !== null && (
-        <aside className="ml-4 w-96 shrink-0 overflow-hidden rounded-lg border border-linea bg-superficie">
+        <aside className="ml-4 w-96 shrink-0 overflow-hidden tarjeta">
           <DetalleCompraPanel
             key={elegida}
             id={elegida}
@@ -292,7 +292,7 @@ function DetalleCompraPanel({ id, onCerrar, onAnulada }: { id: number; onCerrar:
               maxLength={200}
               placeholder="Motivo (obligatorio)"
               aria-label="Motivo de la anulación"
-              className="h-10 w-full rounded-lg border border-linea bg-fondo px-3 outline-none focus:border-texto"
+              className="h-10 w-full rounded-lg border border-borde-control bg-superficie px-3 focus:border-acento"
             />
             {error && <p className="rounded-lg bg-peligro/10 px-3 py-2 text-peligro">{error}</p>}
             <div className="flex gap-2">

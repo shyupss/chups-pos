@@ -6,7 +6,7 @@ import { fechaHora } from "../../formato";
 const POR_PAGINA = 100;
 const ALTO_FILA = 44;
 const VACIO: DatosProveedor = { nombre: "", rut: "", telefono: "", contacto: "", nota: "" };
-const claseCampo = "h-10 w-full rounded-lg border border-linea bg-fondo px-3 outline-none focus:border-texto";
+const claseCampo = "h-10 w-full rounded-lg border border-borde-control bg-superficie px-3 focus:border-acento";
 
 type Panel = { tipo: "nuevo" } | { tipo: "editar"; proveedor: Proveedor } | null;
 
@@ -76,7 +76,7 @@ export default function Proveedores({ activa }: { activa: boolean }) {
             onChange={(e) => setTexto(e.target.value)}
             placeholder="Buscar por nombre, contacto o RUT"
             aria-label="Buscar proveedor"
-            className="h-10 min-w-48 flex-1 rounded-lg border border-linea bg-superficie px-4 outline-none focus:border-texto"
+            className="h-10 min-w-48 flex-1 rounded-lg border border-borde-control bg-superficie px-4 focus:border-acento"
           />
           <label className="flex items-center gap-2 text-tenue">
             <input type="checkbox" checked={inactivos} onChange={(e) => setInactivos(e.target.checked)} />
@@ -91,7 +91,7 @@ export default function Proveedores({ activa }: { activa: boolean }) {
           </button>
         </div>
         {error && <p className="mt-3 rounded-lg bg-peligro/10 px-3 py-2 text-peligro">{error}</p>}
-        <div ref={contenedor} className="mt-4 min-h-0 flex-1 overflow-auto rounded-lg border border-linea bg-superficie">
+        <div ref={contenedor} className="mt-4 min-h-0 flex-1 overflow-auto tarjeta">
           {filas.length === 0 ? (
             <p className="p-8 text-center text-tenue">
               {busqueda ? "Sin resultados" : 'Todavía no hay proveedores. Crea el primero con "Nuevo proveedor".'}
@@ -125,7 +125,7 @@ export default function Proveedores({ activa }: { activa: boolean }) {
         </div>
       </section>
       {panel && (
-        <aside className="ml-4 w-96 shrink-0 rounded-lg border border-linea bg-superficie">
+        <aside className="ml-4 w-96 shrink-0 tarjeta">
           <FormularioProveedor
             key={panel.tipo === "editar" ? panel.proveedor.id : "nuevo"}
             proveedor={panel.tipo === "editar" ? panel.proveedor : null}

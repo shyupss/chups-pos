@@ -140,10 +140,10 @@ export default function Movimientos({ activa, producto, onProducto, onIrAVenta, 
               }}
               placeholder="Filtrar por producto (nombre o código) y Enter"
               aria-label="Filtrar por producto"
-              className="h-10 w-full rounded-lg border border-linea bg-superficie px-4 outline-none focus:border-texto"
+              className="h-10 w-full rounded-lg border border-borde-control bg-superficie px-4 focus:border-acento"
             />
             {sugeridos.length > 0 && (
-              <ul className="absolute z-10 mt-1 w-full overflow-hidden rounded-lg border border-linea bg-superficie">
+              <ul className="absolute z-10 mt-1 w-full overflow-hidden tarjeta shadow-s2">
                 {sugeridos.map((p) => (
                   <li key={p.id}>
                     <button
@@ -167,7 +167,7 @@ export default function Movimientos({ activa, producto, onProducto, onIrAVenta, 
           value={tipo}
           onChange={(e) => setTipo(e.target.value as TipoMovimientoStock | "")}
           aria-label="Tipo de movimiento"
-          className="h-10 rounded-lg border border-linea bg-superficie px-3 outline-none focus:border-texto"
+          className="h-10 rounded-lg border border-borde-control bg-superficie px-3 focus:border-acento"
         >
           <option value="">Todos los tipos</option>
           {TIPOS.map((t) => (
@@ -183,7 +183,7 @@ export default function Movimientos({ activa, producto, onProducto, onIrAVenta, 
             value={desde}
             max={hasta || undefined}
             onChange={(e) => setDesde(e.target.value)}
-            className="h-10 rounded-lg border border-linea bg-superficie px-3 text-texto outline-none focus:border-texto"
+            className="h-10 rounded-lg border border-borde-control bg-superficie px-3 text-texto focus:border-acento"
           />
         </label>
         <label className="flex items-center gap-2 text-tenue">
@@ -193,7 +193,7 @@ export default function Movimientos({ activa, producto, onProducto, onIrAVenta, 
             value={hasta}
             min={desde || undefined}
             onChange={(e) => setHasta(e.target.value)}
-            className="h-10 rounded-lg border border-linea bg-superficie px-3 text-texto outline-none focus:border-texto"
+            className="h-10 rounded-lg border border-borde-control bg-superficie px-3 text-texto focus:border-acento"
           />
         </label>
       </div>
@@ -207,7 +207,7 @@ export default function Movimientos({ activa, producto, onProducto, onIrAVenta, 
         <span className={COL_ANCHA}>Tipo</span>
         <span className={COL_ANCHA}>Motivo u origen</span>
       </div>
-      <div ref={contenedor} className="mt-1 min-h-0 flex-1 overflow-auto rounded-lg border border-linea bg-superficie tabular-nums">
+      <div ref={contenedor} className="mt-1 min-h-0 flex-1 overflow-auto tarjeta tabular-nums">
         {filas.length === 0 ? (
           <p className="p-8 text-center text-tenue">No hay movimientos con estos filtros.</p>
         ) : (

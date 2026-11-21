@@ -130,7 +130,7 @@ export default function CerrarCaja({ turnoId, imprimir, onImpresion, onCancelar,
                 onChange={(e) => setTotal(e.target.value)}
                 placeholder="$0"
                 inputMode="numeric"
-                className="mt-1 h-13 w-full rounded-lg border border-linea bg-fondo px-4 text-2xl tabular-nums outline-none focus:border-texto"
+                className="mt-1 h-13 w-full rounded-lg border border-borde-control bg-superficie px-4 text-2xl tabular-nums focus:border-acento"
               />
             </label>
           )}
@@ -178,7 +178,7 @@ export default function CerrarCaja({ turnoId, imprimir, onImpresion, onCancelar,
               onChange={(e) => setNota(e.target.value)}
               maxLength={300}
               placeholder="Por ejemplo, por qué falta o sobra"
-              className="mt-1 h-10 w-full rounded-lg border border-linea bg-fondo px-3 outline-none focus:border-texto"
+              className="mt-1 h-10 w-full rounded-lg border border-borde-control bg-superficie px-3 focus:border-acento"
             />
           </label>
           {error && <p className="mt-4 rounded-lg bg-peligro/10 px-3 py-2 text-peligro">{error}</p>}
@@ -274,7 +274,7 @@ function Denominaciones({
                 inputMode="numeric"
                 placeholder="0"
                 aria-label={`Cantidad de ${titulo.toLowerCase()} de ${pesos(d)}`}
-                className="h-9 rounded-lg border border-linea bg-fondo px-2 text-right outline-none focus:border-texto"
+                className="h-9 rounded-lg border border-borde-control bg-superficie px-2 text-right focus:border-acento"
               />
               <span className={`text-right ${n > 0 ? "" : "text-tenue"}`}>{pesos(d * n)}</span>
             </label>

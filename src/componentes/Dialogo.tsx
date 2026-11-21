@@ -8,7 +8,7 @@ interface Props {
   ancho?: string;
 }
 
-/** Diálogo pequeño sobre la Caja. Esc lo cierra; sin sombra (solo el cobro la lleva). */
+/** Diálogo pequeño sobre la Caja. Esc lo cierra; con sombra --s3, la más alta de la interfaz. */
 export default function Dialogo({ titulo, onCerrar, children, ancho = "w-[24rem]" }: Props) {
   const id = useId();
   return (
@@ -25,7 +25,7 @@ export default function Dialogo({ titulo, onCerrar, children, ancho = "w-[24rem]
         role="dialog"
         aria-modal="true"
         aria-labelledby={id}
-        className={`${ancho} max-h-full max-w-full overflow-y-auto rounded-lg border border-linea bg-superficie p-6`}
+        className={`${ancho} max-h-full max-w-full overflow-y-auto tarjeta p-6 shadow-s3`}
       >
         <h2 id={id} className="text-lg font-semibold">
           {titulo}

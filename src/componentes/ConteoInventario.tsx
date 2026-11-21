@@ -161,7 +161,7 @@ export default function ConteoInventario({ onTerminado, onCerrar }: Props) {
               value={motivo}
               onChange={(e) => setMotivo(e.target.value)}
               maxLength={200}
-              className="mt-1 h-10 w-full rounded-lg border border-linea bg-fondo px-3 outline-none focus:border-texto"
+              className="mt-1 h-10 w-full rounded-lg border border-borde-control bg-superficie px-3 focus:border-acento"
             />
           </label>
           {error && <p className="mt-3 rounded-lg bg-peligro/10 px-3 py-2 text-peligro">{error}</p>}
@@ -209,7 +209,7 @@ export default function ConteoInventario({ onTerminado, onCerrar }: Props) {
           className="h-11 w-full rounded-lg border-2 border-acento bg-superficie px-4 outline-none disabled:border-linea"
         />
         {resultados.length > 0 && (
-          <ul className="absolute z-10 mt-1 w-full overflow-hidden rounded-lg border border-linea bg-superficie">
+          <ul className="absolute z-10 mt-1 w-full overflow-hidden tarjeta shadow-s2">
             {resultados.map((p) => (
               <li key={p.id}>
                 <button

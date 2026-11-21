@@ -212,7 +212,7 @@ export default function App() {
           {pendiente && <Proximamente seccion={pendiente} />}
         </main>
         {respaldoFallido && (
-          <div role="alert" className="fixed right-4 bottom-4 z-30 max-w-md rounded-lg border border-linea bg-superficie p-4 shadow-lg">
+          <div role="alert" className="fixed right-4 bottom-4 z-30 max-w-md tarjeta p-4 shadow-s3">
             <p className="font-medium text-peligro">{respaldoFallido}</p>
             <div className="mt-3 flex justify-end gap-2 text-sm">
               <button type="button" onClick={() => setRespaldoFallido(null)} className="h-8 rounded-lg px-3 text-tenue hover:bg-fondo">

@@ -138,14 +138,14 @@ export default function Productos({ codigoNuevo, onCodigoUsado, onVerMovimientos
             value={texto}
             onChange={(e) => setTexto(e.target.value)}
             placeholder="Buscar por nombre o código"
-            className="h-10 min-w-48 flex-1 rounded-lg border border-linea bg-superficie px-4 outline-none focus:border-texto"
+            className="h-10 min-w-48 flex-1 rounded-lg border border-borde-control bg-superficie px-4 focus:border-acento"
             autoFocus
           />
           <select
             value={String(filtro)}
             onChange={(e) => setFiltro(aFiltro(e.target.value))}
             aria-label="Filtrar por categoría"
-            className="h-10 max-w-48 rounded-lg border border-linea bg-superficie px-3 outline-none focus:border-texto"
+            className="h-10 max-w-48 rounded-lg border border-borde-control bg-superficie px-3 focus:border-acento"
           >
             <option value="todas">Todas las categorías</option>
             {categorias.map((c) => (
@@ -183,7 +183,7 @@ export default function Productos({ codigoNuevo, onCodigoUsado, onVerMovimientos
           <span className="text-right">Precio</span>
           <span className="text-right">Stock</span>
         </div>
-        <div ref={contenedor} className="mt-1 min-h-0 flex-1 overflow-auto rounded-lg border border-linea bg-superficie tabular-nums">
+        <div ref={contenedor} className="mt-1 min-h-0 flex-1 overflow-auto tarjeta tabular-nums">
           {filas.length === 0 ? (
             <p className="p-8 text-center text-tenue">
               {busqueda || filtro !== "todas"

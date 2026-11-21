@@ -57,7 +57,7 @@ export default function AvisoVenta({ venta, salida, ...acciones }: Props) {
 
   if (!salida) return null;
   return (
-    <div className="mt-3 rounded-lg border border-linea bg-superficie px-4 py-3">
+    <div className="mt-3 tarjeta px-4 py-3">
       <div className="flex items-center gap-3">
         <span className="font-medium">
           {salida.folio !== null ? `Boleta ${folio(salida.folio)}` : "Última boleta"}

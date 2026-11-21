@@ -236,7 +236,7 @@ export default function FormularioProducto({
 }
 
 const claseCampo =
-  "h-10 w-full rounded-lg border border-linea bg-fondo px-3 tabular-nums outline-none focus:border-texto";
+  "h-10 w-full rounded-lg border border-borde-control bg-superficie px-3 tabular-nums focus:border-acento";
 
 function Campo({ etiqueta, children }: { etiqueta: string; children: React.ReactNode }) {
   return (

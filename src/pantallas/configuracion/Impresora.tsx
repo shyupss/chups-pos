@@ -109,7 +109,7 @@ export default function ImpresoraConfig({ cfg, onCambioImpresora }: { cfg: Confi
             value={config.impresora ?? ""}
             onChange={(e) => void cambiarImpresora(e.target.value)}
             aria-label="Impresora"
-            className="h-10 min-w-0 flex-1 rounded-lg border border-linea bg-fondo px-3 outline-none focus:border-texto"
+            className="h-10 min-w-0 flex-1 rounded-lg border border-borde-control bg-superficie px-3 focus:border-acento"
           >
             <option value="">{impresoras === null ? "Buscando impresoras…" : "Elige una impresora…"}</option>
             {impresoras?.map((i) => (

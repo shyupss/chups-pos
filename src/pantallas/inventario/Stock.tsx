@@ -150,13 +150,13 @@ export default function Stock({ activa, onVerMovimientos, estadoInicial }: Props
             onChange={(e) => setTexto(e.target.value)}
             placeholder="Buscar por nombre o código"
             aria-label="Buscar producto"
-            className="h-10 min-w-48 flex-1 rounded-lg border border-linea bg-superficie px-4 outline-none focus:border-texto"
+            className="h-10 min-w-48 flex-1 rounded-lg border border-borde-control bg-superficie px-4 focus:border-acento"
           />
           <select
             value={categoria}
             onChange={(e) => setCategoria(e.target.value)}
             aria-label="Categoría"
-            className="h-10 max-w-48 rounded-lg border border-linea bg-superficie px-3 outline-none focus:border-texto"
+            className="h-10 max-w-48 rounded-lg border border-borde-control bg-superficie px-3 focus:border-acento"
           >
             <option value="todas">Todas las categorías</option>
             {categorias.map((c) => (
@@ -193,7 +193,7 @@ export default function Stock({ activa, onVerMovimientos, estadoInicial }: Props
           <span className={`${COL_ANCHA} text-right`}>Costo</span>
           <span className="text-right">Valor</span>
         </div>
-        <div ref={contenedor} className="mt-1 min-h-0 flex-1 overflow-auto rounded-lg border border-linea bg-superficie tabular-nums">
+        <div ref={contenedor} className="mt-1 min-h-0 flex-1 overflow-auto tarjeta tabular-nums">
           {filas.length === 0 ? (
             <p className="p-8 text-center text-tenue">No hay productos con estos filtros.</p>
           ) : (
@@ -236,7 +236,7 @@ export default function Stock({ activa, onVerMovimientos, estadoInicial }: Props
       </section>
 
       {elegido && (
-        <aside className="ml-4 w-80 shrink-0 rounded-lg border border-linea bg-superficie p-5">
+        <aside className="ml-4 w-80 shrink-0 tarjeta p-5">
           <div className="flex items-start justify-between gap-2">
             <h2 className="font-semibold">{elegido.nombre}</h2>
             <button
@@ -299,7 +299,7 @@ export default function Stock({ activa, onVerMovimientos, estadoInicial }: Props
 
 function Total({ titulo, valor, alerta, children }: { titulo: string; valor: string; alerta?: boolean; children?: ReactNode }) {
   return (
-    <div className="rounded-lg border border-linea bg-superficie px-4 py-3">
+    <div className="tarjeta px-4 py-3">
       <div className="text-xs font-medium uppercase tracking-wide text-tenue">{titulo}</div>
       <div className={`text-2xl font-semibold tabular-nums ${alerta ? "text-peligro" : ""}`}>{valor}</div>
       {children && <div className="text-xs">{children}</div>}
