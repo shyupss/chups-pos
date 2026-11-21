@@ -4,6 +4,7 @@
 //! El texto para la térmica ([`texto`] y [`escpos`]) y el PDF ([`pdf`]) salen de esa misma
 //! estructura, así el papel y el PDF dicen exactamente lo mismo.
 
+pub mod escpos;
 pub mod formato;
 pub mod texto;
 
