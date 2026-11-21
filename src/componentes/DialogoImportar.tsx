@@ -160,7 +160,7 @@ export default function DialogoImportar({ tipo, onCerrar, onImportado }: Props) 
           </p>
           <div className="max-h-96 overflow-auto rounded-lg border border-linea">
             <table className="w-full text-sm">
-              <thead className="sticky top-0 bg-fondo text-left text-xs text-tenue">
+              <thead className="sticky top-0 bg-suave text-left text-xs text-tenue">
                 <tr>
                   <th className="px-3 py-2 font-medium">Columna de la planilla</th>
                   <th className="px-3 py-2 font-medium">Ejemplos</th>

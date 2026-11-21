@@ -183,7 +183,7 @@ export default function Stock({ activa, onVerMovimientos, estadoInicial }: Props
           </p>
         )}
 
-        <div className={`mt-4 grid ${COLUMNAS} gap-2 px-4 text-xs font-medium uppercase text-tenue`}>
+        <div className={`mt-4 grid ${COLUMNAS} gap-2 px-4 text-xs font-medium text-tenue`}>
           <span>Producto</span>
           <span className="text-right">Stock</span>
           <span className={`${COL_ANCHA} text-right`}>Mínimo</span>
@@ -292,7 +292,7 @@ export default function Stock({ activa, onVerMovimientos, estadoInicial }: Props
 function Total({ titulo, valor, alerta, children }: { titulo: string; valor: string; alerta?: boolean; children?: ReactNode }) {
   return (
     <div className="tarjeta px-4 py-3">
-      <div className="text-xs font-medium uppercase tracking-wide text-tenue">{titulo}</div>
+      <div className="text-xs font-medium text-tenue">{titulo}</div>
       <div className={`text-2xl font-semibold tabular-nums ${alerta ? "text-peligro" : ""}`}>{valor}</div>
       {children && <div className="text-xs">{children}</div>}
     </div>

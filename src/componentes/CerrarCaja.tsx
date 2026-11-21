@@ -241,7 +241,7 @@ function Denominaciones({
 }) {
   return (
     <fieldset>
-      <legend className="mb-2 text-xs font-medium uppercase tracking-wide text-tenue">{titulo}</legend>
+      <legend className="mb-2 text-xs font-medium text-tenue">{titulo}</legend>
       <div className="space-y-1.5">
         {lista.map((d, i) => {
           const n = Number(cantidades[d] || 0);
@@ -315,7 +315,7 @@ function ResumenVentas({ r }: { r: ResumenTurno }) {
 const reembolso = (medio: keyof typeof NOMBRE_MEDIO) => (medio === "fiado" ? "fiado, sin reembolso" : NOMBRE_MEDIO[medio].toLowerCase());
 
 function Titulo({ children }: { children: ReactNode }) {
-  return <h3 className="mt-3 mb-2 text-xs font-medium uppercase tracking-wide text-tenue first:mt-0">{children}</h3>;
+  return <h3 className="mt-3 mb-2 text-xs font-medium text-tenue first:mt-0">{children}</h3>;
 }
 
 function Par({ etiqueta, valor, fuerte, tenue }: { etiqueta: string; valor: string; fuerte?: boolean; tenue?: boolean }) {

@@ -341,7 +341,7 @@ export default function DetalleVentaPanel({ ventaId, activa, onImpresion, onCamb
 function Bloque({ titulo, children }: { titulo: string; children: ReactNode }) {
   return (
     <section>
-      <h3 className="mb-1 text-xs font-medium uppercase tracking-wide text-tenue">{titulo}</h3>
+      <h3 className="mb-1 text-xs font-medium text-tenue">{titulo}</h3>
       {children}
     </section>
   );

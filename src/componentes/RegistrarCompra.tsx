@@ -187,7 +187,7 @@ export default function RegistrarCompra({ onRegistrada, onCerrar }: Props) {
           <p className="p-8 text-center text-tenue">Escanea los productos que llegaron.</p>
         ) : (
           <table className="w-full">
-            <thead className="sticky top-0 bg-superficie text-left text-xs uppercase text-tenue">
+            <thead className="sticky top-0 bg-suave text-left text-xs text-tenue">
               <tr className="h-9">
                 <th className="px-3 font-medium">Producto</th>
                 <th className="w-32 px-3 font-medium">Cantidad</th>
@@ -279,7 +279,7 @@ export default function RegistrarCompra({ onRegistrada, onCerrar }: Props) {
           />
         </div>
         <div className="text-right tabular-nums">
-          <div className="text-xs font-medium uppercase text-tenue">Total</div>
+          <div className="text-xs font-medium text-tenue">Total</div>
           <div className="text-3xl font-semibold">{pesos(total)}</div>
         </div>
       </div>

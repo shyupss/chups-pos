@@ -123,7 +123,7 @@ export default function Compras({ activa, elegida, onElegir, onNueva, version }:
         </div>
         {error && <p className="mt-3 rounded-lg bg-peligro-fondo px-3 py-2 text-peligro">{error}</p>}
 
-        <div className={`mt-4 grid ${COLUMNAS} gap-2 px-4 text-xs font-medium uppercase text-tenue`}>
+        <div className={`mt-4 grid ${COLUMNAS} gap-2 px-4 text-xs font-medium text-tenue`}>
           <span>N°</span>
           <span>Fecha</span>
           <span>Proveedor</span>

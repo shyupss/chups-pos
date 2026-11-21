@@ -1,5 +1,7 @@
+import Tecla from "../componentes/Tecla";
+import Boton from "../componentes/Boton";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ArrowDownUp, Lock } from "lucide-react";
+import { ArrowDownUp, Clock, Lock, Pause, Trash2 } from "lucide-react";
 import {
   api,
   textoError,
@@ -104,6 +106,8 @@ export default function Caja({ activa, onCrearProducto, onEnEspera, onImpresion,
   const [pesando, setPesando] = useState<Pesando | null>(null);
   const [config, setConfig] = useState<Config | null>(null);
   const [ultimaVentaId, setUltimaVentaId] = useState<number | null>(null);
+  // Producto agregado o cambiado en último lugar: va resaltado en la tabla y en el visor.
+  const [ultimoId, setUltimoId] = useState<number | null>(null);
   const { salida, iniciar, imprimir, reintentar, guardarPdf, abrirCajon, cerrar, descartarSiTermino } =
     useSalidasVenta(onImpresion);
   const [dialogo, setDialogo] = useState<"poner-espera" | "lista-espera" | "movimiento" | "cerrar-caja" | null>(null);
@@ -138,6 +142,7 @@ export default function Caja({ activa, onCrearProducto, onEnEspera, onImpresion,
   }, []);
 
   const agregar = useCallback((producto: Producto, mil: number) => {
+    setUltimoId(producto.id);
     setLineas((ls) => {
       const i = ls.findIndex((l) => l.producto.id === producto.id);
       if (i === -1) return [...ls, { producto, cantidadMil: Math.min(maximoMil(producto), mil) }];
@@ -200,10 +205,12 @@ export default function Caja({ activa, onCrearProducto, onEnEspera, onImpresion,
     }
   }, [entrada, elegir, agregar, config]);
 
-  const fijarCantidad = (id: number, mil: number) =>
+  const fijarCantidad = (id: number, mil: number) => {
+    setUltimoId(id);
     setLineas((ls) =>
       ls.map((l) => (l.producto.id === id ? { ...l, cantidadMil: Math.min(maximoMil(l.producto), mil) } : l)),
     );
+  };
   const cambiarUnidades = (id: number, unidades: number) => fijarCantidad(id, Math.max(1, unidades) * 1000);
   const quitar = (id: number) => setLineas((ls) => ls.filter((l) => l.producto.id !== id));
 
@@ -217,6 +224,8 @@ export default function Caja({ activa, onCrearProducto, onEnEspera, onImpresion,
   // Total mostrado mientras se escanea. El total que vale lo calcula Rust al confirmar,
   // con los precios de la base de datos.
   const total = lineas.reduce((s, l) => s + subtotalLinea(l.producto.precioVenta, l.cantidadMil), 0);
+  // La línea del visor y de la marca: la última tocada o, si ya no está, la última de la lista.
+  const ultima = lineas.find((l) => l.producto.id === ultimoId) ?? lineas[lineas.length - 1] ?? null;
   const itemsDelCarrito = (): ItemPedido[] =>
     lineas.map((l) => ({ productoId: l.producto.id, cantidadMil: l.cantidadMil }));
 
@@ -373,11 +382,17 @@ export default function Caja({ activa, onCrearProducto, onEnEspera, onImpresion,
             ref={campo}
             value={entrada}
             onChange={(e) => setEntrada(e.target.value)}
-            placeholder="Escanea o escribe y presiona Enter  (3*código = 3 unidades, 0,5*código = 0,5 kg)"
-            className="h-12 w-full rounded-lg border-2 border-acento bg-superficie px-4 text-lg outline-none"
+            placeholder="Escanea o escribe un producto"
+            aria-label="Escanear o escribir un producto"
+            className="h-13 w-full rounded-[10px] border-2 border-acento bg-superficie pr-56 pl-4 text-lg shadow-s1 focus-visible:outline-none"
             autoComplete="off"
             spellCheck={false}
           />
+          <span className="pointer-events-none absolute inset-y-0 right-4 flex items-center gap-1.5 text-xs text-tenue">
+            <Tecla>3*</Tecla> cantidad
+            <span className="w-1" />
+            <Tecla>0,5*</Tecla> kilos
+          </span>
           {resultados.length > 0 && (
             <ul className="absolute z-10 mt-1 w-full overflow-hidden tarjeta shadow-s2">
               {resultados.map((p) => (
@@ -440,139 +455,173 @@ export default function Caja({ activa, onCrearProducto, onEnEspera, onImpresion,
             <p className="p-8 text-center text-tenue">Escanea productos para empezar una venta</p>
           ) : (
             <table className="w-full">
-              <thead className="sticky top-0 bg-superficie text-left text-xs uppercase text-tenue">
+              <thead className="sticky top-0 bg-suave text-left text-[13px] text-tenue">
                 <tr className="h-10">
                   <th className="px-4 font-medium">Producto</th>
                   <th className="px-4 text-right font-medium">Precio</th>
                   <th className="px-4 text-center font-medium">Cantidad</th>
                   <th className="px-4 text-right font-medium">Subtotal</th>
-                  <th className="w-10" />
+                  <th className="w-12" />
                 </tr>
               </thead>
               <tbody>
-                {lineas.map((l) => (
-                  <tr key={l.producto.id} className="h-10 border-t border-linea">
-                    <td className="px-4">{l.producto.nombre}</td>
-                    <td className="px-4 text-right">
-                      {pesos(l.producto.precioVenta)}
-                      {l.producto.unidad === "kg" && <span className="text-tenue">/kg</span>}
-                    </td>
-                    <td className="px-4">
-                      {l.producto.unidad === "kg" ? (
-                        <div className="flex items-center justify-center gap-2">
-                          <span>{cantidad(l.cantidadMil, "kg")}</span>
-                          <button
-                            type="button"
-                            onClick={() => setPesando({ producto: l.producto, cambiar: true })}
-                            className="h-7 rounded-lg border border-linea px-2 text-xs text-tenue hover:bg-suave hover:text-texto"
-                          >
-                            Cambiar peso
-                          </button>
-                        </div>
-                      ) : (
-                        <div className="flex items-center justify-center gap-1">
-                          <BotonChico onClick={() => cambiarUnidades(l.producto.id, l.cantidadMil / 1000 - 1)}>−</BotonChico>
-                          <input
-                            value={l.cantidadMil / 1000}
-                            onChange={(e) => cambiarUnidades(l.producto.id, Number(e.target.value.replace(/\D/g, "")) || 1)}
-                            onKeyDown={(e) => e.key === "Enter" && enfocar()}
-                            className="h-7 w-14 rounded-lg border border-borde-control bg-superficie px-1 text-center focus:border-acento"
-                            inputMode="numeric"
-                            aria-label={`Cantidad de ${l.producto.nombre}`}
-                          />
-                          <BotonChico onClick={() => cambiarUnidades(l.producto.id, l.cantidadMil / 1000 + 1)}>+</BotonChico>
-                        </div>
-                      )}
-                    </td>
-                    <td className="px-4 text-right font-medium">
-                      {pesos(subtotalLinea(l.producto.precioVenta, l.cantidadMil))}
-                    </td>
-                    <td className="pr-2 text-center">
-                      <button
-                        onClick={() => quitar(l.producto.id)}
-                        className="h-7 rounded-lg px-2 text-tenue hover:bg-peligro-fondo hover:text-peligro"
-                        title="Quitar"
-                      >
-                        ×
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                {lineas.map((l) => {
+                  const reciente = ultima?.producto.id === l.producto.id;
+                  return (
+                    <tr key={l.producto.id} className={`h-[46px] border-t border-linea ${reciente ? "bg-resalte" : ""}`}>
+                      <td className="relative px-4">
+                        {reciente && <span aria-hidden className="absolute inset-y-0 left-0 w-[3px] bg-aviso" />}
+                        {l.producto.nombre}
+                      </td>
+                      <td className="px-4 text-right">
+                        {pesos(l.producto.precioVenta)}
+                        {l.producto.unidad === "kg" && <span className="text-tenue">/kg</span>}
+                      </td>
+                      <td className="px-4">
+                        {l.producto.unidad === "kg" ? (
+                          <div className="mx-auto flex h-8 w-fit items-center gap-2 rounded-lg border border-borde-control bg-superficie pr-1 pl-3">
+                            <span>{cantidad(l.cantidadMil, "kg")}</span>
+                            <Boton
+                              variante="terciario"
+                              tamano="chico"
+                              onClick={() => setPesando({ producto: l.producto, cambiar: true })}
+                              className="h-6 rounded-md bg-seleccion px-2 text-xs font-semibold text-acento hover:text-acento"
+                              aria-label={`Cambiar el peso de ${l.producto.nombre}`}
+                            >
+                              Cambiar
+                            </Boton>
+                          </div>
+                        ) : (
+                          <div className="flex items-center justify-center gap-1">
+                            <Boton tamano="icono" className="size-7" aria-label={`Una menos de ${l.producto.nombre}`} onClick={() => cambiarUnidades(l.producto.id, l.cantidadMil / 1000 - 1)}>
+                              −
+                            </Boton>
+                            <input
+                              value={l.cantidadMil / 1000}
+                              onChange={(e) => cambiarUnidades(l.producto.id, Number(e.target.value.replace(/\D/g, "")) || 1)}
+                              onKeyDown={(e) => e.key === "Enter" && enfocar()}
+                              className="h-7 w-14 rounded-lg border border-borde-control px-1 text-center focus:border-acento"
+                              inputMode="numeric"
+                              aria-label={`Cantidad de ${l.producto.nombre}`}
+                            />
+                            <Boton tamano="icono" className="size-7" aria-label={`Una más de ${l.producto.nombre}`} onClick={() => cambiarUnidades(l.producto.id, l.cantidadMil / 1000 + 1)}>
+                              +
+                            </Boton>
+                          </div>
+                        )}
+                      </td>
+                      <td className="px-4 text-right font-medium">
+                        {pesos(subtotalLinea(l.producto.precioVenta, l.cantidadMil))}
+                      </td>
+                      <td className="pr-2 text-center">
+                        <Boton tamano="icono" className="size-7" onClick={() => quitar(l.producto.id)} title="Quitar" aria-label={`Quitar ${l.producto.nombre}`}>
+                          ×
+                        </Boton>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           )}
         </div>
       </section>
 
-      <aside className="flex w-70 shrink-0 flex-col border-l border-linea bg-superficie p-5">
-        <div className="text-tenue">
-          {lineas.length} {lineas.length === 1 ? "producto" : "productos"}
+      <aside className="flex w-82 shrink-0 flex-col gap-5 overflow-y-auto border-l border-linea bg-superficie p-5">
+        <div className="rounded-panel bg-visor-bg pt-4 pr-[18px] pb-[18px] pl-[18px] text-visor-texto shadow-s2">
+          {ultima ? (
+            <div>
+              <div className="flex items-baseline justify-between gap-3 text-sm font-semibold">
+                <span className="min-w-0 truncate">{ultima.producto.nombre}</span>
+                <span className="shrink-0 tabular-nums">{pesos(subtotalLinea(ultima.producto.precioVenta, ultima.cantidadMil))}</span>
+              </div>
+              <div className="mt-0.5 text-[12.5px] text-visor-tenue tabular-nums">
+                {ultima.producto.unidad === "kg"
+                  ? `${cantidad(ultima.cantidadMil, "kg")} a ${pesos(ultima.producto.precioVenta)} el kilo`
+                  : `${cantidad(ultima.cantidadMil, "unidad")} × ${pesos(ultima.producto.precioVenta)}`}
+              </div>
+            </div>
+          ) : (
+            <div className="text-[12.5px] text-visor-tenue">Escanea un producto para empezar</div>
+          )}
+          <hr className="my-3 border-visor-tenue/30" />
+          <div className="text-[13px] text-visor-tenue">Total a pagar</div>
+          <div role="status" aria-live="polite" className="text-[46px] leading-[1.1] font-bold tabular-nums">
+            {pesos(total)}
+          </div>
+          <div className="mt-1 text-[12.5px] text-visor-tenue">{resumenCarrito(lineas)}</div>
         </div>
-        <div className="mt-1 text-xs font-medium uppercase tracking-wide text-tenue">Total</div>
-        <div className="text-4xl font-semibold tabular-nums">{pesos(total)}</div>
-        <button
+
+        <Boton
+          variante="primario"
+          tamano="grande"
+          bloque
+          atajo="F12"
           disabled={lineas.length === 0}
           onClick={() => setCobrando(true)}
-          className="mt-6 h-13 rounded-lg bg-acento text-lg font-semibold text-sobre-acento disabled:bg-linea disabled:text-tenue"
         >
-          Cobrar <span className="text-sm font-normal opacity-70">F12</span>
-        </button>
-        <div className="mt-2 flex gap-2">
-          <button
+          Cobrar
+        </Boton>
+
+        <div className="flex flex-col gap-2">
+          <h2 className="text-[12.5px] font-semibold text-tenue">Venta actual</h2>
+          <Boton
+            bloque
+            icono={Pause}
+            atajo="F8"
+            disabled={lineas.length === 0}
+            onClick={() => setDialogo("poner-espera")}
+            title="Poner en espera (F8)"
+            aria-keyshortcuts="F8"
+          >
+            Poner en espera
+          </Boton>
+          <Boton bloque icono={Clock} atajo="F7" onClick={abrirListaEspera} aria-keyshortcuts="F7">
+            En espera
+            <span className="rounded-full bg-seleccion px-2 text-xs font-semibold text-acento tabular-nums">{enEspera?.length ?? 0}</span>
+          </Boton>
+          <Boton
+            variante="peligro"
+            bloque
+            icono={Trash2}
             disabled={lineas.length === 0}
             onClick={() => {
               setLineas([]);
               enfocar();
             }}
-            className="h-10 flex-1 rounded-lg text-tenue enabled:hover:bg-suave enabled:hover:text-texto disabled:opacity-50"
           >
             Cancelar venta
-          </button>
-          <button
-            disabled={lineas.length === 0}
-            onClick={() => setDialogo("poner-espera")}
-            title="Poner en espera (F8)"
-            aria-keyshortcuts="F8"
-            className="h-10 flex-1 rounded-lg text-tenue enabled:hover:bg-suave enabled:hover:text-texto disabled:opacity-50"
-          >
-            Poner en espera
-          </button>
+          </Boton>
         </div>
-        <button
-          onClick={abrirListaEspera}
-          aria-keyshortcuts="F7"
-          className="mt-2 flex h-10 items-center justify-between rounded-lg border border-linea px-3 hover:bg-suave"
-        >
-          <span>
-            En espera <span className="tabular-nums">({enEspera?.length ?? 0})</span>
-          </span>
-          <span className="text-xs text-tenue">F7</span>
-        </button>
-        <div className="mt-4 space-y-2 border-t border-linea pt-4">
-          <button
-            disabled={!turno}
-            onClick={() => setDialogo("movimiento")}
-            className="flex h-10 w-full items-center gap-2 rounded-lg border border-linea px-3 enabled:hover:bg-suave disabled:opacity-50"
-          >
-            <ArrowDownUp size={16} className="text-tenue" aria-hidden />
+
+        <div className="flex flex-col gap-2">
+          <h2 className="text-[12.5px] font-semibold text-tenue">Caja</h2>
+          <Boton bloque icono={ArrowDownUp} disabled={!turno} onClick={() => setDialogo("movimiento")}>
             Ingreso o retiro de efectivo
-          </button>
-          <button
+          </Boton>
+          <Boton
+            bloque
+            icono={Lock}
             disabled={!turno || lineas.length > 0}
             onClick={() => setDialogo("cerrar-caja")}
             title={lineas.length > 0 ? "Cobra, cancela o pon en espera la venta en curso para cerrar la caja" : undefined}
-            className="flex h-10 w-full items-center gap-2 rounded-lg border border-linea px-3 enabled:hover:bg-suave disabled:opacity-50"
           >
-            <Lock size={16} className="text-tenue" aria-hidden />
             Cerrar caja
-          </button>
+          </Boton>
         </div>
-        <dl className="mt-auto space-y-1 text-xs text-tenue">
-          <div>Enter: agregar · Esc: limpiar búsqueda</div>
-          <div>F7 en espera · F8 poner en espera</div>
-          <div>Ctrl+P reimprimir la última boleta</div>
-          <div>F1 caja · F2 productos · F12 cobrar</div>
-        </dl>
+
+        {/* Con la ventana baja los atajos son lo primero que se esconde. */}
+        <ul className="mt-auto flex flex-col gap-1.5 text-xs text-tenue [@media(height<700px)]:hidden">
+          <li className="flex items-center gap-2">
+            <Tecla>Enter</Tecla> agregar
+          </li>
+          <li className="flex items-center gap-2">
+            <Tecla>Esc</Tecla> limpiar
+          </li>
+          <li className="flex items-center gap-2">
+            <Tecla>Ctrl P</Tecla> reimprimir
+          </li>
+        </ul>
       </aside>
 
       {/* Solo mientras la Caja está a la vista: oculta, sus atajos (Enter, Esc) no deben actuar. */}
@@ -645,16 +694,12 @@ export default function Caja({ activa, onCrearProducto, onEnEspera, onImpresion,
   );
 }
 
-function BotonChico({ onClick, children }: { onClick: () => void; children: string }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="size-7 rounded-lg border border-linea text-tenue hover:bg-suave hover:text-texto"
-    >
-      {children}
-    </button>
-  );
+/** "5 productos, 3 por peso" bajo el total del visor. */
+function resumenCarrito(lineas: Linea[]): string {
+  if (lineas.length === 0) return "Sin productos";
+  const porPeso = lineas.filter((l) => l.producto.unidad === "kg").length;
+  const productos = `${lineas.length} ${lineas.length === 1 ? "producto" : "productos"}`;
+  return porPeso > 0 ? `${productos}, ${porPeso} por peso` : productos;
 }
 
 function AvisoCaja({
@@ -670,12 +715,9 @@ function AvisoCaja({
         <span>
           El código <b>{aviso.codigo}</b> no está registrado.
         </span>
-        <button
-          onClick={() => onCrearProducto(aviso.codigo)}
-          className="h-8 rounded-lg bg-aviso px-3 font-medium text-aviso-fondo"
-        >
+        <Boton tamano="chico" onClick={() => onCrearProducto(aviso.codigo)}>
           Crear producto
-        </button>
+        </Boton>
       </div>
     );
   }

@@ -117,7 +117,7 @@ export default function ConteoInventario({ onTerminado, onCerrar }: Props) {
           </p>
           <div className="mt-3 max-h-80 overflow-auto rounded-lg border border-linea">
             <table className="w-full">
-              <thead className="sticky top-0 bg-superficie text-left text-xs uppercase text-tenue">
+              <thead className="sticky top-0 bg-suave text-left text-xs text-tenue">
                 <tr className="h-9">
                   <th className="px-3 font-medium">Producto</th>
                   <th className="px-3 text-right font-medium">Sistema</th>

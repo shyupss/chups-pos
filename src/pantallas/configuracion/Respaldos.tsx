@@ -156,7 +156,7 @@ export default function Respaldos({ cfg }: { cfg: ConfigEditable }) {
       {aviso && <p className={`text-sm break-all ${aviso.error ? "text-peligro" : "text-exito"}`}>{aviso.texto}</p>}
 
       <div className="overflow-hidden rounded-lg border border-linea">
-        <div className="grid grid-cols-[minmax(0,1fr)_10rem_6rem] gap-3 border-b border-linea bg-fondo px-3 py-2 text-xs font-medium uppercase text-tenue">
+        <div className="grid grid-cols-[minmax(0,1fr)_10rem_6rem] gap-3 border-b border-linea bg-suave px-3 py-2 text-xs font-medium text-tenue">
           <span>Respaldo</span>
           <span>Fecha</span>
           <span className="text-right">Tamaño</span>

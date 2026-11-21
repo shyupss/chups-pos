@@ -86,7 +86,7 @@ export default function DialogoDevolucion({ venta, redondeoActivo, onDevuelta, o
         className="mt-4"
       >
         <table className="w-full">
-          <thead className="text-left text-xs uppercase text-tenue">
+          <thead className="text-left text-xs text-tenue">
             <tr className="h-8">
               <th className="font-medium">Producto</th>
               <th className="px-2 text-right font-medium">Vendido</th>

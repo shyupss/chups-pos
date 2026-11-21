@@ -286,7 +286,7 @@ export default function ImpresoraConfig({ cfg, onCambioImpresora }: { cfg: Confi
 export function Seccion({ titulo, children }: { titulo: string; children: ReactNode }) {
   return (
     <section className="space-y-3 border-t border-linea pt-4 first:border-t-0 first:pt-0">
-      <h3 className="text-xs font-semibold uppercase tracking-wide text-tenue">{titulo}</h3>
+      <h3 className="text-xs font-semibold text-tenue">{titulo}</h3>
       {children}
     </section>
   );

@@ -310,7 +310,7 @@ export default function Ventas({ activa, onImpresion, folioInicial = null, onFol
         )}
         {error && <p className="mt-3 rounded-lg bg-peligro-fondo px-3 py-2 text-peligro">{error}</p>}
 
-        <div className={`mt-4 grid ${COLUMNAS} gap-2 px-4 text-xs font-medium uppercase text-tenue`}>
+        <div className={`mt-4 grid ${COLUMNAS} gap-2 px-4 text-xs font-medium text-tenue`}>
           <span>Folio</span>
           <span>Fecha y hora</span>
           <span className={`${COL_ANCHA} text-right`}>Productos</span>

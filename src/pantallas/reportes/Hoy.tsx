@@ -161,7 +161,7 @@ export default function Hoy({ activa, onVerBajoMinimo, onVerCliente, onVerProduc
 export function Tarjeta({ titulo, valor, pie }: { titulo: string; valor: ReactNode; pie?: string }) {
   return (
     <div className="tarjeta p-4">
-      <div className="text-xs font-medium uppercase text-tenue">{titulo}</div>
+      <div className="text-xs font-medium text-tenue">{titulo}</div>
       <div className="mt-1 text-2xl font-semibold tabular-nums">{valor}</div>
       {pie && (
         <div className="mt-1 truncate text-xs text-tenue" title={pie}>

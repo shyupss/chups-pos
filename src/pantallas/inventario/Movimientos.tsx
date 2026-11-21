@@ -195,7 +195,7 @@ export default function Movimientos({ activa, producto, onProducto, onIrAVenta, 
       </div>
       {error && <p className="mt-3 rounded-lg bg-peligro-fondo px-3 py-2 text-peligro">{error}</p>}
 
-      <div className={`mt-4 grid ${COLUMNAS} gap-2 px-4 text-xs font-medium uppercase text-tenue`}>
+      <div className={`mt-4 grid ${COLUMNAS} gap-2 px-4 text-xs font-medium text-tenue`}>
         <span>Fecha</span>
         <span>Producto</span>
         <span className="text-right">Cantidad</span>
