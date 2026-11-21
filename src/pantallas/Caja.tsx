@@ -96,7 +96,7 @@ export default function Caja({ activa, onCrearProducto, onEnEspera }: Props) {
   useEffect(() => {
     if (!activa) return;
     api
-      .configCaja()
+      .obtenerConfig()
       .then((c) => setRedondeoActivo(c.redondeoEfectivo))
       .catch(() => {});
   }, [activa]);

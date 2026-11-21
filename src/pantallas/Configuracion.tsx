@@ -1,10 +1,11 @@
 import { Monitor, Moon, Sun } from "lucide-react";
 import { useEffect, useState } from "react";
-import { api, textoError, type EstadoSistema } from "../api";
+import { api, type EstadoSistema } from "../api";
 import { Bloque, Fila } from "../componentes/Ajustes";
 import type { ModoBarra } from "../componentes/BarraLateral";
 import Opciones, { type Opcion } from "../componentes/Opciones";
 import NegocioConfig from "./configuracion/Negocio";
+import { useConfig, type ConfigEditable } from "../hooks/useConfig";
 import { useTema, type Tema } from "../hooks/useTema";
 
 interface Props {
@@ -31,6 +32,7 @@ const SI_NO: Opcion<"si" | "no">[] = [
 
 export default function Configuracion({ modoBarra, onModoBarra }: Props) {
   const [tema, setTema] = useTema();
+  const cfg = useConfig();
 
   return (
     <div className="h-full overflow-auto p-6">
@@ -55,7 +57,7 @@ export default function Configuracion({ modoBarra, onModoBarra }: Props) {
         </Bloque>
 
         <Bloque titulo="Caja">
-          <RedondeoEfectivo />
+          <RedondeoEfectivo cfg={cfg} />
         </Bloque>
 
         <Bloque titulo="Negocio">
@@ -83,26 +85,8 @@ export default function Configuracion({ modoBarra, onModoBarra }: Props) {
 }
 
 /** Interruptor de la clave redondeo_efectivo de la tabla config. */
-function RedondeoEfectivo() {
-  const [activo, setActivo] = useState<boolean | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    api
-      .configCaja()
-      .then((c) => setActivo(c.redondeoEfectivo))
-      .catch((e) => setError(textoError(e)));
-  }, []);
-
-  const cambiar = (valor: "si" | "no") => {
-    const nuevo = valor === "si";
-    setActivo(nuevo);
-    api.cambiarRedondeoEfectivo(nuevo).catch((e) => {
-      setActivo(!nuevo);
-      setError(textoError(e));
-    });
-  };
-
+function RedondeoEfectivo({ cfg }: { cfg: ConfigEditable }) {
+  const { config, error, cambiar } = cfg;
   return (
     <Fila
       etiqueta="Redondeo del efectivo"
@@ -110,15 +94,15 @@ function RedondeoEfectivo() {
     >
       {error ? (
         <span className="text-peligro">{error}</span>
-      ) : activo === null ? (
+      ) : config === null ? (
         <span className="text-tenue">Cargando…</span>
       ) : (
         <Opciones
           nombre="redondeo"
           etiqueta="Redondeo del efectivo"
           opciones={SI_NO}
-          valor={activo ? "si" : "no"}
-          onCambiar={cambiar}
+          valor={config.redondeoEfectivo ? "si" : "no"}
+          onCambiar={(v) => void cambiar({ redondeoEfectivo: v === "si" })}
         />
       )}
     </Fila>

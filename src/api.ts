@@ -88,8 +88,30 @@ export interface VentaConfirmada {
   lineas: LineaVendida[];
 }
 
-export interface ConfigCaja {
+export type TablaCaracteres = "cp858" | "cp850" | "wpc1252";
+export type FormatoPdf = "ticket" | "carta";
+export type FormatoBalanza = "peso" | "precio";
+
+/** Configuración tipada de la tabla config (la valida el servicio de Rust). */
+export interface Config {
   redondeoEfectivo: boolean;
+  boletaLeyenda: boolean;
+  boletaCodigo: boolean;
+  impresora: string | null;
+  anchoPapelMm: 58 | 80;
+  tablaCaracteres: TablaCaracteres;
+  imprimirAlCobrar: boolean;
+  copias: 1 | 2;
+  pdfFormato: FormatoPdf;
+  pdfCarpeta: string | null;
+  cajonActivo: boolean;
+  cajonPin: 2 | 5;
+  cajonPulsoMs: number;
+  cajonSoloEfectivo: boolean;
+  balanzaActiva: boolean;
+  balanzaPrefijos: string;
+  balanzaFormato: FormatoBalanza;
+  balanzaLargoCodigo: number;
 }
 
 /** Una venta en espera en la lista. El total usa los precios actuales de los productos activos. */
@@ -161,8 +183,8 @@ export const api = {
 
   confirmarVenta: (venta: NuevaVenta) => invoke<VentaConfirmada>("confirmar_venta", { venta }),
 
-  configCaja: () => invoke<ConfigCaja>("config_caja"),
-  cambiarRedondeoEfectivo: (activo: boolean) => invoke<void>("cambiar_redondeo_efectivo", { activo }),
+  obtenerConfig: () => invoke<Config>("obtener_config"),
+  guardarConfig: (config: Config) => invoke<Config>("guardar_config", { config }),
 
   ponerEnEspera: (nombre: string | null, items: ItemPedido[]) =>
     invoke<number>("poner_en_espera", { nombre, items }),

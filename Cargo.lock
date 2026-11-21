@@ -2817,6 +2817,7 @@ dependencies = [
 name = "pos-core"
 version = "0.1.0"
 dependencies = [
+ "chrono",
  "image",
  "png",
  "serde",

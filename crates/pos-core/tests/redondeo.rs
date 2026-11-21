@@ -42,7 +42,7 @@ async fn redondeo_guardado(pool: &SqlitePool, venta_id: i64) -> (i64, i64, i64) 
 async fn efectivo_se_redondea_a_la_decena() {
     let pool = db::abrir_en_memoria().await.unwrap();
     assert!(
-        config::config_caja(&pool).await.unwrap().redondeo_efectivo,
+        config::obtener(&pool).await.unwrap().redondeo_efectivo,
         "activo por defecto"
     );
 
@@ -122,10 +122,8 @@ async fn tarjetas_y_transferencia_no_se_redondean() {
 #[tokio::test]
 async fn con_redondeo_desactivado_no_se_redondea() {
     let pool = db::abrir_en_memoria().await.unwrap();
-    config::cambiar_redondeo_efectivo(&pool, false)
-        .await
-        .unwrap();
-    assert!(!config::config_caja(&pool).await.unwrap().redondeo_efectivo);
+    cambiar_redondeo(&pool, false).await.unwrap();
+    assert!(!config::obtener(&pool).await.unwrap().redondeo_efectivo);
 
     let v = vender(&pool, 1224, MedioPago::Efectivo).await;
     assert_eq!((v.redondeo, v.total), (0, 1224));
@@ -137,9 +135,7 @@ async fn con_redondeo_desactivado_no_se_redondea() {
             .unwrap();
     assert_eq!(valor, "0");
 
-    config::cambiar_redondeo_efectivo(&pool, true)
-        .await
-        .unwrap();
+    cambiar_redondeo(&pool, true).await.unwrap();
     let v = vender(&pool, 1226, MedioPago::Efectivo).await;
     assert_eq!((v.redondeo, v.total), (4, 1230));
 }
@@ -168,4 +164,10 @@ async fn venta_por_peso_en_efectivo_se_redondea() {
         (v.subtotal, v.redondeo, v.total, v.vuelto),
         (1224, -4, 1220, Some(3780))
     );
+}
+
+async fn cambiar_redondeo(pool: &SqlitePool, activo: bool) -> Result<(), Error> {
+    let mut c = config::obtener(pool).await?;
+    c.redondeo_efectivo = activo;
+    config::guardar(pool, &c).await.map(|_| ())
 }

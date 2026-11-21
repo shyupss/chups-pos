@@ -4,3 +4,6 @@
 # (builds de Windows), así que se fija en CRLF para que esas bases sigan abriendo.
 crates/pos-core/migrations/*.sql text eol=lf
 crates/pos-core/migrations/0001_esquema_inicial.sql text eol=crlf
+
+# Boletas esperadas de los tests de texto: se comparan línea a línea.
+crates/pos-core/tests/boletas/*.txt text eol=lf

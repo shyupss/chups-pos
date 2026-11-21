@@ -9,6 +9,8 @@ license.workspace = true
 serde.workspace = true
 sqlx.workspace = true
 thiserror.workspace = true
+# Fecha y hora local de la boleta (la base guarda UTC).
+chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
 # Logo del negocio: solo PNG y JPG.
 image = { version = "0.25", default-features = false, features = ["png", "jpeg"] }
 # El logo se guarda como PNG de 1 bit.
