@@ -434,6 +434,10 @@ export const api = {
   detalleVenta: (id: number) => invoke<DetalleVenta>("detalle_venta", { id }),
   /** Id de la venta con ese folio (escrito o escaneado de la boleta); null si no existe. */
   ventaPorFolio: (folio: number) => invoke<number | null>("venta_por_folio", { folio }),
+  /** Anula la venta; medioReembolso null en una fiada (no se devuelve dinero). Protegido con PIN. */
+  anularVenta: (id: number, motivo: string, medioReembolso: MedioPago | null, pin: string | null) =>
+    invoke<DetalleVenta>("anular_venta", { id, motivo, medioReembolso, pin }),
+  imprimirAnulacion: (ventaId: number) => invoke<void>("imprimir_anulacion", { ventaId }),
 
   obtenerConfig: () => invoke<Config>("obtener_config"),
   guardarConfig: (config: Config, pin: string | null) => invoke<Config>("guardar_config", { config, pin }),

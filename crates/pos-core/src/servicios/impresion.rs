@@ -3,7 +3,7 @@
 
 use sqlx::SqlitePool;
 
-use crate::boleta::{self, cierre, escpos, pdf, Documento};
+use crate::boleta::{self, anulacion, cierre, escpos, pdf, Documento};
 use crate::servicios::config::{self, FormatoPdf};
 use crate::Resultado;
 
@@ -83,6 +83,11 @@ async fn trabajo(pool: &SqlitePool, d: &dyn Documento) -> Resultado<Trabajo> {
 /// El cierre de caja de un turno.
 pub async fn trabajo_cierre(pool: &SqlitePool, turno_id: i64) -> Resultado<Trabajo> {
     trabajo(pool, &cierre::armar(pool, turno_id).await?).await
+}
+
+/// El comprobante de anulación de una venta anulada.
+pub async fn trabajo_anulacion(pool: &SqlitePool, venta_id: i64) -> Resultado<Trabajo> {
+    trabajo(pool, &anulacion::armar(pool, venta_id).await?).await
 }
 
 /// La boleta de una venta; sin `copias`, las de la configuración. Con `copia` (una

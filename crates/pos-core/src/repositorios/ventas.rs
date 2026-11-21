@@ -334,3 +334,35 @@ pub async fn ultima(conn: &mut SqliteConnection) -> Resultado<Option<i64>> {
             .await?,
     )
 }
+
+pub struct DatosAnulacion<'a> {
+    pub motivo: &'a str,
+    pub turno_id: Option<i64>,
+    /// `None` en una venta fiada (no se devuelve dinero).
+    pub medio_reembolso: Option<&'a str>,
+    pub reembolso: Option<i64>,
+}
+
+/// Marca la venta como anulada si sigue pagada o fiada y sin devoluciones.
+/// Devuelve `false` si ya no lo estaba (otra anulación o devolución llegó antes).
+pub async fn anular(
+    conn: &mut SqliteConnection,
+    venta_id: i64,
+    a: &DatosAnulacion<'_>,
+) -> Resultado<bool> {
+    let r = sqlx::query(
+        "UPDATE ventas
+         SET estado = 'anulada', anulada_en = strftime('%Y-%m-%dT%H:%M:%fZ', 'now'),
+             motivo_anulacion = ?, turno_anulacion_id = ?, medio_reembolso_anulacion = ?,
+             reembolso_anulacion = ?
+         WHERE id = ? AND estado IN ('pagada', 'fiada') AND devolucion IS NULL",
+    )
+    .bind(a.motivo)
+    .bind(a.turno_id)
+    .bind(a.medio_reembolso)
+    .bind(a.reembolso)
+    .bind(venta_id)
+    .execute(conn)
+    .await?;
+    Ok(r.rows_affected() == 1)
+}

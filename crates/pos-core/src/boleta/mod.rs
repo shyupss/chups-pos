@@ -7,6 +7,7 @@
 //! Los demás comprobantes (cierre de caja, anulación, nota de devolución) implementan
 //! [`Documento`] igual que la boleta y se imprimen con el mismo encabezado y las mismas reglas.
 
+pub mod anulacion;
 pub mod cierre;
 pub mod escpos;
 pub mod formato;

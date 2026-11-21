@@ -1,5 +1,6 @@
 //! Reglas de negocio. Combinan repositorios y no conocen la interfaz.
 
+pub mod anulacion;
 pub mod balanza;
 pub mod cantidades;
 pub mod categorias;

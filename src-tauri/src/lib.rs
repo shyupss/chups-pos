@@ -58,6 +58,8 @@ pub fn run() {
             comandos::ventas::listar_ventas,
             comandos::ventas::detalle_venta,
             comandos::ventas::venta_por_folio,
+            comandos::ventas::anular_venta,
+            comandos::ventas::imprimir_anulacion,
             comandos::config::obtener_config,
             comandos::config::guardar_config,
             comandos::categorias::listar_categorias,

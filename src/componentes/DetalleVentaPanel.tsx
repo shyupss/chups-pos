@@ -1,9 +1,10 @@
-import { FileDown, Printer, X } from "lucide-react";
+import { Ban, FileDown, Printer, X } from "lucide-react";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
-import { api, textoError, type DetalleVenta, type LineaDetalle, type MedioPago } from "../api";
+import { api, textoError, type Config, type DetalleVenta, type LineaDetalle, type MedioPago } from "../api";
 import { cantidad, fechaHora, folio, NOMBRE_MEDIO, pesos, pesosConSigno } from "../formato";
 import { useSalidasVenta } from "../hooks/useSalidasVenta";
 import AvisoVenta from "./AvisoVenta";
+import DialogoAnular from "./DialogoAnular";
 import InsigniaEstado from "./InsigniaEstado";
 
 interface Props {
@@ -20,12 +21,66 @@ interface Props {
 export const detalleLinea = (l: Pick<LineaDetalle, "cantidadMil" | "unidad" | "precioUnitario">) =>
   `${cantidad(l.cantidadMil, l.unidad)} x ${pesos(l.precioUnitario)}${l.unidad === "kg" ? "/kg" : ""}`;
 
+/** Impresión de un comprobante (anulación o devolución) que se hace al terminar la acción. */
+interface Comprobante {
+  que: string;
+  estado: "trabajando" | "ok" | "error";
+  texto?: string;
+  imprimir: () => Promise<void>;
+}
+
+/** Por qué no se puede anular, o null si se puede. */
+function motivoSinAnular(v: DetalleVenta): string | null {
+  if (v.estado === "anulada") return "La venta ya está anulada";
+  if (v.estado === "conDevolucion" || v.estado === "devuelta")
+    return "Tiene devoluciones: devuelve el resto de los productos";
+  if (v.estado === "fiada" && v.tieneAbonos) return "La venta fiada tiene abonos: todavía no se puede anular";
+  return null;
+}
+
 const reembolso = (m: MedioPago | null) => (m === null ? "sin reembolso (baja la deuda)" : NOMBRE_MEDIO[m].toLowerCase());
 
 /** Detalle de una venta del historial: líneas, pago, turno, anulación y devoluciones. */
-export default function DetalleVentaPanel({ ventaId, activa, onImpresion, onCerrar }: Props) {
+export default function DetalleVentaPanel({ ventaId, activa, onImpresion, onCambio, onCerrar }: Props) {
   const [venta, setVenta] = useState<DetalleVenta | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [config, setConfig] = useState<Config | null>(null);
+  const [dialogo, setDialogo] = useState<"anular" | null>(null);
+  const [comprobante, setComprobante] = useState<Comprobante | null>(null);
+
+  useEffect(() => {
+    api
+      .obtenerConfig()
+      .then(setConfig)
+      .catch(() => {});
+  }, []);
+
+  /** Imprime el comprobante en segundo plano; si falla, queda el aviso con "Reintentar". */
+  const imprimirComprobante = useCallback(
+    (que: string, enviar: () => Promise<void>) => {
+      const imprimir = async () => {
+        setComprobante({ que, estado: "trabajando", imprimir });
+        try {
+          await enviar();
+          setComprobante({ que, estado: "ok", texto: `Comprobante de ${que} impreso`, imprimir });
+        } catch (e) {
+          setComprobante({ que, estado: "error", texto: textoError(e), imprimir });
+        } finally {
+          onImpresion();
+        }
+      };
+      void imprimir();
+    },
+    [onImpresion],
+  );
+
+  /** Tras anular o devolver: el detalle nuevo, la lista al día y el comprobante si hay impresora. */
+  const alCambiar = (d: DetalleVenta, que: string, enviar: () => Promise<void>) => {
+    setVenta(d);
+    setDialogo(null);
+    onCambio();
+    if (config?.impresora) imprimirComprobante(que, enviar);
+  };
   const { salida, iniciar, imprimir, reintentar, guardarPdf, cerrar } = useSalidasVenta(onImpresion);
 
   const leer = useCallback(async () => {
@@ -184,6 +239,31 @@ export default function DetalleVentaPanel({ ventaId, activa, onImpresion, onCerr
           </div>
 
           <div className="shrink-0 space-y-2 border-t border-linea p-4">
+            {comprobante && (
+              <div
+                role={comprobante.estado === "error" ? "alert" : "status"}
+                className={`flex flex-wrap items-center gap-3 rounded-lg px-3 py-2 ${
+                  comprobante.estado === "error" ? "bg-peligro/10 text-peligro" : "bg-fondo text-tenue"
+                }`}
+              >
+                <span className="min-w-0 flex-1">
+                  {comprobante.estado === "trabajando"
+                    ? `Imprimiendo el comprobante de ${comprobante.que}…`
+                    : comprobante.estado === "error"
+                      ? `No se imprimió el comprobante de ${comprobante.que}: ${comprobante.texto}`
+                      : comprobante.texto}
+                </span>
+                {comprobante.estado === "error" && (
+                  <button
+                    type="button"
+                    onClick={() => void comprobante.imprimir()}
+                    className="h-8 rounded-lg bg-peligro px-3 font-medium text-superficie"
+                  >
+                    Reintentar
+                  </button>
+                )}
+              </div>
+            )}
             {salida && (
               <AvisoVenta
                 venta={null}
@@ -211,8 +291,25 @@ export default function DetalleVentaPanel({ ventaId, activa, onImpresion, onCerr
               >
                 Guardar PDF
               </Boton>
+              <Boton
+                onClick={() => setDialogo("anular")}
+                disabled={motivoSinAnular(venta) !== null}
+                titulo={motivoSinAnular(venta) ?? "Repone el stock y devuelve el dinero"}
+                icono={<Ban size={16} aria-hidden />}
+                peligro
+              >
+                Anular venta
+              </Boton>
             </div>
           </div>
+          {dialogo === "anular" && activa && (
+            <DialogoAnular
+              venta={venta}
+              redondeoActivo={config?.redondeoEfectivo ?? true}
+              onCerrar={() => setDialogo(null)}
+              onAnulada={(d) => alCambiar(d, "anulación", () => api.imprimirAnulacion(d.id))}
+            />
+          )}
         </>
       )}
     </div>

@@ -4,9 +4,11 @@
 
 use std::path::Path;
 
+use pos_core::boleta::anulacion::ComprobanteAnulacion;
 use pos_core::boleta::cierre::CierreCaja;
 use pos_core::boleta::texto::{self, COLUMNAS_58MM, COLUMNAS_80MM};
-use pos_core::boleta::{escpos, Documento, Encabezado};
+use pos_core::boleta::{escpos, Documento, Encabezado, LineaBoleta};
+use pos_core::repositorios::productos::Unidad;
 use pos_core::servicios::config::TablaCaracteres;
 use pos_core::servicios::turnos::{
     Conteo, CuadreEfectivo, MovimientoCaja, ResumenTurno, TipoMovimiento, TotalMedio, Turno,
@@ -199,4 +201,55 @@ fn cierre_de_caja_simple_con_faltante() {
         },
     };
     comparar("cierre-faltante", &c);
+}
+
+fn linea(nombre: &str, unidad: Unidad, cantidad_mil: i64, precio: i64) -> LineaBoleta {
+    LineaBoleta {
+        nombre: nombre.into(),
+        unidad,
+        cantidad_mil,
+        precio_unitario: precio,
+        subtotal: (precio * cantidad_mil + 500) / 1000,
+    }
+}
+
+#[test]
+fn anulacion_con_reembolso_en_efectivo() {
+    // Pagada con débito ($1.224 + $3.570 = $4.794) y devuelta en efectivo a la decena: $4.790.
+    let c = ComprobanteAnulacion {
+        negocio: negocio(),
+        folio: 123,
+        fecha_venta: "21-11-2026 14:05".into(),
+        fecha_anulacion: "21-11-2026 15:40".into(),
+        lineas: vec![
+            linea("Pan corriente (marraqueta)", Unidad::Kg, 532, 2300),
+            linea("Leche entera Colun 1 L", Unidad::Unidad, 3000, 1190),
+        ],
+        total: 4794,
+        medio_pago: MedioPago::Debito,
+        cliente: None,
+        medio_reembolso: Some(MedioPago::Efectivo),
+        reembolso: Some(4790),
+        motivo: "Se cobró dos veces la misma compra".into(),
+    };
+    assert_eq!(c.titulo(), "Anulación de venta N° 000123");
+    comparar("anulacion-efectivo", &c);
+}
+
+#[test]
+fn anulacion_de_una_venta_fiada() {
+    let c = ComprobanteAnulacion {
+        negocio: negocio(),
+        folio: 7,
+        fecha_venta: "20-11-2026 19:30".into(),
+        fecha_anulacion: "21-11-2026 09:15".into(),
+        lineas: vec![linea("Arroz grado 1, 1 kg", Unidad::Unidad, 2000, 1590)],
+        total: 3180,
+        medio_pago: MedioPago::Fiado,
+        cliente: Some("Rosa Martínez".into()),
+        medio_reembolso: None,
+        reembolso: None,
+        motivo: "Se anotó en la cuenta equivocada".into(),
+    };
+    comparar("anulacion-fiada", &c);
 }

@@ -1,8 +1,9 @@
 use pos_core::servicios::historial::{self, DetalleVenta, FiltrosVentas, PaginaVentas};
-use pos_core::servicios::ventas::{self as srv, NuevaVenta, VentaConfirmada};
+use pos_core::servicios::ventas::{self as srv, MedioPago, NuevaVenta, VentaConfirmada};
+use pos_core::servicios::{anulacion, impresion};
 use tauri::State;
 
-use super::{a_texto, ResultadoComando};
+use super::{a_texto, ResultadoComando, ResultadoProtegido};
 use crate::estado::EstadoApp;
 
 #[tauri::command]
@@ -43,4 +44,36 @@ pub async fn venta_por_folio(
     historial::por_folio(&estado.pool, folio)
         .await
         .map_err(a_texto)
+}
+
+/// Anula la venta (repone el stock y registra el reembolso). Pide el PIN si está protegido.
+#[tauri::command]
+pub async fn anular_venta(
+    estado: State<'_, EstadoApp>,
+    id: i64,
+    motivo: String,
+    medio_reembolso: Option<MedioPago>,
+    pin: Option<String>,
+) -> ResultadoProtegido<DetalleVenta> {
+    Ok(anulacion::anular(
+        &estado.pool,
+        &estado.pin,
+        id,
+        &motivo,
+        medio_reembolso,
+        pin.as_deref(),
+    )
+    .await?)
+}
+
+/// Imprime el comprobante "ANULACIÓN DE VENTA" en la impresora configurada.
+#[tauri::command]
+pub async fn imprimir_anulacion(
+    estado: State<'_, EstadoApp>,
+    venta_id: i64,
+) -> ResultadoComando<()> {
+    let trabajo = impresion::trabajo_anulacion(&estado.pool, venta_id)
+        .await
+        .map_err(a_texto)?;
+    super::impresion::enviar(&estado, trabajo).await
 }
