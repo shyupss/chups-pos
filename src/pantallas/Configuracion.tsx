@@ -49,7 +49,7 @@ export default function Configuracion({ modoBarra, onModoBarra, onCambioImpresor
       <div className="max-w-3xl space-y-4">
         <h1 className="text-xl font-semibold">Configuración</h1>
         {cfg.error && (
-          <p role="alert" className="sticky top-0 z-10 rounded-lg bg-peligro/10 px-4 py-3 text-peligro">
+          <p role="alert" className="sticky top-0 z-10 rounded-lg bg-peligro-fondo px-4 py-3 text-peligro">
             No se guardó el cambio: {cfg.error}
           </p>
         )}

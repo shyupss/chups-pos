@@ -1,3 +1,4 @@
+import Boton from "./Boton";
 import { ArrowDownToLine, ArrowUpFromLine } from "lucide-react";
 import { useEffect, useState } from "react";
 import { api, textoError, type MovimientoCaja, type TipoMovimiento } from "../api";
@@ -88,18 +89,14 @@ export default function DialogoMovimiento({ turnoId, onRegistrado, onCerrar }: P
             {valor > 0 && ` · quedarían ${pesos(tipo === "ingreso" ? esperado + valor : esperado - valor)}`}
           </p>
         )}
-        {error && <p className="rounded-lg bg-peligro/10 px-3 py-2 text-peligro">{error}</p>}
+        {error && <p className="rounded-lg bg-peligro-fondo px-3 py-2 text-peligro">{error}</p>}
         <div className="flex gap-2">
-          <button type="button" onClick={onCerrar} className="h-11 flex-1 rounded-lg text-tenue hover:bg-fondo hover:text-texto">
-            Cancelar <span className="text-xs opacity-60">Esc</span>
-          </button>
-          <button
-            type="submit"
-            disabled={!listo || enviando}
-            className="h-11 flex-[2] rounded-lg bg-acento font-semibold text-sobre-acento disabled:bg-linea disabled:text-tenue"
-          >
-            Registrar {tipo} <span className="text-xs font-normal opacity-70">Enter</span>
-          </button>
+          <Boton variante="terciario" atajo="Esc" onClick={onCerrar} className="flex-1">
+            Cancelar
+          </Boton>
+          <Boton type="submit" variante="primario" atajo="Enter" disabled={!listo || enviando} className="flex-[2]">
+            Registrar {tipo}
+          </Boton>
         </div>
       </form>
     </Dialogo>

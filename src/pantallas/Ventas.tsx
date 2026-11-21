@@ -308,7 +308,7 @@ export default function Ventas({ activa, onImpresion, folioInicial = null, onFol
             Buscando el folio {folio(filtros.folio ?? 0)}: los demás filtros no se aplican.
           </p>
         )}
-        {error && <p className="mt-3 rounded-lg bg-peligro/10 px-3 py-2 text-peligro">{error}</p>}
+        {error && <p className="mt-3 rounded-lg bg-peligro-fondo px-3 py-2 text-peligro">{error}</p>}
 
         <div className={`mt-4 grid ${COLUMNAS} gap-2 px-4 text-xs font-medium uppercase text-tenue`}>
           <span>Folio</span>
@@ -345,7 +345,7 @@ export default function Ventas({ activa, onImpresion, folioInicial = null, onFol
                       transform: `translateY(${v.start}px)`,
                     }}
                     className={`grid ${COLUMNAS} items-center gap-2 border-b border-linea px-4 text-left ${
-                      seleccionada ? "bg-linea/70" : "hover:bg-fondo"
+                      seleccionada ? "bg-seleccion" : "hover:bg-suave"
                     } ${venta.estado === "anulada" ? "text-tenue" : ""}`}
                   >
                     <span className="font-medium">{folio(venta.folio)}</span>

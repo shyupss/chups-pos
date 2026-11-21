@@ -1,3 +1,4 @@
+import Boton from "../../componentes/Boton";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -18,10 +19,10 @@ const COLUMNAS =
 const COL_ANCHA = "hidden @2xl:block";
 
 export const TIPOS: { id: TipoMovimientoStock; nombre: string; clase: string }[] = [
-  { id: "venta", nombre: "Venta", clase: "bg-acento/12 text-acento" },
+  { id: "venta", nombre: "Venta", clase: "bg-info-fondo text-info" },
   { id: "compra", nombre: "Compra", clase: "bg-exito-fondo text-exito" },
-  { id: "ajuste", nombre: "Ajuste", clase: "bg-linea text-texto" },
-  { id: "merma", nombre: "Merma", clase: "bg-peligro/10 text-peligro" },
+  { id: "ajuste", nombre: "Ajuste", clase: "bg-suave text-texto" },
+  { id: "merma", nombre: "Merma", clase: "bg-peligro-fondo text-peligro" },
   { id: "devolucion", nombre: "Devolución", clase: "bg-aviso-fondo text-aviso" },
 ];
 
@@ -113,16 +114,11 @@ export default function Movimientos({ activa, producto, onProducto, onIrAVenta, 
     <section className="@container flex min-h-0 flex-1 flex-col">
       <div className="flex flex-wrap items-center gap-3">
         {producto ? (
-          <span className="flex h-10 items-center gap-2 rounded-lg bg-acento/12 pr-1 pl-3 font-medium text-acento">
+          <span className="flex h-10 items-center gap-2 rounded-lg bg-seleccion pr-1 pl-3 font-medium text-acento">
             {producto.nombre}
-            <button
-              type="button"
-              onClick={() => onProducto(null)}
-              aria-label="Ver todos los productos"
-              className="flex size-8 items-center justify-center rounded-md hover:bg-acento/12"
-            >
+            <Boton variante="terciario" tamano="icono" onClick={() => onProducto(null)} aria-label="Ver todos los productos" className="size-7">
               <X size={16} aria-hidden />
-            </button>
+            </Boton>
           </span>
         ) : (
           <form
@@ -153,7 +149,7 @@ export default function Movimientos({ activa, producto, onProducto, onIrAVenta, 
                         setSugeridos([]);
                         setBuscar("");
                       }}
-                      className="h-10 w-full px-4 text-left hover:bg-fondo"
+                      className="h-10 w-full px-4 text-left hover:bg-suave"
                     >
                       {p.nombre}
                     </button>
@@ -197,7 +193,7 @@ export default function Movimientos({ activa, producto, onProducto, onIrAVenta, 
           />
         </label>
       </div>
-      {error && <p className="mt-3 rounded-lg bg-peligro/10 px-3 py-2 text-peligro">{error}</p>}
+      {error && <p className="mt-3 rounded-lg bg-peligro-fondo px-3 py-2 text-peligro">{error}</p>}
 
       <div className={`mt-4 grid ${COLUMNAS} gap-2 px-4 text-xs font-medium uppercase text-tenue`}>
         <span>Fecha</span>

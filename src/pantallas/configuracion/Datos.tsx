@@ -58,7 +58,7 @@ export default function DatosConfig({ respaldos }: { respaldos?: ReactNode }) {
             <button
               type="button"
               onClick={() => void ejemplo(t)}
-              className="flex h-9 items-center gap-2 rounded-lg border border-linea px-3 hover:bg-fondo"
+              className="flex h-9 items-center gap-2 rounded-lg border border-linea px-3 hover:bg-suave"
             >
               <Download size={16} aria-hidden /> Descargar planilla de ejemplo
             </button>

@@ -1,3 +1,4 @@
+import Boton from "../../componentes/Boton";
 import { FileDown, Pencil, Printer } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { api, textoError, type Config, type FichaCliente as Ficha, type Pago, type VentaFiada } from "../../api";
@@ -102,7 +103,7 @@ export default function FichaCliente({ clienteId, activa, config, onCambio, onEd
     }
   };
 
-  if (error) return <p className="m-5 rounded-lg bg-peligro/10 px-3 py-2 text-peligro">{error}</p>;
+  if (error) return <p className="m-5 rounded-lg bg-peligro-fondo px-3 py-2 text-peligro">{error}</p>;
   if (!ficha) return <p className="p-5 text-tenue">Cargando…</p>;
   const { cliente, pendientes, pagadas, pagos } = ficha;
   const elegidas = pendientes.filter((v) => marcadas.has(v.ventaId));
@@ -128,18 +129,18 @@ export default function FichaCliente({ clienteId, activa, config, onCambio, onEd
           </p>
           {cliente.nota && <p className="mt-1 text-tenue italic">{cliente.nota}</p>}
           <div className="mt-1 -ml-2 flex gap-1 text-sm">
-            <button type="button" onClick={onEditar} className="flex h-8 items-center gap-1.5 rounded-lg px-2 text-tenue hover:bg-fondo hover:text-texto">
-              <Pencil size={14} aria-hidden /> Editar
-            </button>
-            <button
-              type="button"
+            <Boton variante="terciario" tamano="chico" icono={Pencil} onClick={onEditar}>
+              Editar
+            </Boton>
+            <Boton
+              variante="terciario"
+              tamano="chico"
               onClick={() => void cambiarActivo()}
               disabled={cliente.activo && cliente.deuda > 0}
               title={cliente.activo && cliente.deuda > 0 ? "Solo se desactiva un cliente que no debe nada" : undefined}
-              className="h-8 rounded-lg px-2 text-tenue hover:bg-fondo hover:text-texto disabled:opacity-50 disabled:hover:bg-transparent"
             >
               {cliente.activo ? "Desactivar" : "Activar"}
-            </button>
+            </Boton>
           </div>
         </div>
         <div className="text-right tabular-nums">
@@ -154,24 +155,15 @@ export default function FichaCliente({ clienteId, activa, config, onCambio, onEd
       </header>
 
       <div className="mt-4 flex flex-wrap gap-2">
-        <button
-          type="button"
-          onClick={() => setPagando(true)}
-          disabled={cliente.deuda === 0}
-          className="h-10 rounded-lg bg-acento px-4 font-semibold text-sobre-acento disabled:bg-linea disabled:text-tenue"
-        >
-          Registrar pago <span className="text-xs font-normal opacity-70">Ctrl+P</span>
-        </button>
-        <button
-          type="button"
-          onClick={() => imprimir("estado de cuenta", () => api.imprimirEstadoCuenta(clienteId))}
-          className="flex h-10 items-center gap-2 rounded-lg border border-linea px-3 hover:bg-fondo"
-        >
-          <Printer size={16} aria-hidden /> Estado de cuenta
-        </button>
-        <button type="button" onClick={() => void pdf()} className="flex h-10 items-center gap-2 rounded-lg border border-linea px-3 hover:bg-fondo">
-          <FileDown size={16} aria-hidden /> PDF
-        </button>
+        <Boton variante="primario" atajo="Ctrl P" onClick={() => setPagando(true)} disabled={cliente.deuda === 0}>
+          Registrar pago
+        </Boton>
+        <Boton icono={Printer} onClick={() => imprimir("estado de cuenta", () => api.imprimirEstadoCuenta(clienteId))}>
+          Estado de cuenta
+        </Boton>
+        <Boton icono={FileDown} onClick={() => void pdf()}>
+          PDF
+        </Boton>
       </div>
 
       {hecho && (
@@ -183,14 +175,14 @@ export default function FichaCliente({ clienteId, activa, config, onCambio, onEd
         <p
           role="status"
           className={`mt-3 flex items-center gap-3 rounded-lg px-3 py-2 ${
-            aviso.tipo === "error" ? "bg-peligro/10 text-peligro" : aviso.tipo === "ok" ? "bg-exito-fondo text-exito" : "bg-fondo text-tenue"
+            aviso.tipo === "error" ? "bg-peligro-fondo text-peligro" : aviso.tipo === "ok" ? "bg-exito-fondo text-exito" : "bg-suave text-tenue"
           }`}
         >
           <span className="min-w-0 flex-1 break-all">{aviso.texto}</span>
           {aviso.reintentar && (
-            <button type="button" onClick={aviso.reintentar} className="font-medium underline">
+            <Boton tamano="chico" onClick={aviso.reintentar}>
               Reintentar
-            </button>
+            </Boton>
           )}
         </p>
       )}
@@ -257,21 +249,13 @@ export default function FichaCliente({ clienteId, activa, config, onCambio, onEd
                       : `Pagó ${p.abonos.map((a) => `${folio(a.folio)} (${pesos(a.monto)})`).join(", ")}`}
                   </div>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => imprimir("comprobante de pago", () => api.imprimirPago(p.id))}
-                  className="h-8 rounded-lg px-2 text-tenue hover:bg-fondo hover:text-texto"
-                >
+                <Boton variante="terciario" tamano="chico" onClick={() => imprimir("comprobante de pago", () => api.imprimirPago(p.id))}>
                   Comprobante
-                </button>
+                </Boton>
                 {!p.anuladoEn && (
-                  <button
-                    type="button"
-                    onClick={() => setAnulando(p)}
-                    className="h-8 rounded-lg px-2 text-peligro hover:bg-peligro/10"
-                  >
+                  <Boton variante="peligro" tamano="chico" onClick={() => setAnulando(p)}>
                     Anular
-                  </button>
+                  </Boton>
                 )}
               </li>
             ))}
@@ -285,7 +269,7 @@ export default function FichaCliente({ clienteId, activa, config, onCambio, onEd
           <ul className="mt-2 divide-y divide-linea rounded-lg border border-linea tabular-nums">
             {pagadas.map((v) => (
               <li key={v.ventaId} className="flex items-center gap-4 px-3 py-2">
-                <button type="button" onClick={() => onIrAVenta(v.folio)} className="font-medium hover:underline">
+                <button type="button" onClick={() => onIrAVenta(v.folio)} className="font-medium text-acento hover:underline">
                   {folio(v.folio)}
                 </button>
                 <span className="text-tenue">{fechaHora(v.fechaHora)}</span>
@@ -362,7 +346,7 @@ function FilaPendiente({
         <input type="checkbox" checked={marcada} onChange={onMarcar} aria-label={`Marcar ${folio(v.folio)}`} />
       </td>
       <td className="py-2">
-        <button type="button" onClick={() => onIrAVenta(v.folio)} className="font-medium hover:underline">
+        <button type="button" onClick={() => onIrAVenta(v.folio)} className="font-medium text-acento hover:underline">
           {folio(v.folio)}
         </button>
       </td>
@@ -432,18 +416,14 @@ function DialogoAnularPago({
             className="mt-1 h-10 w-full rounded-lg border border-borde-control bg-superficie px-3 focus:border-acento"
           />
         </label>
-        {error && <p className="rounded-lg bg-peligro/10 px-3 py-2 text-peligro">{error}</p>}
+        {error && <p className="rounded-lg bg-peligro-fondo px-3 py-2 text-peligro">{error}</p>}
         <div className="flex gap-2">
-          <button type="button" onClick={onCerrar} className="h-11 flex-1 rounded-lg text-tenue hover:bg-fondo hover:text-texto">
+          <Boton variante="terciario" onClick={onCerrar} className="flex-1">
             Volver
-          </button>
-          <button
-            type="submit"
-            disabled={enviando || !motivo.trim()}
-            className="h-11 flex-1 rounded-lg bg-peligro font-semibold text-superficie disabled:bg-linea disabled:text-tenue"
-          >
+          </Boton>
+          <Boton type="submit" variante="peligro" disabled={enviando || !motivo.trim()} className="flex-1">
             Anular pago
-          </button>
+          </Boton>
         </div>
       </form>
     </Dialogo>

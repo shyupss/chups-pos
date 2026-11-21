@@ -68,7 +68,7 @@ export default function BarraLateral({
           onClick={onAlternar}
           title={accion}
           aria-label={accion}
-          className="flex size-8 shrink-0 items-center justify-center rounded-lg text-tenue hover:bg-fondo hover:text-texto"
+          className="flex size-8 shrink-0 items-center justify-center rounded-lg text-tenue hover:bg-suave hover:text-texto"
         >
           {expandida ? <PanelLeftClose size={18} aria-hidden /> : <PanelLeftOpen size={18} aria-hidden />}
         </button>
@@ -98,7 +98,7 @@ function Item({
       aria-keyshortcuts={tecla}
       title={expandida ? undefined : `${nombre} (${tecla})${insignia ? ` · ${insignia.descripcion}` : ""}`}
       className={`relative flex h-10 w-full items-center gap-3 rounded-lg ${expandida ? "px-3" : "justify-center"} ${
-        activa ? "bg-acento/12 font-medium text-acento" : "text-texto hover:bg-fondo"
+        activa ? "bg-acento/12 font-medium text-acento" : "text-texto hover:bg-suave"
       }`}
     >
       <Icono size={20} className="shrink-0" aria-hidden />
@@ -139,7 +139,7 @@ function IndicadorCaja({
       onClick={() => onIr("caja")}
       title={detalle}
       className={`relative flex h-8 items-center gap-2 rounded-lg text-xs font-medium ${
-        turno ? "bg-exito-fondo text-exito" : "bg-fondo text-tenue"
+        turno ? "bg-exito-fondo text-exito" : "bg-suave text-tenue"
       } ${expandida ? "px-3" : "justify-center"}`}
     >
       <span className={`size-2 shrink-0 rounded-full ${turno ? "bg-exito" : "bg-tenue"}`} aria-hidden />
@@ -161,14 +161,14 @@ function IndicadorImpresora({
   const e = impresora.estado;
   const [texto, clase] =
     impresora.impresora === null
-      ? ["Sin impresora", "bg-fondo text-tenue"]
+      ? ["Sin impresora", "bg-suave text-tenue"]
       : e?.tipo === "lista"
         ? ["Impresora lista", "bg-exito-fondo text-exito"]
         : e?.tipo === "desconectada"
-          ? ["Impresora desconectada", "bg-peligro/10 text-peligro"]
+          ? ["Impresora desconectada", "bg-peligro-fondo text-peligro"]
           : e?.tipo === "conError"
             ? [`Impresora: ${e.detalle}`, "bg-aviso-fondo text-aviso"]
-            : ["Impresora sin estado", "bg-fondo text-tenue"];
+            : ["Impresora sin estado", "bg-suave text-tenue"];
   const detalle = impresora.impresora ? `${texto} (${impresora.impresora})` : `${texto}: elígela en Configuración`;
   return (
     <button

@@ -1,3 +1,4 @@
+import Boton from "./Boton";
 import { useState } from "react";
 import { api, textoError, type DetalleVenta, type MedioPago } from "../api";
 import { folio, NOMBRE_MEDIO, pesos, redondeoEfectivo } from "../formato";
@@ -65,7 +66,7 @@ export default function DialogoAnular({ venta, redondeoActivo, onAnulada, onCerr
         </p>
         {fiada ? (
           <>
-            <p className="rounded-lg bg-acento/12 px-3 py-2 text-acento">
+            <p className="rounded-lg bg-info-fondo px-3 py-2 text-info">
               Venta fiada{venta.cliente ? ` de ${venta.cliente}` : ""}: deja de contar como deuda.
               {venta.abonado > 0 &&
                 ` Lo que ya abonó (${pesos(venta.abonado)}) pasa como saldo a favor a sus otras deudas; si no tiene, se le devuelve.`}
@@ -104,18 +105,14 @@ export default function DialogoAnular({ venta, redondeoActivo, onAnulada, onCerr
             className="mt-1 h-10 w-full rounded-lg border border-borde-control bg-superficie px-3 focus:border-acento"
           />
         </label>
-        {error && <p className="rounded-lg bg-peligro/10 px-3 py-2 text-peligro">{error}</p>}
+        {error && <p className="rounded-lg bg-peligro-fondo px-3 py-2 text-peligro">{error}</p>}
         <div className="flex gap-2">
-          <button type="button" onClick={onCerrar} className="h-11 flex-1 rounded-lg text-tenue hover:bg-fondo hover:text-texto">
-            Volver <span className="text-xs opacity-60">Esc</span>
-          </button>
-          <button
-            type="submit"
-            disabled={enviando || !motivo.trim()}
-            className="h-11 flex-[2] rounded-lg bg-peligro font-semibold text-superficie disabled:bg-linea disabled:text-tenue"
-          >
-            Anular venta <span className="text-xs font-normal opacity-70">Enter</span>
-          </button>
+          <Boton variante="terciario" atajo="Esc" onClick={onCerrar} className="flex-1">
+            Volver
+          </Boton>
+          <Boton type="submit" variante="peligro" atajo="Enter" disabled={enviando || !motivo.trim()} className="flex-[2]">
+            Anular venta
+          </Boton>
         </div>
       </form>
     </Dialogo>

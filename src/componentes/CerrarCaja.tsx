@@ -1,3 +1,4 @@
+import Boton from "./Boton";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { api, textoError, type Conteo, type ResumenTurno } from "../api";
 import { aEntero, fechaHora, NOMBRE_MEDIO, pesos, pesosConSigno, soloDigitos } from "../formato";
@@ -181,7 +182,7 @@ export default function CerrarCaja({ turnoId, imprimir, onImpresion, onCancelar,
               className="mt-1 h-10 w-full rounded-lg border border-borde-control bg-superficie px-3 focus:border-acento"
             />
           </label>
-          {error && <p className="mt-4 rounded-lg bg-peligro/10 px-3 py-2 text-peligro">{error}</p>}
+          {error && <p className="mt-4 rounded-lg bg-peligro-fondo px-3 py-2 text-peligro">{error}</p>}
           <Pie
             onVolver={() => setPaso("conteo")}
             volver="Volver al conteo"
@@ -208,35 +209,16 @@ export default function CerrarCaja({ turnoId, imprimir, onImpresion, onCancelar,
             {pdf && <Estado tarea={pdf} trabajando="Guardando el PDF…" error="No se guardó el PDF" />}
           </div>
           <div className="mt-5 flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={() => void imprimirCierre()}
-              disabled={impresion?.estado === "trabajando"}
-              className="h-11 rounded-lg border border-linea px-4 hover:bg-fondo disabled:opacity-50"
-            >
+            <Boton onClick={() => void imprimirCierre()} disabled={impresion?.estado === "trabajando"}>
               {impresion ? "Reimprimir" : "Imprimir"}
-            </button>
-            <button
-              type="button"
-              onClick={() => void guardarPdf(false)}
-              disabled={pdf?.estado === "trabajando"}
-              className="h-11 rounded-lg border border-linea px-4 hover:bg-fondo disabled:opacity-50"
-            >
+            </Boton>
+            <Boton onClick={() => void guardarPdf(false)} disabled={pdf?.estado === "trabajando"}>
               Guardar PDF
-            </button>
-            {pdf?.estado === "ok" && (
-              <button type="button" onClick={() => void guardarPdf(true)} className="h-11 rounded-lg border border-linea px-4 hover:bg-fondo">
-                Abrir PDF
-              </button>
-            )}
-            <button
-              type="button"
-              autoFocus
-              onClick={onCerrada}
-              className="ml-auto h-11 rounded-lg bg-acento px-6 font-semibold text-sobre-acento"
-            >
+            </Boton>
+            {pdf?.estado === "ok" && <Boton onClick={() => void guardarPdf(true)}>Abrir PDF</Boton>}
+            <Boton variante="primario" autoFocus onClick={onCerrada} className="ml-auto px-6">
               Listo
-            </button>
+            </Boton>
           </div>
         </div>
       )}
@@ -354,7 +336,7 @@ function Diferencia({ diferencia }: { diferencia: number }) {
       ? ["bg-exito-fondo text-exito", "Caja cuadrada"]
       : diferencia > 0
         ? ["bg-aviso-fondo text-aviso", `Sobran ${pesos(diferencia)}`]
-        : ["bg-peligro/10 text-peligro", `Faltan ${pesos(-diferencia)}`];
+        : ["bg-peligro-fondo text-peligro", `Faltan ${pesos(-diferencia)}`];
   return (
     <div role="status" className={`mt-3 flex items-baseline justify-between rounded-lg px-4 py-3 tabular-nums ${clase}`}>
       <span className="font-semibold">{texto}</span>
@@ -366,7 +348,7 @@ function Diferencia({ diferencia }: { diferencia: number }) {
 function Estado({ tarea, trabajando, error }: { tarea: Tarea; trabajando: string; error: string }) {
   if (tarea.estado === "error") {
     return (
-      <p role="alert" className="rounded-lg bg-peligro/10 px-3 py-2 text-peligro">
+      <p role="alert" className="rounded-lg bg-peligro-fondo px-3 py-2 text-peligro">
         {error}: {tarea.texto}
       </p>
     );
@@ -393,16 +375,12 @@ function Pie({
 }) {
   return (
     <div className="mt-6 flex gap-2">
-      <button type="button" onClick={onVolver} className="h-12 flex-1 rounded-lg text-tenue hover:bg-fondo hover:text-texto">
-        {volver} {atajo && <span className="text-xs opacity-60">{atajo}</span>}
-      </button>
-      <button
-        type="submit"
-        disabled={deshabilitado}
-        className="h-12 flex-[2] rounded-lg bg-acento font-semibold text-sobre-acento disabled:bg-linea disabled:text-tenue"
-      >
-        {siguiente} <span className="text-xs font-normal opacity-70">Enter</span>
-      </button>
+      <Boton variante="terciario" atajo={atajo} onClick={onVolver} className="flex-1">
+        {volver}
+      </Boton>
+      <Boton type="submit" variante="primario" atajo="Enter" disabled={deshabilitado} className="flex-[2]">
+        {siguiente}
+      </Boton>
     </div>
   );
 }

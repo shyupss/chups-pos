@@ -1,3 +1,4 @@
+import Boton from "./Boton";
 import { Scale } from "lucide-react";
 import { useState } from "react";
 import { api, textoError, type DetalleVenta, type DevolucionRegistrada, type LineaDetalle, type MedioPago } from "../api";
@@ -117,23 +118,13 @@ export default function DialogoDevolucion({ venta, redondeoActivo, onDevuelta, o
                       <span className="block text-center text-xs">Devuelto completo</span>
                     ) : l.unidad === "kg" ? (
                       <div className="flex items-center justify-center gap-2">
-                        <button
-                          type="button"
-                          onClick={() => setPesando(l)}
-                          className="flex h-8 items-center gap-1.5 rounded-lg border border-linea px-2 hover:bg-fondo"
-                        >
-                          <Scale size={14} aria-hidden />
+                        <Boton tamano="chico" icono={Scale} onClick={() => setPesando(l)}>
                           {e.mil > 0 ? cantidad(e.mil, "kg") : "Pesar…"}
-                        </button>
+                        </Boton>
                         {e.mil > 0 && (
-                          <button
-                            type="button"
-                            onClick={() => fijar(l, { mil: 0 })}
-                            aria-label={`No devolver ${l.nombre}`}
-                            className="h-8 rounded-lg px-2 text-tenue hover:bg-fondo hover:text-texto"
-                          >
+                          <Boton tamano="icono" onClick={() => fijar(l, { mil: 0 })} aria-label={`No devolver ${l.nombre}`}>
                             ×
-                          </button>
+                          </Boton>
                         )}
                       </div>
                     ) : (
@@ -176,7 +167,7 @@ export default function DialogoDevolucion({ venta, redondeoActivo, onDevuelta, o
           <div className="space-y-4">
             {fiada ? (
               <>
-                <p className="rounded-lg bg-acento/12 px-3 py-2 text-acento">
+                <p className="rounded-lg bg-info-fondo px-3 py-2 text-info">
                   Venta fiada{venta.cliente ? ` de ${venta.cliente}` : ""}: baja la deuda (debe {pesos(venta.saldo ?? 0)} de
                   esta venta).
                   {venta.abonado > 0 && " Si devuelve más de lo que debe, lo que sobra pasa a sus otras deudas o se le devuelve."}
@@ -226,19 +217,14 @@ export default function DialogoDevolucion({ venta, redondeoActivo, onDevuelta, o
           </dl>
         </div>
 
-        {error && <p className="mt-4 rounded-lg bg-peligro/10 px-3 py-2 text-peligro">{error}</p>}
+        {error && <p className="mt-4 rounded-lg bg-peligro-fondo px-3 py-2 text-peligro">{error}</p>}
         <div className="mt-5 flex gap-2">
-          <button type="button" onClick={onCerrar} className="h-11 flex-1 rounded-lg text-tenue hover:bg-fondo hover:text-texto">
-            Volver <span className="text-xs opacity-60">Esc</span>
-          </button>
-          <button
-            type="submit"
-            disabled={!listo || enviando}
-            className="h-11 flex-[2] rounded-lg bg-acento font-semibold text-sobre-acento disabled:bg-linea disabled:text-tenue"
-          >
-            Devolver {items.length > 0 ? pesos(subtotal + redondeo) : ""}{" "}
-            <span className="text-xs font-normal opacity-70">Enter</span>
-          </button>
+          <Boton variante="terciario" atajo="Esc" onClick={onCerrar} className="flex-1">
+            Volver
+          </Boton>
+          <Boton type="submit" variante="primario" atajo="Enter" disabled={!listo || enviando} className="flex-[2]">
+            Devolver {items.length > 0 ? pesos(subtotal + redondeo) : ""}
+          </Boton>
         </div>
       </form>
 
@@ -261,12 +247,8 @@ export default function DialogoDevolucion({ venta, redondeoActivo, onDevuelta, o
 
 function BotonChico({ onClick, children }: { onClick: () => void; children: string }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="size-8 rounded-lg border border-linea text-tenue hover:bg-fondo hover:text-texto"
-    >
+    <Boton tamano="icono" onClick={onClick}>
       {children}
-    </button>
+    </Boton>
   );
 }

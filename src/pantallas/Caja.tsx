@@ -388,7 +388,7 @@ export default function Caja({ activa, onCrearProducto, onEnEspera, onImpresion,
                       elegir(p, multiploPendiente);
                       enfocar();
                     }}
-                    className="flex h-10 w-full items-center justify-between px-4 text-left hover:bg-fondo"
+                    className="flex h-10 w-full items-center justify-between px-4 text-left hover:bg-suave"
                   >
                     <span>{p.nombre}</span>
                     <span className="text-tenue tabular-nums">
@@ -464,7 +464,7 @@ export default function Caja({ activa, onCrearProducto, onEnEspera, onImpresion,
                           <button
                             type="button"
                             onClick={() => setPesando({ producto: l.producto, cambiar: true })}
-                            className="h-7 rounded-lg border border-linea px-2 text-xs text-tenue hover:bg-fondo hover:text-texto"
+                            className="h-7 rounded-lg border border-linea px-2 text-xs text-tenue hover:bg-suave hover:text-texto"
                           >
                             Cambiar peso
                           </button>
@@ -490,7 +490,7 @@ export default function Caja({ activa, onCrearProducto, onEnEspera, onImpresion,
                     <td className="pr-2 text-center">
                       <button
                         onClick={() => quitar(l.producto.id)}
-                        className="h-7 rounded-lg px-2 text-tenue hover:bg-peligro/10 hover:text-peligro"
+                        className="h-7 rounded-lg px-2 text-tenue hover:bg-peligro-fondo hover:text-peligro"
                         title="Quitar"
                       >
                         ×
@@ -524,7 +524,7 @@ export default function Caja({ activa, onCrearProducto, onEnEspera, onImpresion,
               setLineas([]);
               enfocar();
             }}
-            className="h-10 flex-1 rounded-lg text-tenue enabled:hover:bg-fondo enabled:hover:text-texto disabled:opacity-50"
+            className="h-10 flex-1 rounded-lg text-tenue enabled:hover:bg-suave enabled:hover:text-texto disabled:opacity-50"
           >
             Cancelar venta
           </button>
@@ -533,7 +533,7 @@ export default function Caja({ activa, onCrearProducto, onEnEspera, onImpresion,
             onClick={() => setDialogo("poner-espera")}
             title="Poner en espera (F8)"
             aria-keyshortcuts="F8"
-            className="h-10 flex-1 rounded-lg text-tenue enabled:hover:bg-fondo enabled:hover:text-texto disabled:opacity-50"
+            className="h-10 flex-1 rounded-lg text-tenue enabled:hover:bg-suave enabled:hover:text-texto disabled:opacity-50"
           >
             Poner en espera
           </button>
@@ -541,7 +541,7 @@ export default function Caja({ activa, onCrearProducto, onEnEspera, onImpresion,
         <button
           onClick={abrirListaEspera}
           aria-keyshortcuts="F7"
-          className="mt-2 flex h-10 items-center justify-between rounded-lg border border-linea px-3 hover:bg-fondo"
+          className="mt-2 flex h-10 items-center justify-between rounded-lg border border-linea px-3 hover:bg-suave"
         >
           <span>
             En espera <span className="tabular-nums">({enEspera?.length ?? 0})</span>
@@ -552,7 +552,7 @@ export default function Caja({ activa, onCrearProducto, onEnEspera, onImpresion,
           <button
             disabled={!turno}
             onClick={() => setDialogo("movimiento")}
-            className="flex h-10 w-full items-center gap-2 rounded-lg border border-linea px-3 enabled:hover:bg-fondo disabled:opacity-50"
+            className="flex h-10 w-full items-center gap-2 rounded-lg border border-linea px-3 enabled:hover:bg-suave disabled:opacity-50"
           >
             <ArrowDownUp size={16} className="text-tenue" aria-hidden />
             Ingreso o retiro de efectivo
@@ -561,7 +561,7 @@ export default function Caja({ activa, onCrearProducto, onEnEspera, onImpresion,
             disabled={!turno || lineas.length > 0}
             onClick={() => setDialogo("cerrar-caja")}
             title={lineas.length > 0 ? "Cobra, cancela o pon en espera la venta en curso para cerrar la caja" : undefined}
-            className="flex h-10 w-full items-center gap-2 rounded-lg border border-linea px-3 enabled:hover:bg-fondo disabled:opacity-50"
+            className="flex h-10 w-full items-center gap-2 rounded-lg border border-linea px-3 enabled:hover:bg-suave disabled:opacity-50"
           >
             <Lock size={16} className="text-tenue" aria-hidden />
             Cerrar caja
@@ -650,7 +650,7 @@ function BotonChico({ onClick, children }: { onClick: () => void; children: stri
     <button
       type="button"
       onClick={onClick}
-      className="size-7 rounded-lg border border-linea text-tenue hover:bg-fondo hover:text-texto"
+      className="size-7 rounded-lg border border-linea text-tenue hover:bg-suave hover:text-texto"
     >
       {children}
     </button>
@@ -688,5 +688,5 @@ function AvisoCaja({
       </div>
     );
   }
-  return <div className="mt-3 rounded-lg bg-peligro/10 px-4 py-3 text-peligro">{aviso.texto}</div>;
+  return <div className="mt-3 rounded-lg bg-peligro-fondo px-4 py-3 text-peligro">{aviso.texto}</div>;
 }

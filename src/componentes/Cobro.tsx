@@ -1,3 +1,4 @@
+import Boton from "./Boton";
 import { UserPlus } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { api, textoError, type Cliente, type MedioPago, type NuevaVenta, type VentaConfirmada } from "../api";
@@ -119,16 +120,17 @@ export default function Cobro({ items, totalEstimado, redondeoActivo, onCancelar
 
         <div className="mt-4 grid grid-cols-5 gap-2">
           {MEDIOS.map((m) => (
-            <button
+            <Boton
               key={m.id}
+              aria-pressed={medio === m.id}
               onClick={() => setMedio(m.id)}
-              className={`rounded-lg border px-1 py-3 ${
-                medio === m.id ? "border-texto bg-texto font-medium text-superficie" : "border-linea hover:bg-fondo"
+              className={`h-auto flex-col gap-0 px-1 py-2 ${
+                medio === m.id ? "border-acento bg-seleccion font-semibold text-acento" : ""
               }`}
             >
               {m.nombre}
-              <div className="text-xs opacity-60">{medio === "efectivo" || fiado ? `Alt+${m.tecla}` : m.tecla}</div>
-            </button>
+              <div className="text-xs font-normal opacity-70">{medio === "efectivo" || fiado ? `Alt+${m.tecla}` : m.tecla}</div>
+            </Boton>
           ))}
         </div>
 
@@ -145,9 +147,9 @@ export default function Cobro({ items, totalEstimado, redondeoActivo, onCancelar
             />
             <div className="mt-2 flex gap-2">
               {BILLETES.filter((b) => b >= aPagar || b === 20000).map((b) => (
-                <button key={b} onClick={() => setRecibido(String(b))} className="h-8 rounded-lg border border-linea px-2 tabular-nums hover:bg-fondo">
+                <Boton key={b} tamano="chico" onClick={() => setRecibido(String(b))} className="tabular-nums">
                   {pesos(b)}
-                </button>
+                </Boton>
               ))}
             </div>
             <div className="mt-4 flex items-baseline justify-between">
@@ -176,22 +178,21 @@ export default function Cobro({ items, totalEstimado, redondeoActivo, onCancelar
             Se puede fiar igual con autorización.
           </p>
         )}
-        {error && <p className="mt-4 rounded-lg bg-peligro/10 px-3 py-2 text-peligro">{error}</p>}
+        {error && <p className="mt-4 rounded-lg bg-peligro-fondo px-3 py-2 text-peligro">{error}</p>}
 
         <div className="mt-6 flex gap-2">
-          <button onClick={onCancelar} className="h-12 flex-1 rounded-lg text-tenue hover:bg-fondo hover:text-texto">
-            Volver <span className="text-xs opacity-60">Esc</span>
-          </button>
-          <button
+          <Boton variante="terciario" atajo="Esc" onClick={onCancelar} className="flex-1">
+            Volver
+          </Boton>
+          <Boton
+            variante="primario"
+            atajo={fiado ? "F12" : "Enter"}
             onClick={() => void confirmar()}
             disabled={bloqueado}
-            className={`h-12 flex-[2] rounded-lg font-semibold disabled:bg-linea disabled:text-tenue ${
-              sobreLimite ? "bg-aviso text-aviso-fondo" : "bg-acento text-sobre-acento"
-            }`}
+            className="flex-[2]"
           >
-            {fiado ? (sobreLimite ? "Fiar sobre el límite" : "Fiar") : "Confirmar venta"}{" "}
-            <span className="text-xs font-normal opacity-70">{fiado ? "F12" : "Enter"}</span>
-          </button>
+            {fiado ? (sobreLimite ? "Fiar sobre el límite" : "Fiar") : "Confirmar venta"}
+          </Boton>
         </div>
       </div>
     </div>
@@ -244,9 +245,9 @@ function ElegirCliente({ cliente, onElegir, aPagar }: { cliente: Cliente | null;
             <div className="truncate text-lg font-semibold">{cliente.nombre}</div>
             {cliente.telefono && <div className="text-xs text-tenue">{cliente.telefono}</div>}
           </div>
-          <button type="button" onClick={() => onElegir(null)} className="h-8 rounded-lg px-2 text-tenue hover:bg-fondo hover:text-texto">
+          <Boton tamano="chico" onClick={() => onElegir(null)}>
             Cambiar
-          </button>
+          </Boton>
         </div>
         <dl className="mt-3 space-y-1">
           <div className="flex justify-between">
@@ -291,17 +292,12 @@ function ElegirCliente({ cliente, onElegir, aPagar }: { cliente: Cliente | null;
         />
         {error && <p className="text-peligro">{error}</p>}
         <div className="flex gap-2">
-          <button type="button" onClick={() => setNuevo(null)} className="h-9 flex-1 rounded-lg text-tenue hover:bg-fondo">
+          <Boton variante="terciario" onClick={() => setNuevo(null)} className="flex-1">
             Volver a buscar
-          </button>
-          <button
-            type="button"
-            onClick={() => void crear()}
-            disabled={!nuevo.nombre.trim()}
-            className="h-9 flex-1 rounded-lg bg-texto font-medium text-superficie disabled:bg-linea disabled:text-tenue"
-          >
+          </Boton>
+          <Boton variante="primario" onClick={() => void crear()} disabled={!nuevo.nombre.trim()} className="flex-1">
             Crear y elegir
-          </button>
+          </Boton>
         </div>
       </div>
     );
@@ -322,13 +318,9 @@ function ElegirCliente({ cliente, onElegir, aPagar }: { cliente: Cliente | null;
           aria-label="Buscar cliente"
           className="h-11 min-w-0 flex-1 rounded-lg border border-borde-control bg-superficie px-3 focus:border-acento"
         />
-        <button
-          type="button"
-          onClick={() => setNuevo({ nombre: texto, telefono: "" })}
-          className="flex h-11 items-center gap-2 rounded-lg border border-linea px-3 hover:bg-fondo"
-        >
-          <UserPlus size={16} aria-hidden /> Nuevo cliente
-        </button>
+        <Boton icono={UserPlus} onClick={() => setNuevo({ nombre: texto, telefono: "" })} className="h-11">
+          Nuevo cliente
+        </Boton>
       </div>
       {error && <p className="mt-2 text-peligro">{error}</p>}
       <ul className="mt-2 max-h-48 overflow-auto rounded-lg border border-linea">
@@ -340,7 +332,7 @@ function ElegirCliente({ cliente, onElegir, aPagar }: { cliente: Cliente | null;
               <button
                 type="button"
                 onClick={() => onElegir(c)}
-                className={`flex h-10 w-full items-center justify-between gap-3 px-3 text-left hover:bg-fondo ${i === 0 ? "bg-fondo" : ""}`}
+                className={`flex h-10 w-full items-center justify-between gap-3 px-3 text-left hover:bg-suave ${i === 0 ? "bg-suave" : ""}`}
               >
                 <span className="min-w-0 truncate">
                   {c.nombre}

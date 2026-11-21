@@ -1,3 +1,4 @@
+import Boton from "./Boton";
 import { Scale } from "lucide-react";
 import { useState } from "react";
 import type { Unidad } from "../api";
@@ -22,16 +23,16 @@ export default function CampoCantidad({ producto, valorMil, onCambiar, minimoMil
   if (producto.unidad === "kg") {
     return (
       <>
-        <button
-          type="button"
+        <Boton
+          bloque
           autoFocus={autoFocus}
           onClick={() => setPesando(true)}
           aria-label={etiqueta}
-          className="flex h-11 w-full items-center gap-2 rounded-lg border border-linea bg-fondo px-3 text-left tabular-nums hover:border-texto"
+          icono={Scale}
+          className="h-11 font-normal tabular-nums"
         >
-          <Scale size={16} className="text-tenue" aria-hidden />
           {valorMil === null ? <span className="text-tenue">Pesar o escribir el peso…</span> : cantidad(valorMil, "kg")}
-        </button>
+        </Boton>
         {pesando && (
           <DialogoPeso
             producto={producto}

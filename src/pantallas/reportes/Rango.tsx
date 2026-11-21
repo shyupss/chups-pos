@@ -1,3 +1,4 @@
+import Boton from "../../componentes/Boton";
 import { FileDown, FileSpreadsheet } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { api, textoError, type FormatoExportacion, type TipoReporte } from "../../api";
@@ -49,11 +50,11 @@ export function rangoDe(atajo: Atajo, hoy = new Date()): Rango {
 export function SelectorRango({ rango, onCambiar }: { rango: Rango; onCambiar: (r: Rango) => void }) {
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <div role="radiogroup" aria-label="Rango de fechas" className="flex flex-wrap gap-1 rounded-lg border border-linea bg-fondo p-0.5">
+      <div role="radiogroup" aria-label="Rango de fechas" className="flex flex-wrap gap-1 rounded-lg border border-borde-control bg-suave p-0.5">
         {ATAJOS.map((a) => (
           <label
             key={a.id}
-            className="relative flex h-8 cursor-pointer items-center rounded-md px-3 text-sm text-tenue hover:text-texto has-checked:bg-texto has-checked:font-medium has-checked:text-superficie has-focus-visible:outline-2 has-focus-visible:outline-texto"
+            className="relative flex h-8 cursor-pointer items-center rounded-md px-3 text-sm text-tenue hover:text-texto has-checked:bg-seleccion has-checked:font-semibold has-checked:text-acento has-focus-visible:outline-2 has-focus-visible:outline-acento"
           >
             <input
               type="radio"
@@ -141,27 +142,19 @@ export function Exportar({
           <span className="max-w-72 truncate" title={resultado.ruta}>
             Guardado en {resultado.ruta}
           </span>
-          <button type="button" onClick={() => void api.abrirArchivo(resultado.ruta).catch(() => {})} className="font-medium underline">
+          <Boton variante="terciario" tamano="chico" onClick={() => void api.abrirArchivo(resultado.ruta).catch(() => {})}>
             Abrir
-          </button>
+          </Boton>
         </span>
       )}
       {resultado?.tipo === "error" && <span className="text-sm text-peligro">{resultado.texto}</span>}
       {resultado?.tipo === "trabajando" && <span className="text-sm text-tenue">Exportando…</span>}
-      <button
-        type="button"
-        onClick={() => void exportar("excel")}
-        className="flex h-9 items-center gap-2 rounded-lg border border-linea px-3 hover:bg-fondo"
-      >
-        <FileSpreadsheet size={16} aria-hidden /> Excel <span className="text-xs text-tenue">Ctrl+E</span>
-      </button>
-      <button
-        type="button"
-        onClick={() => void exportar("pdf")}
-        className="flex h-9 items-center gap-2 rounded-lg border border-linea px-3 hover:bg-fondo"
-      >
-        <FileDown size={16} aria-hidden /> PDF
-      </button>
+      <Boton icono={FileSpreadsheet} atajo="Ctrl E" onClick={() => void exportar("excel")}>
+        Excel
+      </Boton>
+      <Boton icono={FileDown} onClick={() => void exportar("pdf")}>
+        PDF
+      </Boton>
     </div>
   );
 }

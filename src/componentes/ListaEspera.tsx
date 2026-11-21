@@ -1,3 +1,4 @@
+import Boton from "./Boton";
 import { useState } from "react";
 import { textoError, type ResumenEspera } from "../api";
 import { hora, pesos } from "../formato";
@@ -14,7 +15,6 @@ interface Props {
   onCerrar: () => void;
 }
 
-const claseBoton = "h-9 rounded-lg px-3 text-tenue hover:bg-fondo hover:text-texto";
 
 export default function ListaEspera({ ventas, maximo, intercambia, onRecuperar, onDescartar, onCerrar }: Props) {
   const [descartando, setDescartando] = useState<number | null>(null);
@@ -42,7 +42,7 @@ export default function ListaEspera({ ventas, maximo, intercambia, onRecuperar, 
           La venta que está en la caja quedará en espera al recuperar otra.
         </p>
       )}
-      {error && <p className="mt-3 rounded-lg bg-peligro/10 px-3 py-2 text-peligro">{error}</p>}
+      {error && <p className="mt-3 rounded-lg bg-peligro-fondo px-3 py-2 text-peligro">{error}</p>}
 
       {ventas === null ? (
         <p className="py-8 text-center text-tenue">Cargando…</p>
@@ -61,37 +61,21 @@ export default function ListaEspera({ ventas, maximo, intercambia, onRecuperar, 
               <div className="shrink-0 font-semibold tabular-nums">{pesos(v.totalEstimado)}</div>
               {descartando === v.id ? (
                 <>
-                  <button
-                    type="button"
-                    autoFocus
-                    disabled={ocupado}
-                    onClick={() => void ejecutar(() => onDescartar(v.id))}
-                    className="h-9 rounded-lg bg-peligro/10 px-3 font-medium text-peligro"
-                  >
+                  <Boton variante="peligro" tamano="chico" autoFocus disabled={ocupado} onClick={() => void ejecutar(() => onDescartar(v.id))}>
                     Descartar
-                  </button>
-                  <button type="button" onClick={() => setDescartando(null)} className={claseBoton}>
+                  </Boton>
+                  <Boton variante="terciario" tamano="chico" onClick={() => setDescartando(null)}>
                     No
-                  </button>
+                  </Boton>
                 </>
               ) : (
                 <>
-                  <button
-                    type="button"
-                    autoFocus={i === 0}
-                    disabled={ocupado}
-                    onClick={() => void ejecutar(() => onRecuperar(v.id))}
-                    className="h-9 rounded-lg bg-acento px-3 font-semibold text-sobre-acento disabled:bg-linea disabled:text-tenue"
-                  >
+                  <Boton tamano="chico" autoFocus={i === 0} disabled={ocupado} onClick={() => void ejecutar(() => onRecuperar(v.id))}>
                     Recuperar
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setDescartando(v.id)}
-                    className="h-9 rounded-lg px-3 text-tenue hover:bg-peligro/10 hover:text-peligro"
-                  >
+                  </Boton>
+                  <Boton variante="terciario" tamano="chico" onClick={() => setDescartando(v.id)}>
                     Descartar
-                  </button>
+                  </Boton>
                 </>
               )}
             </li>
@@ -103,9 +87,9 @@ export default function ListaEspera({ ventas, maximo, intercambia, onRecuperar, 
         <span className="text-xs text-tenue tabular-nums">
           {ventas?.length ?? 0} de {maximo} · el total usa los precios actuales
         </span>
-        <button type="button" onClick={onCerrar} className={claseBoton}>
-          Cerrar <span className="text-xs opacity-60">Esc</span>
-        </button>
+        <Boton variante="terciario" atajo="Esc" onClick={onCerrar}>
+          Cerrar
+        </Boton>
       </div>
     </Dialogo>
   );

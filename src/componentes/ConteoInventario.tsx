@@ -1,3 +1,4 @@
+import Boton from "./Boton";
 import { useRef, useState } from "react";
 import { api, textoError, type Diferencia, type Producto } from "../api";
 import { cantidad, pesos, pesosConSigno } from "../formato";
@@ -164,23 +165,20 @@ export default function ConteoInventario({ onTerminado, onCerrar }: Props) {
               className="mt-1 h-10 w-full rounded-lg border border-borde-control bg-superficie px-3 focus:border-acento"
             />
           </label>
-          {error && <p className="mt-3 rounded-lg bg-peligro/10 px-3 py-2 text-peligro">{error}</p>}
+          {error && <p className="mt-3 rounded-lg bg-peligro-fondo px-3 py-2 text-peligro">{error}</p>}
           <div className="mt-5 flex gap-2">
-            <button
-              type="button"
-              onClick={() => setResumen(null)}
-              className="h-11 flex-1 rounded-lg text-tenue hover:bg-fondo hover:text-texto"
-            >
-              Seguir contando <span className="text-xs opacity-60">Esc</span>
-            </button>
-            <button
+            <Boton variante="terciario" atajo="Esc" onClick={() => setResumen(null)} className="flex-1">
+              Seguir contando
+            </Boton>
+            <Boton
               type="submit"
+              variante="primario"
+              atajo="Enter"
               disabled={enviando || !motivo.trim() || conDiferencia.length === 0}
-              className="h-11 flex-[2] rounded-lg bg-acento font-semibold text-sobre-acento disabled:bg-linea disabled:text-tenue"
+              className="flex-[2]"
             >
-              {conDiferencia.length === 0 ? "No hay diferencias" : `Ajustar ${conDiferencia.length} productos`}{" "}
-              <span className="text-xs font-normal opacity-70">Enter</span>
-            </button>
+              {conDiferencia.length === 0 ? "No hay diferencias" : `Ajustar ${conDiferencia.length} productos`}
+            </Boton>
           </div>
         </form>
       </Dialogo>
@@ -215,7 +213,7 @@ export default function ConteoInventario({ onTerminado, onCerrar }: Props) {
                 <button
                   type="button"
                   onClick={() => elegir(p)}
-                  className="flex h-10 w-full items-center justify-between px-4 text-left hover:bg-fondo"
+                  className="flex h-10 w-full items-center justify-between px-4 text-left hover:bg-suave"
                 >
                   <span>{p.nombre}</span>
                   <span className="text-tenue tabular-nums">{cantidad(p.stockMil, p.unidad)}</span>
@@ -260,32 +258,26 @@ export default function ConteoInventario({ onTerminado, onCerrar }: Props) {
               <li key={l.producto.id} className="flex h-10 items-center gap-3 px-3 tabular-nums">
                 <span className="min-w-0 flex-1 truncate">{l.producto.nombre}</span>
                 <span className="font-medium">{cantidad(l.contadoMil, l.producto.unidad)}</span>
-                <button
-                  type="button"
+                <Boton
+                  tamano="icono"
                   onClick={() => setLineas((ls) => ls.filter((x) => x.producto.id !== l.producto.id))}
                   aria-label={`Quitar ${l.producto.nombre}`}
-                  className="h-7 rounded-lg px-2 text-tenue hover:bg-peligro/10 hover:text-peligro"
                 >
                   ×
-                </button>
+                </Boton>
               </li>
             ))}
           </ul>
         )}
       </div>
-      {error && <p className="mt-3 rounded-lg bg-peligro/10 px-3 py-2 text-peligro">{error}</p>}
+      {error && <p className="mt-3 rounded-lg bg-peligro-fondo px-3 py-2 text-peligro">{error}</p>}
       <div className="mt-5 flex gap-2">
-        <button type="button" onClick={onCerrar} className="h-11 flex-1 rounded-lg text-tenue hover:bg-fondo hover:text-texto">
-          Cancelar <span className="text-xs opacity-60">Esc</span>
-        </button>
-        <button
-          type="button"
-          onClick={() => void revisar()}
-          disabled={lineas.length === 0}
-          className="h-11 flex-[2] rounded-lg bg-acento font-semibold text-sobre-acento disabled:bg-linea disabled:text-tenue"
-        >
+        <Boton variante="terciario" atajo="Esc" onClick={onCerrar} className="flex-1">
+          Cancelar
+        </Boton>
+        <Boton variante="primario" onClick={() => void revisar()} disabled={lineas.length === 0} className="flex-[2]">
           Revisar diferencias ({lineas.length})
-        </button>
+        </Boton>
       </div>
     </Dialogo>
   );

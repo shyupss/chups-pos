@@ -1,3 +1,4 @@
+import Boton from "../../componentes/Boton";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { Plus } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -116,16 +117,11 @@ export default function Compras({ activa, elegida, onElegir, onNueva, version }:
               className="h-10 rounded-lg border border-borde-control bg-superficie px-3 text-texto focus:border-acento"
             />
           </label>
-          <button
-            type="button"
-            onClick={onNueva}
-            aria-keyshortcuts="Control+N"
-            className="ml-auto flex h-10 items-center gap-2 rounded-lg bg-acento px-4 font-semibold text-sobre-acento"
-          >
-            <Plus size={16} aria-hidden /> Nueva compra <span className="text-xs font-normal opacity-70">Ctrl+N</span>
-          </button>
+          <Boton variante="primario" icono={Plus} atajo="Ctrl N" onClick={onNueva} aria-keyshortcuts="Control+N" className="ml-auto">
+            Nueva compra
+          </Boton>
         </div>
-        {error && <p className="mt-3 rounded-lg bg-peligro/10 px-3 py-2 text-peligro">{error}</p>}
+        {error && <p className="mt-3 rounded-lg bg-peligro-fondo px-3 py-2 text-peligro">{error}</p>}
 
         <div className={`mt-4 grid ${COLUMNAS} gap-2 px-4 text-xs font-medium uppercase text-tenue`}>
           <span>N°</span>
@@ -149,7 +145,7 @@ export default function Compras({ activa, elegida, onElegir, onNueva, version }:
                     aria-current={elegida === c.id ? "true" : undefined}
                     style={{ position: "absolute", top: 0, left: 0, width: "100%", height: ALTO_FILA, transform: `translateY(${v.start}px)` }}
                     className={`grid ${COLUMNAS} items-center gap-2 border-b border-linea px-4 text-left ${
-                      elegida === c.id ? "bg-linea/70" : "hover:bg-fondo"
+                      elegida === c.id ? "bg-seleccion" : "hover:bg-suave"
                     } ${c.anuladaEn ? "text-tenue" : ""}`}
                   >
                     <span className="font-medium">{c.id}</span>
@@ -218,10 +214,10 @@ function DetalleCompraPanel({ id, onCerrar, onAnulada }: { id: number; onCerrar:
     <div className="flex h-full flex-col">
       <div className="flex h-14 shrink-0 items-center gap-3 border-b border-linea px-5">
         <h2 className="font-semibold">Compra N° {c.id}</h2>
-        {c.anuladaEn && <span className="rounded-full bg-peligro/10 px-2.5 py-0.5 text-xs font-medium text-peligro">Anulada</span>}
-        <button type="button" onClick={onCerrar} aria-label="Cerrar detalle" className="ml-auto h-8 rounded-lg px-2 text-tenue hover:bg-fondo">
+        {c.anuladaEn && <span className="rounded-full bg-peligro-fondo px-2.5 py-0.5 text-xs font-medium text-peligro">Anulada</span>}
+        <Boton tamano="icono" onClick={onCerrar} aria-label="Cerrar detalle" className="ml-auto">
           ×
-        </button>
+        </Boton>
       </div>
       <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-5 tabular-nums">
         <dl className="space-y-1">
@@ -250,21 +246,17 @@ function DetalleCompraPanel({ id, onCerrar, onAnulada }: { id: number; onCerrar:
         </div>
         {c.nota && <p className="text-tenue">Nota: {c.nota}</p>}
         {c.anuladaEn && (
-          <p className="rounded-lg bg-peligro/10 p-3 text-peligro">
+          <p className="rounded-lg bg-peligro-fondo p-3 text-peligro">
             Anulada el {fechaHora(c.anuladaEn)}: {c.motivoAnulacion}
           </p>
         )}
-        {error && <p className="rounded-lg bg-peligro/10 px-3 py-2 text-peligro">{error}</p>}
+        {error && <p className="rounded-lg bg-peligro-fondo px-3 py-2 text-peligro">{error}</p>}
       </div>
       {!c.anuladaEn && (
         <div className="shrink-0 border-t border-linea p-4">
-          <button
-            type="button"
-            onClick={() => setAnulando(true)}
-            className="h-10 w-full rounded-lg border border-peligro/40 text-peligro hover:bg-peligro/10"
-          >
+          <Boton variante="peligro" bloque onClick={() => setAnulando(true)}>
             Anular compra
-          </button>
+          </Boton>
         </div>
       )}
       {anulando && (
@@ -294,18 +286,14 @@ function DetalleCompraPanel({ id, onCerrar, onAnulada }: { id: number; onCerrar:
               aria-label="Motivo de la anulación"
               className="h-10 w-full rounded-lg border border-borde-control bg-superficie px-3 focus:border-acento"
             />
-            {error && <p className="rounded-lg bg-peligro/10 px-3 py-2 text-peligro">{error}</p>}
+            {error && <p className="rounded-lg bg-peligro-fondo px-3 py-2 text-peligro">{error}</p>}
             <div className="flex gap-2">
-              <button type="button" onClick={() => setAnulando(false)} className="h-11 flex-1 rounded-lg text-tenue hover:bg-fondo">
-                Volver <span className="text-xs opacity-60">Esc</span>
-              </button>
-              <button
-                type="submit"
-                disabled={!motivo.trim()}
-                className="h-11 flex-[2] rounded-lg bg-peligro font-semibold text-superficie disabled:bg-linea disabled:text-tenue"
-              >
+              <Boton variante="terciario" atajo="Esc" onClick={() => setAnulando(false)} className="flex-1">
+                Volver
+              </Boton>
+              <Boton type="submit" variante="peligro" disabled={!motivo.trim()} className="flex-[2]">
                 Anular compra
-              </button>
+              </Boton>
             </div>
           </form>
         </Dialogo>

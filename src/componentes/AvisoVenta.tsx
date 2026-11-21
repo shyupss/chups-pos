@@ -1,3 +1,4 @@
+import Boton from "./Boton";
 import type { ReactNode } from "react";
 import type { VentaConfirmada } from "../api";
 import { folio, pesos } from "../formato";
@@ -18,8 +19,6 @@ interface Props extends Acciones {
   salida: SalidaVenta | null;
 }
 
-const claseBoton =
-  "h-8 shrink-0 rounded-lg border border-exito/40 px-3 font-medium hover:bg-exito/10 disabled:opacity-50";
 
 /** Aviso de la venta registrada, con la impresión, el PDF y el cajón. */
 export default function AvisoVenta({ venta, salida, ...acciones }: Props) {
@@ -42,12 +41,12 @@ export default function AvisoVenta({ venta, salida, ...acciones }: Props) {
             </span>
           )}
           <span className="ml-auto flex gap-2">
-            <button type="button" onClick={acciones.reimprimir} disabled={imprimiendo} className={claseBoton} title="Reimprimir (Ctrl+P)">
+            <Boton tamano="chico" onClick={acciones.reimprimir} disabled={imprimiendo} title="Reimprimir (Ctrl+P)">
               Reimprimir
-            </button>
-            <button type="button" onClick={acciones.guardarPdf} disabled={guardando} className={claseBoton}>
+            </Boton>
+            <Boton tamano="chico" onClick={acciones.guardarPdf} disabled={guardando}>
               Guardar PDF
-            </button>
+            </Boton>
           </span>
         </div>
         <Estados salida={salida} acciones={acciones} />
@@ -62,14 +61,9 @@ export default function AvisoVenta({ venta, salida, ...acciones }: Props) {
         <span className="font-medium">
           {salida.folio !== null ? `Boleta ${folio(salida.folio)}` : "Última boleta"}
         </span>
-        <button
-          type="button"
-          onClick={acciones.cerrar}
-          aria-label="Cerrar aviso"
-          className="ml-auto h-7 rounded-lg px-2 text-tenue hover:bg-fondo hover:text-texto"
-        >
+        <Boton variante="terciario" tamano="icono" className="ml-auto" onClick={acciones.cerrar} aria-label="Cerrar aviso">
           ×
-        </button>
+        </Boton>
       </div>
       <Estados salida={salida} acciones={acciones} />
     </div>
@@ -82,7 +76,7 @@ function Estados({ salida, acciones }: { salida: SalidaVenta | null; acciones: A
   const fila = (clave: string, tarea: Tarea, textos: { trabajando: string; error: string }, accion?: ReactNode) => {
     if (tarea.estado === "error") {
       filas.push(
-        <div key={clave} role="alert" className="flex flex-wrap items-center gap-3 rounded-lg bg-peligro/10 px-3 py-2 text-peligro">
+        <div key={clave} role="alert" className="flex flex-wrap items-center gap-3 rounded-lg bg-peligro-fondo px-3 py-2 text-peligro">
           <span className="min-w-0 flex-1">
             {textos.error}: {tarea.texto}
           </span>
@@ -107,9 +101,9 @@ function Estados({ salida, acciones }: { salida: SalidaVenta | null; acciones: A
       salida.impresion,
       { trabajando: "Imprimiendo la boleta…", error: "No se imprimió la boleta (la venta quedó guardada)" },
       salida.impresion.estado === "error" ? (
-        <button type="button" onClick={acciones.reintentar} className="h-8 rounded-lg bg-peligro px-3 font-medium text-superficie">
+        <Boton tamano="chico" onClick={acciones.reintentar}>
           Reintentar
-        </button>
+        </Boton>
       ) : undefined,
     );
   }
@@ -123,9 +117,9 @@ function Estados({ salida, acciones }: { salida: SalidaVenta | null; acciones: A
       pdf,
       { trabajando: "Guardando el PDF…", error: "No se guardó el PDF" },
       pdf.estado === "ok" ? (
-        <button type="button" onClick={acciones.abrirPdf} className={claseBoton}>
+        <Boton tamano="chico" onClick={acciones.abrirPdf}>
           Abrir
-        </button>
+        </Boton>
       ) : undefined,
     );
   }

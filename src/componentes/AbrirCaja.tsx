@@ -1,3 +1,4 @@
+import Boton from "./Boton";
 import { LockOpen } from "lucide-react";
 import { useState } from "react";
 import { api, textoError, type Turno } from "../api";
@@ -42,7 +43,7 @@ export default function AbrirCaja({ sugerido, enEspera, onAbierta }: Props) {
         className="w-[32rem] max-w-full tarjeta p-8"
       >
         <div className="flex items-center gap-3">
-          <span className="flex size-10 items-center justify-center rounded-lg bg-acento/12 text-acento">
+          <span className="flex size-10 items-center justify-center rounded-lg bg-seleccion text-acento">
             <LockOpen size={20} aria-hidden />
           </span>
           <div>
@@ -55,9 +56,9 @@ export default function AbrirCaja({ sugerido, enEspera, onAbierta }: Props) {
           <label htmlFor="monto-inicial" className="text-tenue">
             Monto inicial
           </label>
-          <button type="button" onClick={() => setTexto("")} className="text-xs text-tenue hover:text-texto">
+          <Boton variante="terciario" tamano="chico" onClick={() => setTexto("")}>
             Limpiar
-          </button>
+          </Boton>
         </div>
         <input
           id="monto-inicial"
@@ -72,15 +73,15 @@ export default function AbrirCaja({ sugerido, enEspera, onAbierta }: Props) {
         />
         <div className="mt-2 flex flex-wrap gap-2">
           {BILLETES.map((b) => (
-            <button
+            <Boton
               key={b}
-              type="button"
+              tamano="chico"
               onClick={() => setTexto(String(monto + b))}
-              className="h-8 rounded-lg border border-linea px-2 tabular-nums hover:bg-fondo"
+              className="tabular-nums"
               title={`Sumar un billete de ${pesos(b)}`}
             >
               +{pesos(b)}
-            </button>
+            </Boton>
           ))}
         </div>
         <p id="sugerido-caja" className="mt-3 text-xs text-tenue">
@@ -91,15 +92,11 @@ export default function AbrirCaja({ sugerido, enEspera, onAbierta }: Props) {
             ` Hay ${enEspera === 1 ? "1 venta en espera" : `${enEspera} ventas en espera`} para recuperar después de abrir.`}
         </p>
 
-        {error && <p className="mt-4 rounded-lg bg-peligro/10 px-3 py-2 text-peligro">{error}</p>}
+        {error && <p className="mt-4 rounded-lg bg-peligro-fondo px-3 py-2 text-peligro">{error}</p>}
 
-        <button
-          type="submit"
-          disabled={enviando}
-          className="mt-6 h-13 w-full rounded-lg bg-acento text-lg font-semibold text-sobre-acento disabled:bg-linea disabled:text-tenue"
-        >
-          Abrir caja con {pesos(monto)} <span className="text-sm font-normal opacity-70">Enter</span>
-        </button>
+        <Boton type="submit" variante="primario" atajo="Enter" disabled={enviando} className="mt-6 h-12 w-full text-base">
+          Abrir caja con {pesos(monto)}
+        </Boton>
       </form>
     </div>
   );

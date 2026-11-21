@@ -114,7 +114,7 @@ export default function NegocioConfig({ conPin }: { conPin: ConPin }) {
             onClick={() =>
               void ejecutar(() => conPin((pin) => api.elegirLogo(pin), { accion: "Cambiar el logo" }), "Logo cargado.")
             }
-            className="h-10 rounded-lg border border-linea px-4 hover:bg-fondo disabled:opacity-50"
+            className="h-10 rounded-lg border border-linea px-4 hover:bg-suave disabled:opacity-50"
           >
             Elegir logo…
           </button>
@@ -125,7 +125,7 @@ export default function NegocioConfig({ conPin }: { conPin: ConPin }) {
               onClick={() =>
                 void ejecutar(() => conPin((pin) => api.quitarLogo(pin), { accion: "Quitar el logo" }), "Logo quitado.")
               }
-              className="h-10 rounded-lg px-4 text-tenue hover:bg-peligro/10 hover:text-peligro disabled:opacity-50"
+              className="h-10 rounded-lg px-4 text-tenue hover:bg-peligro-fondo hover:text-peligro disabled:opacity-50"
             >
               Quitar logo
             </button>

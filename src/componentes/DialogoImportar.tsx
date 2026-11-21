@@ -1,3 +1,4 @@
+import Boton from "./Boton";
 import { useEffect, useState } from "react";
 import {
   api,
@@ -133,7 +134,7 @@ export default function DialogoImportar({ tipo, onCerrar, onImportado }: Props) 
   const titulo = productos ? "Importar productos" : "Importar clientes";
   return (
     <Dialogo titulo={titulo} onCerrar={onCerrar} ancho="w-[60rem]">
-      {error && <p className="mt-3 rounded-lg bg-peligro/10 px-3 py-2 text-peligro">{error}</p>}
+      {error && <p className="mt-3 rounded-lg bg-peligro-fondo px-3 py-2 text-peligro">{error}</p>}
       {!apertura ? (
         <p className="mt-3 text-tenue">{trabajando ? "Leyendo la planilla…" : "Elige una planilla .xlsx, .xls, .ods o .csv."}</p>
       ) : resultado ? (
@@ -145,9 +146,9 @@ export default function DialogoImportar({ tipo, onCerrar, onImportado }: Props) 
             {resultado.omitidos > 0 && ` Se omitieron ${resultado.omitidos} filas con error.`}
           </p>
           <div className="flex justify-end">
-            <button type="button" onClick={onCerrar} className="h-10 rounded-lg bg-acento px-5 font-semibold text-sobre-acento">
+            <Boton variante="primario" onClick={onCerrar}>
               Cerrar
-            </button>
+            </Boton>
           </div>
         </div>
       ) : !vista ? (
@@ -203,17 +204,10 @@ export default function DialogoImportar({ tipo, onCerrar, onImportado }: Props) 
               : "Las deudas no se importan: solo nacen de ventas fiadas."}
           </p>
           <div className="flex justify-between gap-2">
-            <button type="button" onClick={() => void elegir()} className="h-10 rounded-lg border border-linea px-4 hover:bg-fondo">
-              Elegir otro archivo
-            </button>
-            <button
-              type="button"
-              onClick={() => void previsualizar()}
-              disabled={trabajando}
-              className="h-10 rounded-lg bg-acento px-5 font-semibold text-sobre-acento disabled:bg-linea disabled:text-tenue"
-            >
+            <Boton onClick={() => void elegir()}>Elegir otro archivo</Boton>
+            <Boton variante="primario" onClick={() => void previsualizar()} disabled={trabajando}>
               {trabajando ? "Revisando…" : "Ver vista previa"}
-            </button>
+            </Boton>
           </div>
         </div>
       ) : (
@@ -280,17 +274,10 @@ export default function DialogoImportar({ tipo, onCerrar, onImportado }: Props) 
             />
           )}
           <div className="flex justify-between gap-2">
-            <button type="button" onClick={() => setVista(null)} className="h-10 rounded-lg border border-linea px-4 hover:bg-fondo">
-              Volver a las columnas
-            </button>
-            <button
-              type="button"
-              onClick={() => void importar()}
-              disabled={trabajando || vista.nuevas.length + vista.actualizan.length === 0}
-              className="h-10 rounded-lg bg-acento px-5 font-semibold text-sobre-acento disabled:bg-linea disabled:text-tenue"
-            >
+            <Boton onClick={() => setVista(null)}>Volver a las columnas</Boton>
+            <Boton variante="primario" onClick={() => void importar()} disabled={trabajando || vista.nuevas.length + vista.actualizan.length === 0}>
               {trabajando ? "Importando…" : `Importar ${vista.nuevas.length + vista.actualizan.length} ${que}`}
-            </button>
+            </Boton>
           </div>
         </div>
       )}

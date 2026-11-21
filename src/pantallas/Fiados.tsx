@@ -1,3 +1,4 @@
+import Boton from "../componentes/Boton";
 import BotonExportar from "../componentes/BotonExportar";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
@@ -101,13 +102,9 @@ export default function Fiados({ activa, onIrAVenta, onImpresion, clienteInicial
             aria-label="Buscar cliente"
             className="h-10 min-w-0 flex-1 rounded-lg border border-borde-control bg-superficie px-4 focus:border-acento"
           />
-          <button
-            type="button"
-            onClick={() => setPanel({ tipo: "nuevo" })}
-            className="h-10 shrink-0 rounded-lg bg-acento px-4 font-semibold text-sobre-acento"
-          >
+          <Boton variante="primario" onClick={() => setPanel({ tipo: "nuevo" })}>
             Nuevo cliente
-          </button>
+          </Boton>
         </div>
         <label className="mt-2 flex items-center gap-2 text-tenue">
           <input type="checkbox" checked={todos} onChange={(e) => setTodos(e.target.checked)} />
@@ -116,7 +113,7 @@ export default function Fiados({ activa, onIrAVenta, onImpresion, clienteInicial
         <div className="mt-2">
           <BotonExportar que="clientes" etiqueta="Exportar clientes y deudas" />
         </div>
-        {error && <p className="mt-3 rounded-lg bg-peligro/10 px-3 py-2 text-peligro">{error}</p>}
+        {error && <p className="mt-3 rounded-lg bg-peligro-fondo px-3 py-2 text-peligro">{error}</p>}
         <div ref={contenedor} className="mt-3 min-h-0 flex-1 overflow-auto tarjeta">
           {filas.length === 0 ? (
             <p className="p-8 text-center text-tenue">
@@ -134,7 +131,7 @@ export default function Fiados({ activa, onIrAVenta, onImpresion, clienteInicial
                     key={d.id}
                     onClick={() => setPanel({ tipo: "ficha", id: d.id })}
                     style={{ position: "absolute", top: 0, left: 0, width: "100%", height: ALTO_FILA, transform: `translateY(${v.start}px)` }}
-                    className={`flex items-center gap-3 border-b border-linea px-4 text-left ${elegido ? "bg-linea/70" : "hover:bg-fondo"} ${
+                    className={`flex items-center gap-3 border-b border-linea px-4 text-left ${elegido ? "bg-seleccion" : "hover:bg-suave"} ${
                       d.activo ? "" : "text-tenue"
                     }`}
                   >
@@ -277,18 +274,14 @@ function FormularioCliente({
       <Campo etiqueta="Nota (opcional)">
         <input value={datos.nota} onChange={cambiar("nota")} maxLength={200} className={claseCampo} />
       </Campo>
-      {error && <p className="rounded-lg bg-peligro/10 px-3 py-2 text-peligro">{error}</p>}
+      {error && <p className="rounded-lg bg-peligro-fondo px-3 py-2 text-peligro">{error}</p>}
       <div className="mt-2 flex gap-2">
-        <button type="button" onClick={onCerrar} className="h-10 flex-1 rounded-lg text-tenue hover:bg-fondo hover:text-texto">
-          Cancelar <span className="text-xs opacity-60">Esc</span>
-        </button>
-        <button
-          type="submit"
-          disabled={guardando || !datos.nombre.trim()}
-          className="h-10 flex-1 rounded-lg bg-acento font-semibold text-sobre-acento disabled:bg-linea disabled:text-tenue"
-        >
+        <Boton variante="terciario" atajo="Esc" onClick={onCerrar} className="flex-1">
+          Cancelar
+        </Boton>
+        <Boton type="submit" variante="primario" disabled={guardando || !datos.nombre.trim()} className="flex-1">
           {cliente ? "Guardar" : "Crear cliente"}
-        </button>
+        </Boton>
       </div>
     </form>
   );

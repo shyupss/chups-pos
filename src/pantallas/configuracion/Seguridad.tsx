@@ -1,3 +1,4 @@
+import Boton from "../../componentes/Boton";
 import { KeyRound, ShieldCheck } from "lucide-react";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { api, textoError, type AccionesProtegidas, type EstadoSeguridad } from "../../api";
@@ -40,7 +41,7 @@ const ACCIONES: { clave: keyof AccionesProtegidas; nombre: string; ayuda: string
 
 const claseCampo =
   "h-10 w-full rounded-lg border border-borde-control bg-superficie px-3 text-center text-lg tracking-[0.4em] tabular-nums [-webkit-text-security:disc] focus:border-acento";
-const claseBoton = "h-10 rounded-lg border border-linea px-4 hover:bg-fondo disabled:opacity-50";
+const claseBoton = "h-10 rounded-lg border border-linea px-4 hover:bg-suave disabled:opacity-50";
 const clasePrincipal =
   "h-10 rounded-lg bg-acento px-5 font-semibold text-sobre-acento disabled:bg-linea disabled:text-tenue";
 
@@ -115,7 +116,7 @@ export default function SeguridadConfig({ conPin, onPinCambiado }: Props) {
               <button
                 type="button"
                 onClick={() => void quitar()}
-                className="h-10 rounded-lg px-4 text-tenue hover:bg-peligro/10 hover:text-peligro"
+                className="h-10 rounded-lg px-4 text-tenue hover:bg-peligro-fondo hover:text-peligro"
               >
                 Quitar PIN
               </button>
@@ -218,7 +219,7 @@ function useNuevoPin() {
 
 function MensajeError({ texto }: { texto: string | null }) {
   return texto ? (
-    <p role="alert" className="mt-3 rounded-lg bg-peligro/10 px-3 py-2 text-peligro">
+    <p role="alert" className="mt-3 rounded-lg bg-peligro-fondo px-3 py-2 text-peligro">
       {texto}
     </p>
   ) : null;
@@ -265,12 +266,12 @@ function CrearPin({ onCreado }: { onCreado: (codigo: string) => void }) {
 function PieDialogo({ onCancelar, listo, enviando, texto }: { onCancelar: () => void; listo: boolean; enviando: boolean; texto: string }) {
   return (
     <div className="mt-5 flex gap-2">
-      <button type="button" onClick={onCancelar} className="h-11 flex-1 rounded-lg text-tenue hover:bg-fondo hover:text-texto">
-        Cancelar <span className="text-xs opacity-60">Esc</span>
-      </button>
-      <button type="submit" disabled={!listo || enviando} className="h-11 flex-[2] rounded-lg bg-acento font-semibold text-sobre-acento disabled:bg-linea disabled:text-tenue">
-        {enviando ? "Guardando…" : texto} <span className="text-xs font-normal opacity-70">Enter</span>
-      </button>
+      <Boton variante="terciario" atajo="Esc" onClick={onCancelar} className="flex-1">
+        Cancelar
+      </Boton>
+      <Boton type="submit" variante="primario" atajo="Enter" disabled={!listo || enviando} className="flex-[2]">
+        {enviando ? "Guardando…" : texto}
+      </Boton>
     </div>
   );
 }

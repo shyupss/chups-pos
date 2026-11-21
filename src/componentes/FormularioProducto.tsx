@@ -1,3 +1,4 @@
+import Boton from "./Boton";
 import { useEffect, useRef, useState } from "react";
 import { api, textoError, type Categoria, type Producto, type Unidad } from "../api";
 import { aEntero, cantidad, cantidadEditable, parseCantidad, pesos, soloDigitos } from "../formato";
@@ -199,36 +200,24 @@ export default function FormularioProducto({
         </Campo>
       </div>
 
-      {error && <p className="rounded-lg bg-peligro/10 px-3 py-2 text-peligro">{error}</p>}
+      {error && <p className="rounded-lg bg-peligro-fondo px-3 py-2 text-peligro">{error}</p>}
 
       <div className="mt-auto flex flex-wrap gap-2">
-        <button
-          type="submit"
-          disabled={guardando}
-          className="h-11 flex-1 rounded-lg bg-acento font-semibold text-sobre-acento disabled:bg-linea disabled:text-tenue"
-        >
+        <Boton type="submit" variante="primario" disabled={guardando} className="flex-1">
           Guardar
-        </button>
-        <button type="button" onClick={onCerrar} className="h-11 rounded-lg px-4 text-tenue hover:bg-fondo hover:text-texto">
+        </Boton>
+        <Boton variante="terciario" onClick={onCerrar}>
           Cerrar
-        </button>
+        </Boton>
         {!nuevo && onVerMovimientos && (
-          <button
-            type="button"
-            onClick={() => onVerMovimientos(producto)}
-            className="h-10 w-full rounded-lg border border-linea hover:bg-fondo"
-          >
+          <Boton bloque onClick={() => onVerMovimientos(producto)}>
             Ver movimientos
-          </button>
+          </Boton>
         )}
         {!nuevo && (
-          <button
-            type="button"
-            onClick={() => void alternarActivo()}
-            className="h-10 w-full rounded-lg text-tenue hover:bg-fondo hover:text-texto"
-          >
+          <Boton variante="terciario" bloque onClick={() => void alternarActivo()}>
             {producto.activo ? "Desactivar (deja de aparecer en la caja)" : "Volver a activar"}
-          </button>
+          </Boton>
         )}
       </div>
     </form>

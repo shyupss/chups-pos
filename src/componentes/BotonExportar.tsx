@@ -1,3 +1,4 @@
+import Boton from "./Boton";
 import { FileSpreadsheet } from "lucide-react";
 import { useState } from "react";
 import { api, textoError, type Exportacion } from "../api";
@@ -26,22 +27,17 @@ export default function BotonExportar({
   };
   return (
     <span className="inline-flex flex-wrap items-center gap-2">
-      <button
-        type="button"
-        onClick={() => void exportar()}
-        disabled={estado?.trabajando}
-        className="flex h-9 items-center gap-2 rounded-lg border border-linea px-3 hover:bg-fondo disabled:opacity-60"
-      >
-        <FileSpreadsheet size={16} aria-hidden /> {estado?.trabajando ? "Exportando…" : etiqueta}
-      </button>
+      <Boton icono={FileSpreadsheet} onClick={() => void exportar()} disabled={estado?.trabajando}>
+        {estado?.trabajando ? "Exportando…" : etiqueta}
+      </Boton>
       {estado?.ruta && (
         <span className="flex items-center gap-2 text-sm text-exito">
           <span className="max-w-64 truncate" title={estado.ruta}>
             Guardado
           </span>
-          <button type="button" onClick={() => void api.abrirArchivo(estado.ruta!).catch(() => {})} className="font-medium underline">
+          <Boton variante="terciario" tamano="chico" onClick={() => void api.abrirArchivo(estado.ruta!).catch(() => {})}>
             Abrir
-          </button>
+          </Boton>
         </span>
       )}
       {estado?.error && <span className="text-sm text-peligro">{estado.error}</span>}

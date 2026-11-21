@@ -45,7 +45,7 @@ export default function Hoy({ activa, onVerBajoMinimo, onVerCliente, onVerProduc
     };
   }, [activa, cargar]);
 
-  if (error) return <p className="rounded-lg bg-peligro/10 px-3 py-2 text-peligro">{error}</p>;
+  if (error) return <p className="rounded-lg bg-peligro-fondo px-3 py-2 text-peligro">{error}</p>;
   if (!hoy) return <p className="text-tenue">Cargando…</p>;
 
   const semanaPasada = DIA_SEMANA.format(dia(hoy.fecha));

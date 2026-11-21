@@ -1,3 +1,4 @@
+import Boton from "../../componentes/Boton";
 import { FolderOpen, HardDriveDownload, RotateCcw, TriangleAlert } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { api, textoError, type EstadoRespaldos, type InfoRespaldo } from "../../api";
@@ -94,7 +95,7 @@ export default function Respaldos({ cfg }: { cfg: ConfigEditable }) {
       </div>
 
       {estado.error && (
-        <p className="flex items-start gap-2 rounded-lg bg-peligro/10 px-3 py-2 text-peligro">
+        <p className="flex items-start gap-2 rounded-lg bg-peligro-fondo px-3 py-2 text-peligro">
           <TriangleAlert size={18} className="mt-0.5 shrink-0" aria-hidden /> {estado.error}
         </p>
       )}
@@ -125,14 +126,14 @@ export default function Respaldos({ cfg }: { cfg: ConfigEditable }) {
               return r ? `Respaldo guardado en ${r.ruta}` : null;
             })
           }
-          className="h-10 rounded-lg border border-linea px-4 hover:bg-fondo"
+          className="h-10 rounded-lg border border-linea px-4 hover:bg-suave"
         >
           Respaldar en…
         </button>
         <button
           type="button"
           onClick={() => void api.abrirCarpetaRespaldos().catch((e) => setAviso({ texto: textoError(e), error: true }))}
-          className="flex h-10 items-center gap-2 rounded-lg border border-linea px-4 hover:bg-fondo"
+          className="flex h-10 items-center gap-2 rounded-lg border border-linea px-4 hover:bg-suave"
         >
           <FolderOpen size={16} aria-hidden /> Abrir carpeta
         </button>
@@ -147,7 +148,7 @@ export default function Respaldos({ cfg }: { cfg: ConfigEditable }) {
               return null;
             })
           }
-          className="flex h-10 items-center gap-2 rounded-lg border border-linea px-4 text-peligro hover:bg-peligro/10"
+          className="flex h-10 items-center gap-2 rounded-lg border border-linea px-4 text-peligro hover:bg-peligro-fondo"
         >
           <RotateCcw size={16} aria-hidden /> Restaurar un respaldo…
         </button>
@@ -243,11 +244,11 @@ function DialogoRestaurar({
         Todo lo que se hizo después de este respaldo se reemplaza. Antes se respalda la base actual (queda en la carpeta de
         respaldos como «antes-de-restaurar») y después la app se reinicia.
       </p>
-      {error && <p className="mt-3 rounded-lg bg-peligro/10 px-3 py-2 text-peligro">{error}</p>}
+      {error && <p className="mt-3 rounded-lg bg-peligro-fondo px-3 py-2 text-peligro">{error}</p>}
       <div className="mt-5 flex gap-2">
-        <button type="button" onClick={onCerrar} className="h-11 flex-1 rounded-lg text-tenue hover:bg-fondo hover:text-texto">
-          Cancelar <span className="text-xs opacity-60">Esc</span>
-        </button>
+        <Boton variante="terciario" atajo="Esc" onClick={onCerrar} className="flex-1">
+          Cancelar
+        </Boton>
         <button
           type="button"
           onClick={() => void restaurar()}

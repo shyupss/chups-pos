@@ -1,3 +1,4 @@
+import Boton from "../../componentes/Boton";
 import BotonExportar from "../../componentes/BotonExportar";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { ClipboardList, History, PackageMinus, Scale } from "lucide-react";
@@ -167,20 +168,16 @@ export default function Stock({ activa, onVerMovimientos, estadoInicial }: Props
             <option value="sin">Sin categoría</option>
           </select>
           <Opciones nombre="estado-stock" etiqueta="Estado del stock" opciones={ESTADOS} valor={estado} onCambiar={setEstado} />
-          <button
-            type="button"
-            onClick={() => setDialogo("conteo")}
-            className="flex h-10 items-center gap-2 rounded-lg bg-acento px-4 font-semibold text-sobre-acento"
-          >
-            <ClipboardList size={16} aria-hidden /> Contar inventario
-          </button>
+          <Boton icono={ClipboardList} onClick={() => setDialogo("conteo")}>
+            Contar inventario
+          </Boton>
           <BotonExportar que="stock" etiqueta="Excel" />
         </div>
 
         {aviso && (
           <p
             role="status"
-            className={`mt-3 rounded-lg px-3 py-2 ${aviso.error ? "bg-peligro/10 text-peligro" : "bg-exito-fondo text-exito"}`}
+            className={`mt-3 rounded-lg px-3 py-2 ${aviso.error ? "bg-peligro-fondo text-peligro" : "bg-exito-fondo text-exito"}`}
           >
             {aviso.texto}
           </p>
@@ -207,7 +204,7 @@ export default function Stock({ activa, onVerMovimientos, estadoInicial }: Props
                     aria-current={elegido?.id === p.id ? "true" : undefined}
                     style={{ position: "absolute", top: 0, left: 0, width: "100%", height: ALTO_FILA, transform: `translateY(${v.start}px)` }}
                     className={`grid ${COLUMNAS} items-center gap-2 border-b border-linea px-4 text-left ${
-                      elegido?.id === p.id ? "bg-linea/70" : "hover:bg-fondo"
+                      elegido?.id === p.id ? "bg-seleccion" : "hover:bg-suave"
                     }`}
                   >
                     <span className="truncate" title={p.nombre}>
@@ -239,14 +236,9 @@ export default function Stock({ activa, onVerMovimientos, estadoInicial }: Props
         <aside className="ml-4 w-80 shrink-0 tarjeta p-5">
           <div className="flex items-start justify-between gap-2">
             <h2 className="font-semibold">{elegido.nombre}</h2>
-            <button
-              type="button"
-              onClick={() => setElegido(null)}
-              aria-label="Cerrar"
-              className="h-7 rounded-lg px-2 text-tenue hover:bg-fondo hover:text-texto"
-            >
+            <Boton tamano="icono" onClick={() => setElegido(null)} aria-label="Cerrar">
               ×
-            </button>
+            </Boton>
           </div>
           {elegido.codigoBarras && <div className="text-xs text-tenue">{elegido.codigoBarras}</div>}
           <dl className="mt-4 space-y-1 tabular-nums">
@@ -318,9 +310,9 @@ function Par({ etiqueta, valor, fuerte }: { etiqueta: string; valor: string; fue
 
 function Accion({ onClick, icono, children }: { onClick: () => void; icono: ReactNode; children: ReactNode }) {
   return (
-    <button type="button" onClick={onClick} className="flex h-10 w-full items-center gap-2 rounded-lg border border-linea px-3 hover:bg-fondo">
+    <Boton bloque onClick={onClick}>
       <span className="text-tenue">{icono}</span>
       {children}
-    </button>
+    </Boton>
   );
 }

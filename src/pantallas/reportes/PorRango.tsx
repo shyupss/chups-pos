@@ -16,7 +16,7 @@ const dia = (texto: string) => new Date(`${texto}T12:00:00`);
 const boletas = (n: number) => (n === 1 ? "1 boleta" : `${n} boletas`);
 
 function Estado({ error }: { error: string | null }) {
-  return error ? <p className="rounded-lg bg-peligro/10 px-3 py-2 text-peligro">{error}</p> : <p className="text-tenue">Cargando…</p>;
+  return error ? <p className="rounded-lg bg-peligro-fondo px-3 py-2 text-peligro">{error}</p> : <p className="text-tenue">Cargando…</p>;
 }
 
 // --- Ventas ---------------------------------------------------------------------------------

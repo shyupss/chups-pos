@@ -48,7 +48,7 @@ function textoEstado(e: EstadoImpresora): string {
   }
 }
 
-const claseBoton = "h-10 shrink-0 rounded-lg border border-linea px-4 hover:bg-fondo disabled:opacity-50";
+const claseBoton = "h-10 shrink-0 rounded-lg border border-linea px-4 hover:bg-suave disabled:opacity-50";
 
 interface Resultado {
   error: boolean;
