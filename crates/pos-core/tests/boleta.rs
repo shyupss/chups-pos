@@ -226,7 +226,7 @@ async fn trabajos_de_impresion_segun_la_configuracion() {
     .unwrap();
 
     // Sin impresora elegida: error claro que lleva a Configuración.
-    let sin = impresion::trabajo_boleta(&pool, v.id, None).await;
+    let sin = impresion::trabajo_boleta(&pool, v.id, None, false).await;
     assert!(matches!(sin, Err(Error::Validacion(_))), "{sin:?}");
 
     let mut c = config::obtener(&pool).await.unwrap();
@@ -237,14 +237,16 @@ async fn trabajos_de_impresion_segun_la_configuracion() {
         .await
         .unwrap();
 
-    let t = impresion::trabajo_boleta(&pool, v.id, None).await.unwrap();
+    let t = impresion::trabajo_boleta(&pool, v.id, None, false)
+        .await
+        .unwrap();
     assert_eq!(
         (t.impresora.as_str(), t.documento.as_str()),
         ("Archivo (pruebas)", "boleta-000001")
     );
     let cortes = t.bytes.windows(4).filter(|w| *w == escpos::CORTE).count();
     assert_eq!(cortes, 2, "dos copias");
-    let una = impresion::trabajo_boleta(&pool, v.id, Some(1))
+    let una = impresion::trabajo_boleta(&pool, v.id, Some(1), false)
         .await
         .unwrap();
     assert_eq!(una.bytes.len() * 2, t.bytes.len());

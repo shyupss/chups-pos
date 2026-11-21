@@ -267,6 +267,103 @@ export interface TurnoBreve {
   abierto: boolean;
 }
 
+/** Estado que se busca en el historial ("conDevolucion" incluye las devueltas por completo). */
+export type EstadoFiltro = "pagada" | "fiada" | "anulada" | "conDevolucion";
+/** Estado de la insignia: "devuelta" es cuando se devolvió todo lo vendido. */
+export type EstadoVenta = "pagada" | "fiada" | "anulada" | "conDevolucion" | "devuelta";
+
+/** Filtros del historial. Fechas como días locales "aaaa-mm-dd" (hasta incluido). Con folio, el resto no se mira. */
+export interface FiltrosVentas {
+  desde: string | null;
+  hasta: string | null;
+  folio: number | null;
+  medioPago: MedioPago | null;
+  estado: EstadoFiltro | null;
+  turnoId: number | null;
+}
+
+export interface VentaListada {
+  id: number;
+  folio: number;
+  fechaHora: string;
+  productos: number;
+  total: number;
+  medioPago: MedioPago;
+  estado: EstadoVenta;
+}
+
+export interface PaginaVentas {
+  ventas: VentaListada[];
+  /** Solo en la primera página: cantidad y lo vendido (sin anuladas, descontando lo devuelto), en SQL. */
+  totales: { cantidad: number; total: number } | null;
+}
+
+export interface LineaDetalle {
+  /** Id de la línea vendida: el que se usa para devolver. */
+  id: number;
+  productoId: number;
+  nombre: string;
+  unidad: Unidad;
+  precioUnitario: number;
+  cantidadMil: number;
+  subtotal: number;
+  devueltoMil: number;
+}
+
+export interface Anulacion {
+  fecha: string;
+  motivo: string;
+  turnoId: number | null;
+  /** null en una venta fiada: no se devolvió dinero. */
+  medioReembolso: MedioPago | null;
+  reembolso: number | null;
+}
+
+export interface LineaDevuelta {
+  ventaItemId: number;
+  nombre: string;
+  unidad: Unidad;
+  precioUnitario: number;
+  cantidadMil: number;
+  monto: number;
+  vuelveAStock: boolean;
+}
+
+export interface Devolucion {
+  id: number;
+  fecha: string;
+  turnoId: number | null;
+  /** Lo devuelto al cliente, con el redondeo incluido. */
+  monto: number;
+  redondeo: number;
+  /** null en una venta fiada: bajó la deuda. */
+  medioReembolso: MedioPago | null;
+  motivo: string;
+  lineas: LineaDevuelta[];
+}
+
+export interface DetalleVenta {
+  id: number;
+  folio: number;
+  fechaHora: string;
+  subtotal: number;
+  descuento: number;
+  redondeo: number;
+  total: number;
+  medioPago: MedioPago;
+  montoRecibido: number | null;
+  vuelto: number | null;
+  cliente: string | null;
+  estado: EstadoVenta;
+  /** null en las ventas anteriores a los turnos. */
+  turnoId: number | null;
+  lineas: LineaDetalle[];
+  anulacion: Anulacion | null;
+  devoluciones: Devolucion[];
+  montoDevuelto: number;
+  tieneAbonos: boolean;
+}
+
 /** Etiqueta de balanza leída: producto por kg y los gramos de la etiqueta. */
 export interface LecturaBalanza {
   producto: Producto;
@@ -292,9 +389,9 @@ export const api = {
 
   listarImpresoras: () => invoke<Impresora[]>("listar_impresoras"),
   estadoImpresora: () => invoke<EstadoConfigurada>("estado_impresora"),
-  /** Sin `copias`, las de la configuración. */
-  imprimirBoleta: (ventaId: number, copias?: number) =>
-    invoke<void>("imprimir_boleta", { ventaId, copias: copias ?? null }),
+  /** Sin `copias`, las de la configuración. Las reimpresiones (`copia`) dicen "COPIA". */
+  imprimirBoleta: (ventaId: number, copias?: number, copia = false) =>
+    invoke<void>("imprimir_boleta", { ventaId, copias: copias ?? null, copia }),
   imprimirPrueba: () => invoke<void>("imprimir_prueba"),
   abrirCajon: () => invoke<void>("abrir_cajon"),
   carpetaImpresoraPruebas: () => invoke<string>("carpeta_impresora_pruebas"),
@@ -332,6 +429,11 @@ export const api = {
   eliminarCategoria: (id: number) => invoke<void>("eliminar_categoria", { id }),
 
   confirmarVenta: (venta: NuevaVenta) => invoke<VentaConfirmada>("confirmar_venta", { venta }),
+  listarVentas: (filtros: FiltrosVentas, limite: number, desplazamiento: number) =>
+    invoke<PaginaVentas>("listar_ventas", { filtros, limite, desplazamiento }),
+  detalleVenta: (id: number) => invoke<DetalleVenta>("detalle_venta", { id }),
+  /** Id de la venta con ese folio (escrito o escaneado de la boleta); null si no existe. */
+  ventaPorFolio: (folio: number) => invoke<number | null>("venta_por_folio", { folio }),
 
   obtenerConfig: () => invoke<Config>("obtener_config"),
   guardarConfig: (config: Config, pin: string | null) => invoke<Config>("guardar_config", { config, pin }),

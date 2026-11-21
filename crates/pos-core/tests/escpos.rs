@@ -92,6 +92,8 @@ fn boleta(con_logo: bool) -> Boleta {
         cliente: None,
         leyenda: true,
         codigo_barras: true,
+        copia: false,
+        anulada: None,
     }
 }
 

@@ -85,13 +85,16 @@ pub async fn trabajo_cierre(pool: &SqlitePool, turno_id: i64) -> Resultado<Traba
     trabajo(pool, &cierre::armar(pool, turno_id).await?).await
 }
 
-/// La boleta de una venta; sin `copias`, las de la configuración.
+/// La boleta de una venta; sin `copias`, las de la configuración. Con `copia` (una
+/// reimpresión) dice "COPIA".
 pub async fn trabajo_boleta(
     pool: &SqlitePool,
     venta_id: i64,
     copias: Option<u8>,
+    copia: bool,
 ) -> Resultado<Trabajo> {
-    let b = boleta::armar(pool, venta_id).await?;
+    let mut b = boleta::armar(pool, venta_id).await?;
+    b.copia = copia;
     let cfg = config::obtener(pool).await?;
     let copias = copias.unwrap_or(cfg.copias).clamp(1, 3);
     Ok(Trabajo {

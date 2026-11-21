@@ -61,6 +61,8 @@ fn boleta(lineas: usize) -> Boleta {
         cliente: None,
         leyenda: true,
         codigo_barras: true,
+        copia: false,
+        anulada: None,
     }
 }
 

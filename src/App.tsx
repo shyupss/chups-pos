@@ -6,6 +6,7 @@ import { ProveedorPin } from "./componentes/PedirPin";
 import Configuracion from "./pantallas/Configuracion";
 import Productos from "./pantallas/Productos";
 import Proximamente from "./pantallas/Proximamente";
+import Ventas from "./pantallas/Ventas";
 import { guardarPreferencia, leerPreferencia } from "./preferencias";
 import { SECCIONES, type Seccion } from "./secciones";
 
@@ -108,6 +109,7 @@ export default function App() {
           {seccion === "productos" && (
             <Productos codigoNuevo={codigoNuevo} onCodigoUsado={() => setCodigoNuevo(null)} />
           )}
+          {seccion === "ventas" && <Ventas activa onImpresion={refrescarImpresora} />}
           {seccion === "configuracion" && (
             <Configuracion
               modoBarra={modoBarra}

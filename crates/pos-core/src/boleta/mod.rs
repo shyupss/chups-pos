@@ -115,6 +115,10 @@ pub struct Boleta {
     pub leyenda: bool,
     /// Código de barras con el folio al pie (config boleta_codigo).
     pub codigo_barras: bool,
+    /// Reimpresión: dice "COPIA" bajo la fecha.
+    pub copia: bool,
+    /// Venta anulada: fecha local de la anulación. Dice "ANULADA" bajo la fecha.
+    pub anulada: Option<String>,
 }
 
 impl Boleta {
@@ -164,6 +168,8 @@ pub async fn armar(pool: &SqlitePool, venta_id: i64) -> Resultado<Boleta> {
         cliente: v.cliente,
         leyenda: cfg.boleta_leyenda,
         codigo_barras: cfg.boleta_codigo,
+        copia: false,
+        anulada: v.anulada_en.as_deref().map(formato::fecha_local),
     })
 }
 

@@ -198,6 +198,13 @@ pub fn renderizar(b: &Boleta, columnas: usize) -> Vec<LineaTexto> {
         Estilo::NEGRITA,
     );
     a.texto(&b.fecha, Centro, Estilo::NORMAL);
+    if let Some(cuando) = &b.anulada {
+        a.texto("ANULADA", Centro, Estilo::TITULO);
+        a.texto(&format!("Anulada el {cuando}"), Centro, Estilo::NORMAL);
+    }
+    if b.copia {
+        a.texto("*** COPIA ***", Centro, Estilo::NEGRITA);
+    }
     a.push(LineaTexto::Separador);
 
     // 3. Detalle.

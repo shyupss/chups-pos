@@ -103,7 +103,7 @@ export default function Caja({ activa, onCrearProducto, onEnEspera, onImpresion,
   const [pesando, setPesando] = useState<Pesando | null>(null);
   const [config, setConfig] = useState<Config | null>(null);
   const [ultimaVentaId, setUltimaVentaId] = useState<number | null>(null);
-  const { salida, iniciar, imprimir, guardarPdf, abrirCajon, cerrar, descartarSiTermino } =
+  const { salida, iniciar, imprimir, reintentar, guardarPdf, abrirCajon, cerrar, descartarSiTermino } =
     useSalidasVenta(onImpresion);
   const [dialogo, setDialogo] = useState<"poner-espera" | "lista-espera" | "movimiento" | "cerrar-caja" | null>(null);
   const [enEspera, setEnEspera] = useState<ResumenEspera[] | null>(null);
@@ -279,7 +279,7 @@ export default function Caja({ activa, onCrearProducto, onEnEspera, onImpresion,
     await refrescarEspera();
   };
 
-  /** Ctrl+P: reimprime la última boleta (una copia). */
+  /** Ctrl+P: reimprime la última boleta (una copia, que dice "COPIA"). */
   const reimprimirUltima = useCallback(() => {
     if (ultimaVentaId === null) {
       setAviso({ tipo: "error", texto: "Todavía no hay ventas para reimprimir" });
@@ -289,7 +289,7 @@ export default function Caja({ activa, onCrearProducto, onEnEspera, onImpresion,
     if (!mostrada || salida?.ventaId !== ultimaVentaId) {
       iniciar(ultimaVentaId, mostrada && aviso?.tipo === "venta" ? aviso.venta.folio : null);
     }
-    void imprimir(ultimaVentaId, 1);
+    void imprimir(ultimaVentaId, 1, true);
   }, [ultimaVentaId, aviso, salida, iniciar, imprimir]);
 
   // Atajos y "foco pegajoso": si el lector escribe mientras el foco está en otro lado,
@@ -406,8 +406,9 @@ export default function Caja({ activa, onCrearProducto, onEnEspera, onImpresion,
             salida={salida?.ventaId === aviso.venta.id ? salida : null}
             reimprimir={() => {
               if (salida?.ventaId !== aviso.venta.id) iniciar(aviso.venta.id, aviso.venta.folio);
-              void imprimir(aviso.venta.id, 1);
+              void imprimir(aviso.venta.id, 1, true);
             }}
+            reintentar={reintentar}
             guardarPdf={() => {
               if (salida?.ventaId !== aviso.venta.id) iniciar(aviso.venta.id, aviso.venta.folio);
               void guardarPdf(aviso.venta.id, false);
@@ -422,7 +423,8 @@ export default function Caja({ activa, onCrearProducto, onEnEspera, onImpresion,
               <AvisoVenta
                 venta={null}
                 salida={salida}
-                reimprimir={() => salida && void imprimir(salida.ventaId, 1)}
+                reimprimir={() => salida && void imprimir(salida.ventaId, 1, true)}
+                reintentar={reintentar}
                 guardarPdf={() => salida && void guardarPdf(salida.ventaId, false)}
                 abrirPdf={() => salida && void guardarPdf(salida.ventaId, true)}
                 cerrar={cerrar}
