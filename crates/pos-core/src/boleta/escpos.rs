@@ -120,7 +120,7 @@ fn wpc1252(c: char) -> Option<u8> {
 }
 
 /// Reemplazo para lo que la tabla no tiene: la letra sin tilde, una versión ASCII o "?".
-fn reemplazo(c: char) -> &'static str {
+pub(crate) fn reemplazo(c: char) -> &'static str {
     const SIN_TILDE: &str = "ĀAāaĂAăaĄAąaĆCćcČCčcĎDďdĒEēeĘEęeĚEěeĞGğgĪIīiİIıiŁLłlŃNńnŇNňnŌOōoŐOőoŘRřrŚSśsŞSşsŠSšsŢTţtŤTťtŪUūuŮUůuŰUűuŸYŹZźzŻZżzŽZžz";
     let mut letras = SIN_TILDE.char_indices();
     while let Some((_, con)) = letras.next() {

@@ -20,6 +20,7 @@ pub fn run() {
 
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_opener::init())
         .setup(move |app| {
             let carpeta = app.path().app_data_dir()?;
             std::fs::create_dir_all(&carpeta)?;
@@ -27,10 +28,19 @@ pub fn run() {
 
             let pool = tauri::async_runtime::block_on(pos_core::db::abrir(&ruta_db))?;
 
+            // Documentos del usuario; si Windows no la informa, la carpeta de datos.
+            let carpeta_pdf = app
+                .path()
+                .document_dir()
+                .unwrap_or_else(|_| carpeta.clone())
+                .join("CHUPS POS")
+                .join("Boletas");
+
             app.manage(EstadoApp {
                 pool,
                 ruta_db,
                 ms_inicio: inicio.elapsed().as_millis() as u64,
+                carpeta_pdf,
             });
             Ok(())
         })
@@ -56,6 +66,9 @@ pub fn run() {
             comandos::negocio::guardar_negocio,
             comandos::negocio::elegir_logo,
             comandos::negocio::quitar_logo,
+            comandos::boletas::guardar_boleta_pdf,
+            comandos::boletas::carpeta_pdf_predeterminada,
+            comandos::boletas::elegir_carpeta_pdf,
         ])
         .run(tauri::generate_context!())
         .expect("error al iniciar CHUPS POS");

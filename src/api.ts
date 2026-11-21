@@ -152,6 +152,13 @@ export const api = {
   elegirLogo: () => invoke<Negocio | null>("elegir_logo"),
   quitarLogo: () => invoke<Negocio>("quitar_logo"),
 
+  /** Guarda el PDF de la boleta y, si `abrir`, lo abre. Devuelve la ruta. */
+  guardarBoletaPdf: (ventaId: number, abrir: boolean) =>
+    invoke<string>("guardar_boleta_pdf", { ventaId, abrir }),
+  carpetaPdfPredeterminada: () => invoke<string>("carpeta_pdf_predeterminada"),
+  /** Diálogo de carpeta; null si el usuario cancela. */
+  elegirCarpetaPdf: () => invoke<string | null>("elegir_carpeta_pdf"),
+
   buscarProductoPorCodigo: (codigo: string) =>
     invoke<Producto | null>("buscar_producto_por_codigo", { codigo }),
   buscarProductos: (

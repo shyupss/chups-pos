@@ -6,6 +6,7 @@
 
 pub mod escpos;
 pub mod formato;
+pub mod pdf;
 pub mod texto;
 
 use sqlx::SqlitePool;

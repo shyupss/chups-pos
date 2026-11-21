@@ -20,3 +20,5 @@ sqlx.workspace = true
 tauri = { version = "2", features = [] }
 # Elegir el logo y la carpeta de los PDF con el diálogo nativo (se usa desde Rust).
 tauri-plugin-dialog = "2.8"
+# Abrir el PDF de la boleta con el visor del sistema.
+tauri-plugin-opener = "2.7"

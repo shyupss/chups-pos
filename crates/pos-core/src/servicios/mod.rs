@@ -4,6 +4,7 @@ pub mod cantidades;
 pub mod categorias;
 pub mod config;
 pub mod espera;
+pub mod impresion;
 pub mod negocio;
 pub mod productos;
 pub mod sistema;

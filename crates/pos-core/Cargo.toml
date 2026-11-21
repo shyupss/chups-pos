@@ -15,6 +15,14 @@ chrono = { version = "0.4", default-features = false, features = ["clock", "std"
 image = { version = "0.25", default-features = false, features = ["png", "jpeg"] }
 # El logo se guarda como PNG de 1 bit.
 png = "0.18"
+# PDF de la boleta. Sin features: nada de imágenes del crate image 0.24 ni js-sys.
+printpdf = { version = "0.7", default-features = false }
+# Medir el ancho del texto con la misma fuente que se incrusta (misma versión que usa printpdf).
+owned_ttf_parser = "0.19"
+# Barras CODE128 para el PDF (la impresora térmica las arma sola).
+barcoders = { version = "2", default-features = false }
+# printpdf deja las fuentes sin comprimir: se recomprime el PDF (misma versión y features que printpdf).
+lopdf = { version = "0.31", default-features = false, features = ["pom_parser"] }
 
 [dev-dependencies]
 tempfile = "3"
