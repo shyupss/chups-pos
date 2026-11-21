@@ -10,4 +10,6 @@ pub struct EstadoApp {
     pub ms_inicio: u64,
     /// Donde van los PDF si no se eligió otra carpeta: Documentos\CHUPS POS\Boletas.
     pub carpeta_pdf: PathBuf,
+    /// Impresoras del sistema y la virtual de pruebas (escribe en la carpeta de datos).
+    pub hardware: pos_hardware::Hardware,
 }

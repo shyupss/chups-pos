@@ -1,0 +1,21 @@
+[package]
+name = "pos-hardware"
+description = "Impresoras del sistema: listar, estado y envío de bytes RAW. Separado del modelo."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+serde.workspace = true
+thiserror.workspace = true
+
+# Cola de impresión de Windows (winspool): solo las features que se usan.
+[target.'cfg(windows)'.dependencies]
+windows = { version = "0.62", features = [
+    "Win32_Graphics_Printing",
+    "Win32_Graphics_Gdi",
+    "Win32_Security",
+] }
+
+[dev-dependencies]
+tempfile = "3"

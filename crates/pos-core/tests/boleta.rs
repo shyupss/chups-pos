@@ -193,3 +193,55 @@ async fn configuracion_tipada_con_valores_por_defecto() {
         TablaCaracteres::Cp858
     );
 }
+
+#[tokio::test]
+async fn trabajos_de_impresion_segun_la_configuracion() {
+    use pos_core::boleta::escpos;
+    use pos_core::servicios::impresion;
+
+    let pool = db::abrir_en_memoria().await.unwrap();
+    negocio_listo(&pool).await;
+    let p = comun::crear(&pool, "B", "Bebida", 1500, 10).await;
+    let v = ventas::confirmar(
+        &pool,
+        &NuevaVenta {
+            items: vec![ItemPedido {
+                producto_id: p.id,
+                cantidad_mil: 1000,
+            }],
+            medio_pago: MedioPago::Debito,
+            monto_recibido: None,
+            descuento: 0,
+            cliente_id: None,
+        },
+    )
+    .await
+    .unwrap();
+
+    // Sin impresora elegida: error claro que lleva a Configuración.
+    let sin = impresion::trabajo_boleta(&pool, v.id, None).await;
+    assert!(matches!(sin, Err(Error::Validacion(_))), "{sin:?}");
+
+    let mut c = config::obtener(&pool).await.unwrap();
+    c.impresora = Some("Archivo (pruebas)".into());
+    c.copias = 2;
+    c.cajon_pin = 5;
+    config::guardar(&pool, &c).await.unwrap();
+
+    let t = impresion::trabajo_boleta(&pool, v.id, None).await.unwrap();
+    assert_eq!(
+        (t.impresora.as_str(), t.documento.as_str()),
+        ("Archivo (pruebas)", "boleta-000001")
+    );
+    let cortes = t.bytes.windows(4).filter(|w| *w == escpos::CORTE).count();
+    assert_eq!(cortes, 2, "dos copias");
+    let una = impresion::trabajo_boleta(&pool, v.id, Some(1))
+        .await
+        .unwrap();
+    assert_eq!(una.bytes.len() * 2, t.bytes.len());
+
+    let cajon = impresion::trabajo_cajon(&pool).await.unwrap();
+    assert_eq!(cajon.bytes, escpos::pulso_cajon(5, 100));
+    let prueba = impresion::trabajo_prueba(&pool).await.unwrap();
+    assert!(prueba.bytes.starts_with(&escpos::INICIALIZAR));
+}

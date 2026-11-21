@@ -131,6 +131,27 @@ export interface VentaRecuperada {
   intercambioId: number | null;
 }
 
+/** Estado que informa el driver de la impresora. */
+export type EstadoImpresora =
+  | { tipo: "lista" }
+  | { tipo: "desconectada" }
+  | { tipo: "conError"; detalle: string }
+  | { tipo: "desconocido" };
+
+export interface Impresora {
+  nombre: string;
+  predeterminada: boolean;
+  estado: EstadoImpresora;
+  /** "Archivo (pruebas)": escribe los bytes en un .bin. */
+  esVirtual: boolean;
+}
+
+/** La impresora elegida en Configuración y su estado (null si no hay ninguna elegida). */
+export interface EstadoConfigurada {
+  impresora: string | null;
+  estado: EstadoImpresora | null;
+}
+
 export interface Negocio {
   nombre: string;
   rut: string | null;
@@ -158,6 +179,15 @@ export const api = {
   carpetaPdfPredeterminada: () => invoke<string>("carpeta_pdf_predeterminada"),
   /** Diálogo de carpeta; null si el usuario cancela. */
   elegirCarpetaPdf: () => invoke<string | null>("elegir_carpeta_pdf"),
+
+  listarImpresoras: () => invoke<Impresora[]>("listar_impresoras"),
+  estadoImpresora: () => invoke<EstadoConfigurada>("estado_impresora"),
+  /** Sin `copias`, las de la configuración. */
+  imprimirBoleta: (ventaId: number, copias?: number) =>
+    invoke<void>("imprimir_boleta", { ventaId, copias: copias ?? null }),
+  imprimirPrueba: () => invoke<void>("imprimir_prueba"),
+  abrirCajon: () => invoke<void>("abrir_cajon"),
+  carpetaImpresoraPruebas: () => invoke<string>("carpeta_impresora_pruebas"),
 
   buscarProductoPorCodigo: (codigo: string) =>
     invoke<Producto | null>("buscar_producto_por_codigo", { codigo }),
