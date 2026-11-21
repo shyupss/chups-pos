@@ -45,3 +45,10 @@ pub async fn crear_kg(
     d.stock_inicial_mil = stock_mil;
     productos::crear(pool, &d).await.unwrap()
 }
+
+/// Base en memoria con la caja abierta (monto inicial $0), lista para vender.
+pub async fn con_caja() -> SqlitePool {
+    let pool = pos_core::db::abrir_en_memoria().await.unwrap();
+    pos_core::servicios::turnos::abrir(&pool, 0).await.unwrap();
+    pool
+}

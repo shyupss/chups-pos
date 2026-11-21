@@ -46,7 +46,7 @@ where
         .map_err(|e| e.to_string())
 }
 
-async fn enviar(estado: &EstadoApp, trabajo: srv::Trabajo) -> ResultadoComando<()> {
+pub(crate) async fn enviar(estado: &EstadoApp, trabajo: srv::Trabajo) -> ResultadoComando<()> {
     con_hardware(estado, move |hw| {
         hw.enviar(&trabajo.impresora, &trabajo.documento, &trabajo.bytes)
     })
@@ -91,14 +91,16 @@ pub async fn estado_impresora(estado: State<'_, EstadoApp>) -> ResultadoComando<
     })
 }
 
-/// Imprime la boleta de una venta. Sin `copias`, las de la configuración.
+/// Imprime la boleta de una venta. Sin `copias`, las de la configuración. Las reimpresiones
+/// (`copia`) dicen "COPIA".
 #[tauri::command]
 pub async fn imprimir_boleta(
     estado: State<'_, EstadoApp>,
     venta_id: i64,
     copias: Option<u8>,
+    copia: Option<bool>,
 ) -> ResultadoComando<()> {
-    let trabajo = srv::trabajo_boleta(&estado.pool, venta_id, copias)
+    let trabajo = srv::trabajo_boleta(&estado.pool, venta_id, copias, copia.unwrap_or(false))
         .await
         .map_err(a_texto)?;
     enviar(&estado, trabajo).await

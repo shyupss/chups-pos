@@ -1,8 +1,9 @@
 mod comun;
 
 use pos_core::servicios::config;
+use pos_core::servicios::seguridad::ControlPin;
 use pos_core::servicios::ventas::{self, ItemPedido, MedioPago, NuevaVenta, VentaConfirmada};
-use pos_core::{db, Error};
+use pos_core::Error;
 use std::sync::atomic::{AtomicU32, Ordering};
 
 use sqlx::SqlitePool;
@@ -40,7 +41,7 @@ async fn redondeo_guardado(pool: &SqlitePool, venta_id: i64) -> (i64, i64, i64) 
 
 #[tokio::test]
 async fn efectivo_se_redondea_a_la_decena() {
-    let pool = db::abrir_en_memoria().await.unwrap();
+    let pool = comun::con_caja().await;
     assert!(
         config::obtener(&pool).await.unwrap().redondeo_efectivo,
         "activo por defecto"
@@ -69,7 +70,7 @@ async fn efectivo_se_redondea_a_la_decena() {
 
 #[tokio::test]
 async fn el_vuelto_se_calcula_sobre_el_total_redondeado() {
-    let pool = db::abrir_en_memoria().await.unwrap();
+    let pool = comun::con_caja().await;
     let p = comun::crear(&pool, "1", "Queque", 1226, 0).await;
     let v = ventas::confirmar(
         &pool,
@@ -108,7 +109,7 @@ async fn el_vuelto_se_calcula_sobre_el_total_redondeado() {
 
 #[tokio::test]
 async fn tarjetas_y_transferencia_no_se_redondean() {
-    let pool = db::abrir_en_memoria().await.unwrap();
+    let pool = comun::con_caja().await;
     for medio in [
         MedioPago::Debito,
         MedioPago::Credito,
@@ -121,7 +122,7 @@ async fn tarjetas_y_transferencia_no_se_redondean() {
 
 #[tokio::test]
 async fn con_redondeo_desactivado_no_se_redondea() {
-    let pool = db::abrir_en_memoria().await.unwrap();
+    let pool = comun::con_caja().await;
     cambiar_redondeo(&pool, false).await.unwrap();
     assert!(!config::obtener(&pool).await.unwrap().redondeo_efectivo);
 
@@ -142,7 +143,7 @@ async fn con_redondeo_desactivado_no_se_redondea() {
 
 #[tokio::test]
 async fn venta_por_peso_en_efectivo_se_redondea() {
-    let pool = db::abrir_en_memoria().await.unwrap();
+    let pool = comun::con_caja().await;
     let queso = comun::crear_kg(&pool, "Q", "Queso", 2300, 10_000).await;
     let v = ventas::confirmar(
         &pool,
@@ -169,5 +170,7 @@ async fn venta_por_peso_en_efectivo_se_redondea() {
 async fn cambiar_redondeo(pool: &SqlitePool, activo: bool) -> Result<(), Error> {
     let mut c = config::obtener(pool).await?;
     c.redondeo_efectivo = activo;
-    config::guardar(pool, &c).await.map(|_| ())
+    config::guardar(pool, &ControlPin::new(), None, &c)
+        .await
+        .map(|_| ())
 }

@@ -54,6 +54,8 @@ fn boleta(
         cliente: None,
         leyenda: true,
         codigo_barras: true,
+        copia: false,
+        anulada: None,
     }
 }
 
@@ -170,4 +172,17 @@ fn fiado_sin_leyenda_ni_codigo() {
     b.descuento = 180;
     b.total = b.subtotal - b.descuento;
     comparar("fiado", &b);
+}
+
+#[test]
+fn reimpresion_de_una_venta_anulada() {
+    let mut b = boleta(
+        vec![linea("Leche entera Colun 1 L", Unidad::Unidad, 3000, 1190)],
+        MedioPago::Debito,
+        None,
+        0,
+    );
+    b.copia = true;
+    b.anulada = Some("21-11-2026 15:40".into());
+    comparar("copia-anulada", &b);
 }

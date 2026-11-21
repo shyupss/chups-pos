@@ -47,13 +47,7 @@ export const SECCIONES: DatosSeccion[] = [
     Icono: NotebookPen,
     pendiente: "Clientes, deudas y registro de pagos parciales. Llega en la fase 5.",
   },
-  {
-    id: "ventas",
-    nombre: "Ventas",
-    tecla: "F5",
-    Icono: Receipt,
-    pendiente: "Historial de boletas, reimpresión, anulación y devoluciones. Llega en la fase 4.",
-  },
+  { id: "ventas", nombre: "Ventas", tecla: "F5", Icono: Receipt },
   {
     id: "reportes",
     nombre: "Reportes",

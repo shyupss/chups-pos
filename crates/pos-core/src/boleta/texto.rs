@@ -2,7 +2,7 @@
 //! o 48 columnas (80 mm). La térmica ([`super::escpos`]) y el PDF las dibujan tal cual.
 
 use super::formato::{detalle, folio, pesos, pesos_con_signo};
-use super::Boleta;
+use super::{Boleta, Encabezado};
 use crate::servicios::ventas::MedioPago;
 
 pub const COLUMNAS_58MM: usize = 32;
@@ -108,13 +108,29 @@ pub fn partir(texto: &str, ancho: usize) -> Vec<String> {
     lineas
 }
 
-struct Armado {
+/// Junta las líneas de un documento cuidando que nada pase del ancho del papel.
+pub(crate) struct Armado {
     lineas: Vec<LineaTexto>,
     columnas: usize,
 }
 
 impl Armado {
-    fn texto(&mut self, texto: &str, alineacion: Alineacion, estilo: Estilo) {
+    pub(crate) fn nuevo(columnas: usize) -> Self {
+        Armado {
+            lineas: Vec::new(),
+            columnas,
+        }
+    }
+
+    pub(crate) fn columnas(&self) -> usize {
+        self.columnas
+    }
+
+    pub(crate) fn lineas(self) -> Vec<LineaTexto> {
+        self.lineas
+    }
+
+    pub(crate) fn texto(&mut self, texto: &str, alineacion: Alineacion, estilo: Estilo) {
         let ancho = if estilo.doble_ancho {
             self.columnas / 2
         } else {
@@ -130,7 +146,7 @@ impl Armado {
     }
 
     /// Texto y monto en la misma línea; si no caben juntos, el texto arriba y el monto abajo.
-    fn par(&mut self, izquierda: &str, derecha: &str, estilo: Estilo) {
+    pub(crate) fn par(&mut self, izquierda: &str, derecha: &str, estilo: Estilo) {
         if largo(izquierda) + 1 + largo(derecha) <= self.columnas {
             self.lineas.push(LineaTexto::Columnas {
                 izquierda: izquierda.to_owned(),
@@ -143,33 +159,36 @@ impl Armado {
         }
     }
 
-    fn push(&mut self, linea: LineaTexto) {
+    pub(crate) fn push(&mut self, linea: LineaTexto) {
         self.lineas.push(linea);
+    }
+}
+
+/// Logo, nombre, RUT, dirección y teléfono del negocio: el comienzo de todo documento.
+pub(crate) fn encabezado(a: &mut Armado, n: &Encabezado) {
+    use Alineacion::Centro;
+    if n.logo.is_some() {
+        a.push(LineaTexto::Logo);
+    }
+    a.texto(&n.nombre, Centro, Estilo::TITULO);
+    if let Some(rut) = &n.rut {
+        a.texto(&format!("RUT {rut}"), Centro, Estilo::NORMAL);
+    }
+    if let Some(direccion) = &n.direccion {
+        a.texto(direccion, Centro, Estilo::NORMAL);
+    }
+    if let Some(telefono) = &n.telefono {
+        a.texto(&format!("Tel. {telefono}"), Centro, Estilo::NORMAL);
     }
 }
 
 /// Arma las líneas de la boleta en el orden en que se imprimen.
 pub fn renderizar(b: &Boleta, columnas: usize) -> Vec<LineaTexto> {
     use Alineacion::{Centro, Izquierda};
-    let mut a = Armado {
-        lineas: Vec::new(),
-        columnas,
-    };
+    let mut a = Armado::nuevo(columnas);
 
     // 1. Negocio.
-    if b.negocio.logo.is_some() {
-        a.push(LineaTexto::Logo);
-    }
-    a.texto(&b.negocio.nombre, Centro, Estilo::TITULO);
-    if let Some(rut) = &b.negocio.rut {
-        a.texto(&format!("RUT {rut}"), Centro, Estilo::NORMAL);
-    }
-    if let Some(direccion) = &b.negocio.direccion {
-        a.texto(direccion, Centro, Estilo::NORMAL);
-    }
-    if let Some(telefono) = &b.negocio.telefono {
-        a.texto(&format!("Tel. {telefono}"), Centro, Estilo::NORMAL);
-    }
+    encabezado(&mut a, &b.negocio);
 
     // 2. Folio y fecha.
     a.push(LineaTexto::Separador);
@@ -179,6 +198,13 @@ pub fn renderizar(b: &Boleta, columnas: usize) -> Vec<LineaTexto> {
         Estilo::NEGRITA,
     );
     a.texto(&b.fecha, Centro, Estilo::NORMAL);
+    if let Some(cuando) = &b.anulada {
+        a.texto("ANULADA", Centro, Estilo::TITULO);
+        a.texto(&format!("Anulada el {cuando}"), Centro, Estilo::NORMAL);
+    }
+    if b.copia {
+        a.texto("*** COPIA ***", Centro, Estilo::NEGRITA);
+    }
     a.push(LineaTexto::Separador);
 
     // 3. Detalle.

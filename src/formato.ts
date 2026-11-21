@@ -1,4 +1,4 @@
-import type { Unidad } from "./api";
+import type { MedioPago, Unidad } from "./api";
 
 const clp = new Intl.NumberFormat("es-CL", {
   style: "currency",
@@ -91,3 +91,36 @@ const reloj = new Intl.DateTimeFormat("es-CL", { hour: "2-digit", minute: "2-dig
 
 /** Fecha ISO en UTC (como la guarda la base) -> "14:05" en la hora local del PC. */
 export const hora = (iso: string) => reloj.format(new Date(iso));
+
+/** Fecha local "aaaa-mm-dd" (la de los filtros por día). */
+export function diaLocal(fecha: Date): string {
+  const dos = (n: number) => String(n).padStart(2, "0");
+  return `${fecha.getFullYear()}-${dos(fecha.getMonth() + 1)}-${dos(fecha.getDate())}`;
+}
+
+/** "21-11-2026 14:05" en la hora local, igual que en la boleta. */
+export function fechaHora(iso: string): string {
+  const [a, m, d] = diaLocal(new Date(iso)).split("-");
+  return `${d}-${m}-${a} ${hora(iso)}`;
+}
+
+/** "09:12" si fue hoy; "20-11 09:12" si fue otro día. */
+export function horaODia(iso: string): string {
+  const dia = diaLocal(new Date(iso));
+  if (dia === diaLocal(new Date())) return hora(iso);
+  const [, m, d] = dia.split("-");
+  return `${d}-${m} ${hora(iso)}`;
+}
+
+/** +$100 / −$100 / $0: diferencias y ajustes con su signo. */
+export const pesosConSigno = (monto: number) =>
+  monto > 0 ? `+${pesos(monto)}` : monto < 0 ? `−${pesos(-monto)}` : pesos(0);
+
+/** Nombre para mostrar de un medio de pago. */
+export const NOMBRE_MEDIO: Record<MedioPago, string> = {
+  efectivo: "Efectivo",
+  debito: "Débito",
+  credito: "Crédito",
+  transferencia: "Transferencia",
+  fiado: "Fiado",
+};

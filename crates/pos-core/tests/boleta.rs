@@ -4,12 +4,15 @@ use pos_core::boleta;
 use pos_core::repositorios::productos::Unidad;
 use pos_core::servicios::config::{self, Config, FormatoBalanza, TablaCaracteres};
 use pos_core::servicios::negocio::{self, DatosNegocio};
+use pos_core::servicios::seguridad::ControlPin;
 use pos_core::servicios::ventas::{self, ItemPedido, MedioPago, NuevaVenta};
-use pos_core::{db, Error};
+use pos_core::Error;
 
 async fn negocio_listo(pool: &sqlx::SqlitePool) {
     negocio::guardar(
         pool,
+        &ControlPin::new(),
+        None,
         &DatosNegocio {
             nombre: "Almacén Don Pepe".into(),
             rut: Some("12345678-5".into()),
@@ -24,7 +27,7 @@ async fn negocio_listo(pool: &sqlx::SqlitePool) {
 
 #[tokio::test]
 async fn arma_la_boleta_desde_la_venta_guardada() {
-    let pool = db::abrir_en_memoria().await.unwrap();
+    let pool = comun::con_caja().await;
     negocio_listo(&pool).await;
     let pan = comun::crear_kg(&pool, "P", "Pan corriente", 2300, 10_000).await;
     let bebida = comun::crear(&pool, "B", "Bebida", 1500, 10).await;
@@ -84,7 +87,9 @@ async fn arma_la_boleta_desde_la_venta_guardada() {
     let mut c = config::obtener(&pool).await.unwrap();
     c.boleta_leyenda = false;
     c.boleta_codigo = false;
-    config::guardar(&pool, &c).await.unwrap();
+    config::guardar(&pool, &ControlPin::new(), None, &c)
+        .await
+        .unwrap();
     let b = boleta::armar(&pool, v.id).await.unwrap();
     assert!(!b.leyenda && !b.codigo_barras);
 
@@ -93,7 +98,7 @@ async fn arma_la_boleta_desde_la_venta_guardada() {
 
 #[tokio::test]
 async fn sin_nombre_de_negocio_no_se_arma() {
-    let pool = db::abrir_en_memoria().await.unwrap();
+    let pool = comun::con_caja().await;
     let p = comun::crear(&pool, "B", "Bebida", 1500, 10).await;
     let v = ventas::confirmar(
         &pool,
@@ -123,7 +128,7 @@ async fn sin_nombre_de_negocio_no_se_arma() {
 
 #[tokio::test]
 async fn configuracion_tipada_con_valores_por_defecto() {
-    let pool = db::abrir_en_memoria().await.unwrap();
+    let pool = comun::con_caja().await;
     let c = config::obtener(&pool).await.unwrap();
     assert_eq!(c, Config::default());
     assert_eq!(c.columnas(), 48);
@@ -137,7 +142,9 @@ async fn configuracion_tipada_con_valores_por_defecto() {
     nueva.cajon_pin = 5;
     nueva.balanza_prefijos = " 20 - 22 , 25 ".into();
     nueva.balanza_formato = FormatoBalanza::Precio;
-    let guardada = config::guardar(&pool, &nueva).await.unwrap();
+    let guardada = config::guardar(&pool, &ControlPin::new(), None, &nueva)
+        .await
+        .unwrap();
     assert_eq!(guardada.impresora.as_deref(), Some("POS-80"));
     assert_eq!(guardada.columnas(), 32);
     assert_eq!(guardada.balanza_prefijos, "20-22,25");
@@ -176,7 +183,7 @@ async fn configuracion_tipada_con_valores_por_defecto() {
     ] {
         assert!(
             matches!(
-                config::guardar(&pool, &malo).await,
+                config::guardar(&pool, &ControlPin::new(), None, &malo).await,
                 Err(Error::Validacion(_))
             ),
             "{malo:?}"
@@ -199,7 +206,7 @@ async fn trabajos_de_impresion_segun_la_configuracion() {
     use pos_core::boleta::escpos;
     use pos_core::servicios::impresion;
 
-    let pool = db::abrir_en_memoria().await.unwrap();
+    let pool = comun::con_caja().await;
     negocio_listo(&pool).await;
     let p = comun::crear(&pool, "B", "Bebida", 1500, 10).await;
     let v = ventas::confirmar(
@@ -219,23 +226,27 @@ async fn trabajos_de_impresion_segun_la_configuracion() {
     .unwrap();
 
     // Sin impresora elegida: error claro que lleva a Configuración.
-    let sin = impresion::trabajo_boleta(&pool, v.id, None).await;
+    let sin = impresion::trabajo_boleta(&pool, v.id, None, false).await;
     assert!(matches!(sin, Err(Error::Validacion(_))), "{sin:?}");
 
     let mut c = config::obtener(&pool).await.unwrap();
     c.impresora = Some("Archivo (pruebas)".into());
     c.copias = 2;
     c.cajon_pin = 5;
-    config::guardar(&pool, &c).await.unwrap();
+    config::guardar(&pool, &ControlPin::new(), None, &c)
+        .await
+        .unwrap();
 
-    let t = impresion::trabajo_boleta(&pool, v.id, None).await.unwrap();
+    let t = impresion::trabajo_boleta(&pool, v.id, None, false)
+        .await
+        .unwrap();
     assert_eq!(
         (t.impresora.as_str(), t.documento.as_str()),
         ("Archivo (pruebas)", "boleta-000001")
     );
     let cortes = t.bytes.windows(4).filter(|w| *w == escpos::CORTE).count();
     assert_eq!(cortes, 2, "dos copias");
-    let una = impresion::trabajo_boleta(&pool, v.id, Some(1))
+    let una = impresion::trabajo_boleta(&pool, v.id, Some(1), false)
         .await
         .unwrap();
     assert_eq!(una.bytes.len() * 2, t.bytes.len());

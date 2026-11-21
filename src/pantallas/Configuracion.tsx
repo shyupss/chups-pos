@@ -4,9 +4,11 @@ import { api, type EstadoSistema } from "../api";
 import { Bloque, Fila } from "../componentes/Ajustes";
 import type { ModoBarra } from "../componentes/BarraLateral";
 import Opciones, { type Opcion } from "../componentes/Opciones";
+import { useConPinRecordado } from "../componentes/PedirPin";
 import EscanerConfig from "./configuracion/Escaner";
 import ImpresoraConfig from "./configuracion/Impresora";
 import NegocioConfig from "./configuracion/Negocio";
+import SeguridadConfig from "./configuracion/Seguridad";
 import { useConfig, type ConfigEditable } from "../hooks/useConfig";
 import { useTema, type Tema } from "../hooks/useTema";
 
@@ -36,7 +38,9 @@ const SI_NO: Opcion<"si" | "no">[] = [
 
 export default function Configuracion({ modoBarra, onModoBarra, onCambioImpresora }: Props) {
   const [tema, setTema] = useTema();
-  const cfg = useConfig();
+  // El PIN se pide en el primer cambio y se recuerda mientras esta pantalla está abierta.
+  const { conPin, olvidar } = useConPinRecordado();
+  const cfg = useConfig(conPin);
 
   return (
     <div className="h-full overflow-auto p-6">
@@ -70,14 +74,14 @@ export default function Configuracion({ modoBarra, onModoBarra, onCambioImpresor
         </Bloque>
 
         <Bloque titulo="Negocio">
-          <NegocioConfig />
+          <NegocioConfig conPin={conPin} />
         </Bloque>
         <Bloque titulo="Impresora y escáner">
           <ImpresoraConfig cfg={cfg} onCambioImpresora={onCambioImpresora} />
           <EscanerConfig cfg={cfg} />
         </Bloque>
-        <Bloque titulo="Seguridad" fase={4}>
-          PIN de administrador para las acciones sensibles.
+        <Bloque titulo="Seguridad">
+          <SeguridadConfig conPin={conPin} onPinCambiado={olvidar} />
         </Bloque>
         <Bloque titulo="Datos y respaldos" fase={6}>
           Importar y exportar Excel, y respaldos de la base de datos.

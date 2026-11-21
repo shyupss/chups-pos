@@ -1,0 +1,34 @@
+        A l m a c é n   D o n   P e p e
+                RUT 12.345.678-5
+          Av. Siempre Viva 742, Talca
+------------------------------------------------
+          C I E R R E   D E   C A J A
+                Turno N° 000003
+------------------------------------------------
+Apertura                        20-11-2026 22:40
+Cierre                          21-11-2026 06:10
+------------------------------------------------
+VENTAS
+Efectivo (2)                              $4.220
+Débito (0)                                    $0
+Crédito (0)                                   $0
+Transferencia (0)                             $0
+Fiado (0)                                     $0
+Total (2)                                 $4.220
+Redondeo del efectivo                        -$4
+------------------------------------------------
+EFECTIVO
+Monto inicial                                 $0
+Ventas en efectivo                        $4.220
+Ingresos                                      $0
+Retiros                                       $0
+Reembolsos                                    $0
+Esperado                                  $4.220
+Contado                                   $4.000
+DIFERENCIA                                 -$220
+                  FALTAN $220
+------------------------------------------------
+
+
+        ________________________________
+                     Firma

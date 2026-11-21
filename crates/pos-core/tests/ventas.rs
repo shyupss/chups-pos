@@ -1,7 +1,7 @@
 mod comun;
 
 use pos_core::servicios::ventas::{self, ItemPedido, MedioPago, NuevaVenta};
-use pos_core::{db, Error};
+use pos_core::Error;
 
 fn venta(items: &[(i64, i64)], medio: MedioPago, recibido: Option<i64>) -> NuevaVenta {
     NuevaVenta {
@@ -21,7 +21,7 @@ fn venta(items: &[(i64, i64)], medio: MedioPago, recibido: Option<i64>) -> Nueva
 
 #[tokio::test]
 async fn venta_en_efectivo_calcula_vuelto_y_descuenta_stock() {
-    let pool = db::abrir_en_memoria().await.unwrap();
+    let pool = comun::con_caja().await;
     let pan = comun::crear(&pool, "1", "Pan", 150, 100).await;
     let leche = comun::crear(&pool, "2", "Leche", 1190, 10).await;
 
@@ -58,7 +58,7 @@ async fn venta_en_efectivo_calcula_vuelto_y_descuenta_stock() {
 
 #[tokio::test]
 async fn folios_son_correlativos_y_tarjeta_no_da_vuelto() {
-    let pool = db::abrir_en_memoria().await.unwrap();
+    let pool = comun::con_caja().await;
     let p = comun::crear(&pool, "1", "Bebida", 1000, 0).await;
 
     let a = ventas::confirmar(&pool, &venta(&[(p.id, 1)], MedioPago::Debito, None))
@@ -79,7 +79,7 @@ async fn folios_son_correlativos_y_tarjeta_no_da_vuelto() {
 
 #[tokio::test]
 async fn usa_el_precio_de_la_base_no_el_de_la_interfaz() {
-    let pool = db::abrir_en_memoria().await.unwrap();
+    let pool = comun::con_caja().await;
     let p = comun::crear(&pool, "1", "Queso", 3000, 5).await;
     let mut d = comun::datos(Some("1"), "Queso", 3500, 0);
     d.stock_minimo_mil = 0;
@@ -95,7 +95,7 @@ async fn usa_el_precio_de_la_base_no_el_de_la_interfaz() {
 
 #[tokio::test]
 async fn rechazos_no_dejan_nada_guardado() {
-    let pool = db::abrir_en_memoria().await.unwrap();
+    let pool = comun::con_caja().await;
     let p = comun::crear(&pool, "1", "Café", 4990, 3).await;
 
     let casos = [
@@ -131,7 +131,7 @@ async fn rechazos_no_dejan_nada_guardado() {
 
 #[tokio::test]
 async fn producto_desactivado_no_se_puede_vender() {
-    let pool = db::abrir_en_memoria().await.unwrap();
+    let pool = comun::con_caja().await;
     let p = comun::crear(&pool, "1", "Viejo", 100, 1).await;
     pos_core::servicios::productos::cambiar_activo(&pool, p.id, false)
         .await

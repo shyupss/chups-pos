@@ -1,7 +1,7 @@
 use pos_core::servicios::config::{self as srv, Config};
 use tauri::State;
 
-use super::{a_texto, ResultadoComando};
+use super::{a_texto, ResultadoComando, ResultadoProtegido};
 use crate::estado::EstadoApp;
 
 /// Toda la configuración tipada (caja, boleta, impresora, cajón y balanza).
@@ -11,10 +11,12 @@ pub async fn obtener_config(estado: State<'_, EstadoApp>) -> ResultadoComando<Co
 }
 
 /// Valida y guarda la configuración completa; devuelve la que quedó.
+/// Pide el PIN si "cambiar configuración" está protegida.
 #[tauri::command]
 pub async fn guardar_config(
     estado: State<'_, EstadoApp>,
     config: Config,
-) -> ResultadoComando<Config> {
-    srv::guardar(&estado.pool, &config).await.map_err(a_texto)
+    pin: Option<String>,
+) -> ResultadoProtegido<Config> {
+    Ok(srv::guardar(&estado.pool, &estado.pin, pin.as_deref(), &config).await?)
 }

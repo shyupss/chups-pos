@@ -1,5 +1,6 @@
 import { PanelLeftClose, PanelLeftOpen, Printer } from "lucide-react";
-import type { EstadoConfigurada } from "../api";
+import type { EstadoConfigurada, Turno } from "../api";
+import { fechaHora, horaODia } from "../formato";
 import { SECCIONES, type DatosSeccion, type Seccion } from "../secciones";
 
 /** "auto": colapsada en la Caja y expandida en las demás secciones. */
@@ -15,6 +16,8 @@ interface Props {
   insignias?: Partial<Record<Seccion, Insignia>>;
   /** Estado de la impresora elegida; null mientras se lee. */
   impresora?: EstadoConfigurada | null;
+  /** Turno abierto; null si la caja está cerrada y undefined mientras se lee. */
+  turno?: Turno | null;
 }
 
 interface Insignia {
@@ -23,7 +26,15 @@ interface Insignia {
   descripcion: string;
 }
 
-export default function BarraLateral({ actual, expandida, onIr, onAlternar, insignias = {}, impresora = null }: Props) {
+export default function BarraLateral({
+  actual,
+  expandida,
+  onIr,
+  onAlternar,
+  insignias = {},
+  impresora = null,
+  turno,
+}: Props) {
   const item = (s: DatosSeccion) => (
     <li key={s.id}>
       <Item seccion={s} activa={s.id === actual} expandida={expandida} insignia={insignias[s.id]} onIr={onIr} />
@@ -48,16 +59,7 @@ export default function BarraLateral({ actual, expandida, onIr, onAlternar, insi
       </nav>
 
       <div className="flex shrink-0 flex-col gap-1 border-t border-linea p-2">
-        {/* Fijo por ahora: se conecta con los turnos de caja en la fase 4. */}
-        <div
-          className={`flex h-8 items-center gap-2 rounded-lg bg-exito-fondo text-xs font-medium text-exito ${
-            expandida ? "px-3" : "justify-center"
-          }`}
-          title="Caja abierta"
-        >
-          <span className="size-2 shrink-0 rounded-full bg-exito" aria-hidden />
-          <span className={expandida ? "truncate" : "sr-only"}>Caja abierta</span>
-        </div>
+        {turno !== undefined && <IndicadorCaja turno={turno} expandida={expandida} onIr={onIr} />}
         {impresora && <IndicadorImpresora impresora={impresora} expandida={expandida} onIr={onIr} />}
       </div>
       <div className={`flex shrink-0 items-center gap-2 px-2 pb-2 ${expandida ? "justify-end" : "flex-col"}`}>
@@ -119,6 +121,33 @@ function Item({
   );
 }
 
+/** "Caja abierta desde 09:12" o "Caja cerrada", con el turno real. Lleva a la Caja. */
+function IndicadorCaja({
+  turno,
+  expandida,
+  onIr,
+}: {
+  turno: Turno | null;
+  expandida: boolean;
+  onIr: (seccion: Seccion) => void;
+}) {
+  const texto = turno ? `Caja abierta desde ${horaODia(turno.abiertoEn)}` : "Caja cerrada";
+  const detalle = turno ? `Caja abierta desde el ${fechaHora(turno.abiertoEn)} (turno N° ${turno.id})` : "Caja cerrada: ábrela en la Caja";
+  return (
+    <button
+      type="button"
+      onClick={() => onIr("caja")}
+      title={detalle}
+      className={`relative flex h-8 items-center gap-2 rounded-lg text-xs font-medium ${
+        turno ? "bg-exito-fondo text-exito" : "bg-fondo text-tenue"
+      } ${expandida ? "px-3" : "justify-center"}`}
+    >
+      <span className={`size-2 shrink-0 rounded-full ${turno ? "bg-exito" : "bg-tenue"}`} aria-hidden />
+      <span className={expandida ? "truncate" : "sr-only"}>{texto}</span>
+    </button>
+  );
+}
+
 /** Estado real de la impresora (lo informa el driver). Lleva a Configuración. */
 function IndicadorImpresora({
   impresora,
@@ -146,7 +175,7 @@ function IndicadorImpresora({
       type="button"
       onClick={() => onIr("configuracion")}
       title={detalle}
-      className={`flex h-8 items-center gap-2 rounded-lg text-xs font-medium ${clase} ${expandida ? "px-3" : "justify-center"}`}
+      className={`relative flex h-8 items-center gap-2 rounded-lg text-xs font-medium ${clase} ${expandida ? "px-3" : "justify-center"}`}
     >
       <Printer size={14} className="shrink-0" aria-hidden />
       <span className={expandida ? "truncate" : "sr-only"}>{texto}</span>

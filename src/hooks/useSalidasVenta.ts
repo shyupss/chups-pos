@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { api, textoError } from "../api";
 
 /** Una tarea en segundo plano sobre la boleta: imprimir o guardar el PDF. */
@@ -33,6 +33,8 @@ const pendiente = (s: SalidaVenta) =>
  */
 export function useSalidasVenta(onImpresion: () => void) {
   const [salida, setSalida] = useState<SalidaVenta | null>(null);
+  // Para "Reintentar": la misma impresión que falló (original o copia).
+  const ultimoIntento = useRef<{ ventaId: number; copias?: number; copia: boolean } | null>(null);
 
   const actualizar = useCallback((ventaId: number, cambio: Partial<SalidaVenta>) => {
     setSalida((s) => (s && s.ventaId === ventaId ? { ...s, ...cambio } : s));
@@ -42,12 +44,14 @@ export function useSalidasVenta(onImpresion: () => void) {
     setSalida({ ventaId, folio, impresion: null, pdf: null, rutaPdf: null, errorCajon: null });
   }, []);
 
+  /** `copia`: es una reimpresión y la boleta dice "COPIA". */
   const imprimir = useCallback(
-    async (ventaId: number, copias?: number) => {
+    async (ventaId: number, copias?: number, copia = false) => {
+      ultimoIntento.current = { ventaId, copias, copia };
       actualizar(ventaId, { impresion: { estado: "trabajando" } });
       try {
-        await api.imprimirBoleta(ventaId, copias);
-        actualizar(ventaId, { impresion: { estado: "ok", texto: "Boleta impresa" } });
+        await api.imprimirBoleta(ventaId, copias, copia);
+        actualizar(ventaId, { impresion: { estado: "ok", texto: copia ? "Copia impresa" : "Boleta impresa" } });
       } catch (e) {
         actualizar(ventaId, { impresion: { estado: "error", texto: textoError(e) } });
       } finally {
@@ -81,6 +85,11 @@ export function useSalidasVenta(onImpresion: () => void) {
     [actualizar],
   );
 
+  const reintentar = useCallback(() => {
+    const u = ultimoIntento.current;
+    if (u) void imprimir(u.ventaId, u.copias, u.copia);
+  }, [imprimir]);
+
   const cerrar = useCallback(() => setSalida(null), []);
 
   /** Al empezar otra venta: se olvida lo que terminó bien, pero un error sigue a la vista. */
@@ -88,5 +97,5 @@ export function useSalidasVenta(onImpresion: () => void) {
     setSalida((s) => (s && !pendiente(s) ? null : s));
   }, []);
 
-  return { salida, iniciar, imprimir, guardarPdf, abrirCajon, cerrar, descartarSiTermino };
+  return { salida, iniciar, imprimir, reintentar, guardarPdf, abrirCajon, cerrar, descartarSiTermino };
 }

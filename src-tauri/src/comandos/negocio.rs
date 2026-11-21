@@ -1,8 +1,9 @@
 use pos_core::servicios::negocio::{self as srv, DatosNegocio, Negocio};
+use pos_core::servicios::seguridad::{self, Accion};
 use tauri::{AppHandle, State};
 use tauri_plugin_dialog::DialogExt;
 
-use super::{a_texto, ResultadoComando};
+use super::{a_texto, ResultadoComando, ResultadoProtegido};
 use crate::estado::EstadoApp;
 
 #[tauri::command]
@@ -14,17 +15,26 @@ pub async fn obtener_negocio(estado: State<'_, EstadoApp>) -> ResultadoComando<N
 pub async fn guardar_negocio(
     estado: State<'_, EstadoApp>,
     datos: DatosNegocio,
-) -> ResultadoComando<Negocio> {
-    srv::guardar(&estado.pool, &datos).await.map_err(a_texto)
+    pin: Option<String>,
+) -> ResultadoProtegido<Negocio> {
+    Ok(srv::guardar(&estado.pool, &estado.pin, pin.as_deref(), &datos).await?)
 }
 
 /// Abre el diálogo para elegir un PNG o JPG y lo deja como logo (escalado y en blanco y negro).
-/// Devuelve `None` si el usuario cancela.
+/// Devuelve `None` si el usuario cancela. El PIN se revisa antes de abrir el diálogo.
 #[tauri::command]
 pub async fn elegir_logo(
     app: AppHandle,
     estado: State<'_, EstadoApp>,
-) -> ResultadoComando<Option<Negocio>> {
+    pin: Option<String>,
+) -> ResultadoProtegido<Option<Negocio>> {
+    seguridad::exigir(
+        &estado.pool,
+        &estado.pin,
+        Accion::CambiarConfiguracion,
+        pin.as_deref(),
+    )
+    .await?;
     // El diálogo bloquea mientras está abierto: fuera de los hilos del runtime.
     let elegido = tauri::async_runtime::spawn_blocking(move || {
         app.dialog()
@@ -42,15 +52,17 @@ pub async fn elegir_logo(
         .into_path()
         .map_err(|_| "No se pudo abrir ese archivo".to_string())?;
     let bytes = tokio_fs_leer(ruta).await?;
-    srv::guardar_logo(&estado.pool, &bytes)
-        .await
-        .map(Some)
-        .map_err(a_texto)
+    Ok(Some(
+        srv::guardar_logo(&estado.pool, &estado.pin, pin.as_deref(), &bytes).await?,
+    ))
 }
 
 #[tauri::command]
-pub async fn quitar_logo(estado: State<'_, EstadoApp>) -> ResultadoComando<Negocio> {
-    srv::quitar_logo(&estado.pool).await.map_err(a_texto)
+pub async fn quitar_logo(
+    estado: State<'_, EstadoApp>,
+    pin: Option<String>,
+) -> ResultadoProtegido<Negocio> {
+    Ok(srv::quitar_logo(&estado.pool, &estado.pin, pin.as_deref()).await?)
 }
 
 async fn tokio_fs_leer(ruta: std::path::PathBuf) -> ResultadoComando<Vec<u8>> {

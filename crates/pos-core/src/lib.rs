@@ -16,4 +16,4 @@ pub mod repositorios;
 pub mod rut;
 pub mod servicios;
 
-pub use error::{Error, Resultado};
+pub use error::{Error, FalloPin, Resultado};

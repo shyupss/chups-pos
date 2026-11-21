@@ -22,3 +22,9 @@ lto = true
 codegen-units = 1
 strip = true
 panic = "abort"
+
+# Argon2 sin optimizar tarda segundos por hash: los tests y `tauri dev` lo compilan optimizado.
+[profile.dev.package.argon2]
+opt-level = 3
+[profile.dev.package.blake2]
+opt-level = 3

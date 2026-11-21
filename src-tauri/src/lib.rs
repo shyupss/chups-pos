@@ -42,6 +42,7 @@ pub fn run() {
                 ms_inicio: inicio.elapsed().as_millis() as u64,
                 carpeta_pdf,
                 hardware: pos_hardware::Hardware::new(&carpeta),
+                pin: pos_core::servicios::seguridad::ControlPin::new(),
             });
             Ok(())
         })
@@ -54,6 +55,13 @@ pub fn run() {
             comandos::productos::editar_producto,
             comandos::productos::cambiar_estado_producto,
             comandos::ventas::confirmar_venta,
+            comandos::ventas::listar_ventas,
+            comandos::ventas::detalle_venta,
+            comandos::ventas::venta_por_folio,
+            comandos::ventas::anular_venta,
+            comandos::ventas::imprimir_anulacion,
+            comandos::ventas::registrar_devolucion,
+            comandos::ventas::imprimir_devolucion,
             comandos::config::obtener_config,
             comandos::config::guardar_config,
             comandos::categorias::listar_categorias,
@@ -78,6 +86,20 @@ pub fn run() {
             comandos::impresion::imprimir_prueba,
             comandos::impresion::abrir_cajon,
             comandos::impresion::carpeta_impresora_pruebas,
+            comandos::seguridad::estado_seguridad,
+            comandos::seguridad::crear_pin,
+            comandos::seguridad::cambiar_pin,
+            comandos::seguridad::quitar_pin,
+            comandos::seguridad::recuperar_pin,
+            comandos::seguridad::guardar_protegidas,
+            comandos::turnos::estado_caja,
+            comandos::turnos::abrir_turno,
+            comandos::turnos::registrar_movimiento_caja,
+            comandos::turnos::resumen_turno,
+            comandos::turnos::cerrar_turno,
+            comandos::turnos::listar_turnos,
+            comandos::turnos::imprimir_cierre,
+            comandos::turnos::guardar_cierre_pdf,
         ])
         .run(tauri::generate_context!())
         .expect("error al iniciar CHUPS POS");

@@ -164,6 +164,222 @@ export interface Negocio {
 
 export type DatosNegocio = Omit<Negocio, "logoPng">;
 
+/** Acciones que pueden pedir el PIN de administrador (sin PIN creado, ninguna lo pide). */
+export interface AccionesProtegidas {
+  anularVenta: boolean;
+  devolucion: boolean;
+  retiroEfectivo: boolean;
+  cerrarCaja: boolean;
+  cambiarConfiguracion: boolean;
+}
+
+export interface EstadoSeguridad {
+  tienePin: boolean;
+  protegidas: AccionesProtegidas;
+}
+
+/**
+ * Error de un comando protegido: falta el PIN, es incorrecto o está bloqueado.
+ * Los demás errores llegan como texto. Si el PIN es correcto lo decide siempre Rust.
+ */
+export interface ErrorPin {
+  pin: "requerido" | "incorrecto" | "bloqueado";
+  mensaje: string;
+  /** Segundos que faltan para volver a probar, si está bloqueado. */
+  segundos: number | null;
+}
+
+/** Billetes o monedas de una denominación contados al cerrar la caja. */
+export interface Conteo {
+  denominacion: number;
+  cantidad: number;
+}
+
+/** Turno de caja: desde que se abre con un monto inicial hasta que se cierra contando el efectivo. */
+export interface Turno {
+  id: number;
+  abiertoEn: string;
+  cerradoEn: string | null;
+  abierto: boolean;
+  montoInicial: number;
+  efectivoEsperado: number | null;
+  efectivoContado: number | null;
+  /** Contado − esperado: positivo sobra, negativo falta. */
+  diferencia: number | null;
+  detalleConteo: Conteo[] | null;
+  notaCierre: string | null;
+}
+
+export interface EstadoCaja {
+  /** null si la caja está cerrada. */
+  turno: Turno | null;
+  /** Monto inicial del último turno, para sugerirlo al abrir. */
+  ultimoMontoInicial: number | null;
+}
+
+export type TipoMovimiento = "ingreso" | "retiro";
+
+export interface MovimientoCaja {
+  id: number;
+  tipo: TipoMovimiento;
+  monto: number;
+  motivo: string;
+  fecha: string;
+}
+
+/** Cantidad y monto de un medio de pago o de reembolso ("fiado" = sin reembolso). */
+export interface TotalMedio {
+  medio: MedioPago;
+  cantidad: number;
+  monto: number;
+  redondeo: number;
+}
+
+export interface CuadreEfectivo {
+  montoInicial: number;
+  ventas: number;
+  abonos: number;
+  ingresos: number;
+  retiros: number;
+  reembolsos: number;
+  esperado: number;
+}
+
+/** Resumen del turno; el efectivo esperado lo calcula Rust. */
+export interface ResumenTurno {
+  turno: Turno;
+  cantidadVentas: number;
+  totalVentas: number;
+  ventas: TotalMedio[];
+  redondeoVentas: number;
+  abonos: TotalMedio[];
+  anulaciones: TotalMedio[];
+  devoluciones: TotalMedio[];
+  redondeoReembolsos: number;
+  movimientos: MovimientoCaja[];
+  efectivo: CuadreEfectivo;
+}
+
+export interface TurnoBreve {
+  id: number;
+  abiertoEn: string;
+  cerradoEn: string | null;
+  abierto: boolean;
+}
+
+/** Estado que se busca en el historial ("conDevolucion" incluye las devueltas por completo). */
+export type EstadoFiltro = "pagada" | "fiada" | "anulada" | "conDevolucion";
+/** Estado de la insignia: "devuelta" es cuando se devolvió todo lo vendido. */
+export type EstadoVenta = "pagada" | "fiada" | "anulada" | "conDevolucion" | "devuelta";
+
+/** Filtros del historial. Fechas como días locales "aaaa-mm-dd" (hasta incluido). Con folio, el resto no se mira. */
+export interface FiltrosVentas {
+  desde: string | null;
+  hasta: string | null;
+  folio: number | null;
+  medioPago: MedioPago | null;
+  estado: EstadoFiltro | null;
+  turnoId: number | null;
+}
+
+export interface VentaListada {
+  id: number;
+  folio: number;
+  fechaHora: string;
+  productos: number;
+  total: number;
+  medioPago: MedioPago;
+  estado: EstadoVenta;
+}
+
+export interface PaginaVentas {
+  ventas: VentaListada[];
+  /** Solo en la primera página: cantidad y lo vendido (sin anuladas, descontando lo devuelto), en SQL. */
+  totales: { cantidad: number; total: number } | null;
+}
+
+export interface LineaDetalle {
+  /** Id de la línea vendida: el que se usa para devolver. */
+  id: number;
+  productoId: number;
+  nombre: string;
+  unidad: Unidad;
+  precioUnitario: number;
+  cantidadMil: number;
+  subtotal: number;
+  devueltoMil: number;
+}
+
+export interface Anulacion {
+  fecha: string;
+  motivo: string;
+  turnoId: number | null;
+  /** null en una venta fiada: no se devolvió dinero. */
+  medioReembolso: MedioPago | null;
+  reembolso: number | null;
+}
+
+export interface LineaDevuelta {
+  ventaItemId: number;
+  nombre: string;
+  unidad: Unidad;
+  precioUnitario: number;
+  cantidadMil: number;
+  monto: number;
+  vuelveAStock: boolean;
+}
+
+export interface Devolucion {
+  id: number;
+  fecha: string;
+  turnoId: number | null;
+  /** Lo devuelto al cliente, con el redondeo incluido. */
+  monto: number;
+  redondeo: number;
+  /** null en una venta fiada: bajó la deuda. */
+  medioReembolso: MedioPago | null;
+  motivo: string;
+  lineas: LineaDevuelta[];
+}
+
+export interface DetalleVenta {
+  id: number;
+  folio: number;
+  fechaHora: string;
+  subtotal: number;
+  descuento: number;
+  redondeo: number;
+  total: number;
+  medioPago: MedioPago;
+  montoRecibido: number | null;
+  vuelto: number | null;
+  cliente: string | null;
+  estado: EstadoVenta;
+  /** null en las ventas anteriores a los turnos. */
+  turnoId: number | null;
+  lineas: LineaDetalle[];
+  anulacion: Anulacion | null;
+  devoluciones: Devolucion[];
+  montoDevuelto: number;
+  tieneAbonos: boolean;
+}
+
+/** Una línea a devolver; la cantidad en milésimas, como al vender. */
+export interface ItemDevuelto {
+  ventaItemId: number;
+  cantidadMil: number;
+  /** false: dañado o vencido, queda como merma. */
+  vuelveAStock: boolean;
+}
+
+export interface DevolucionRegistrada {
+  devolucionId: number;
+  /** Lo devuelto (o lo que bajó la deuda), con el redondeo: lo calcula Rust. */
+  monto: number;
+  redondeo: number;
+  venta: DetalleVenta;
+}
+
 /** Etiqueta de balanza leída: producto por kg y los gramos de la etiqueta. */
 export interface LecturaBalanza {
   producto: Producto;
@@ -174,10 +390,11 @@ export const api = {
   estadoSistema: () => invoke<EstadoSistema>("estado_sistema"),
 
   obtenerNegocio: () => invoke<Negocio>("obtener_negocio"),
-  guardarNegocio: (datos: DatosNegocio) => invoke<Negocio>("guardar_negocio", { datos }),
+  // Los comandos que reciben `pin` están protegidos: sin PIN o con uno incorrecto fallan con ErrorPin.
+  guardarNegocio: (datos: DatosNegocio, pin: string | null) => invoke<Negocio>("guardar_negocio", { datos, pin }),
   /** Abre el diálogo de archivos; null si el usuario cancela. */
-  elegirLogo: () => invoke<Negocio | null>("elegir_logo"),
-  quitarLogo: () => invoke<Negocio>("quitar_logo"),
+  elegirLogo: (pin: string | null) => invoke<Negocio | null>("elegir_logo", { pin }),
+  quitarLogo: (pin: string | null) => invoke<Negocio>("quitar_logo", { pin }),
 
   /** Guarda el PDF de la boleta y, si `abrir`, lo abre. Devuelve la ruta. */
   guardarBoletaPdf: (ventaId: number, abrir: boolean) =>
@@ -188,9 +405,9 @@ export const api = {
 
   listarImpresoras: () => invoke<Impresora[]>("listar_impresoras"),
   estadoImpresora: () => invoke<EstadoConfigurada>("estado_impresora"),
-  /** Sin `copias`, las de la configuración. */
-  imprimirBoleta: (ventaId: number, copias?: number) =>
-    invoke<void>("imprimir_boleta", { ventaId, copias: copias ?? null }),
+  /** Sin `copias`, las de la configuración. Las reimpresiones (`copia`) dicen "COPIA". */
+  imprimirBoleta: (ventaId: number, copias?: number, copia = false) =>
+    invoke<void>("imprimir_boleta", { ventaId, copias: copias ?? null, copia }),
   imprimirPrueba: () => invoke<void>("imprimir_prueba"),
   abrirCajon: () => invoke<void>("abrir_cajon"),
   carpetaImpresoraPruebas: () => invoke<string>("carpeta_impresora_pruebas"),
@@ -228,9 +445,50 @@ export const api = {
   eliminarCategoria: (id: number) => invoke<void>("eliminar_categoria", { id }),
 
   confirmarVenta: (venta: NuevaVenta) => invoke<VentaConfirmada>("confirmar_venta", { venta }),
+  listarVentas: (filtros: FiltrosVentas, limite: number, desplazamiento: number) =>
+    invoke<PaginaVentas>("listar_ventas", { filtros, limite, desplazamiento }),
+  detalleVenta: (id: number) => invoke<DetalleVenta>("detalle_venta", { id }),
+  /** Id de la venta con ese folio (escrito o escaneado de la boleta); null si no existe. */
+  ventaPorFolio: (folio: number) => invoke<number | null>("venta_por_folio", { folio }),
+  /** Anula la venta; medioReembolso null en una fiada (no se devuelve dinero). Protegido con PIN. */
+  anularVenta: (id: number, motivo: string, medioReembolso: MedioPago | null, pin: string | null) =>
+    invoke<DetalleVenta>("anular_venta", { id, motivo, medioReembolso, pin }),
+  imprimirAnulacion: (ventaId: number) => invoke<void>("imprimir_anulacion", { ventaId }),
+  /** Devuelve parte de una venta; medioReembolso null en una fiada. Protegido con PIN. */
+  registrarDevolucion: (
+    ventaId: number,
+    items: ItemDevuelto[],
+    medioReembolso: MedioPago | null,
+    motivo: string,
+    pin: string | null,
+  ) => invoke<DevolucionRegistrada>("registrar_devolucion", { ventaId, items, medioReembolso, motivo, pin }),
+  imprimirDevolucion: (devolucionId: number) => invoke<void>("imprimir_devolucion", { devolucionId }),
 
   obtenerConfig: () => invoke<Config>("obtener_config"),
-  guardarConfig: (config: Config) => invoke<Config>("guardar_config", { config }),
+  guardarConfig: (config: Config, pin: string | null) => invoke<Config>("guardar_config", { config, pin }),
+
+  estadoCaja: () => invoke<EstadoCaja>("estado_caja"),
+  abrirTurno: (montoInicial: number) => invoke<Turno>("abrir_turno", { montoInicial }),
+  registrarMovimientoCaja: (tipo: TipoMovimiento, monto: number, motivo: string, pin: string | null) =>
+    invoke<MovimientoCaja>("registrar_movimiento_caja", { tipo, monto, motivo, pin }),
+  resumenTurno: (turnoId: number) => invoke<ResumenTurno>("resumen_turno", { turnoId }),
+  cerrarTurno: (efectivoContado: number, detalleConteo: Conteo[] | null, nota: string | null, pin: string | null) =>
+    invoke<ResumenTurno>("cerrar_turno", { efectivoContado, detalleConteo, nota, pin }),
+  listarTurnos: (limite: number, desplazamiento: number) =>
+    invoke<TurnoBreve[]>("listar_turnos", { limite, desplazamiento }),
+  imprimirCierre: (turnoId: number) => invoke<void>("imprimir_cierre", { turnoId }),
+  /** Guarda el PDF del cierre y, si `abrir`, lo abre. Devuelve la ruta. */
+  guardarCierrePdf: (turnoId: number, abrir: boolean) => invoke<string>("guardar_cierre_pdf", { turnoId, abrir }),
+
+  estadoSeguridad: () => invoke<EstadoSeguridad>("estado_seguridad"),
+  /** Devuelve el código de recuperación, que se muestra una sola vez. */
+  crearPin: (pin: string) => invoke<string>("crear_pin", { pin }),
+  cambiarPin: (actual: string, nuevo: string) => invoke<void>("cambiar_pin", { actual, nuevo }),
+  quitarPin: (pin: string | null) => invoke<void>("quitar_pin", { pin }),
+  /** PIN nuevo con el código de recuperación; devuelve el código nuevo. */
+  recuperarPin: (codigo: string, nuevo: string) => invoke<string>("recuperar_pin", { codigo, nuevo }),
+  guardarProtegidas: (protegidas: AccionesProtegidas, pin: string | null) =>
+    invoke<EstadoSeguridad>("guardar_protegidas", { protegidas, pin }),
 
   ponerEnEspera: (nombre: string | null, items: ItemPedido[]) =>
     invoke<number>("poner_en_espera", { nombre, items }),
@@ -241,5 +499,9 @@ export const api = {
   descartarEnEspera: (id: number) => invoke<void>("descartar_en_espera", { id }),
 };
 
-/** Los errores de Rust llegan como texto listo para mostrar. */
-export const textoError = (e: unknown) => (typeof e === "string" ? e : String(e));
+/** El error de PIN de un comando protegido, o null si el error es otro. */
+export const errorPin = (e: unknown): ErrorPin | null =>
+  typeof e === "object" && e !== null && "pin" in e && "mensaje" in e ? (e as ErrorPin) : null;
+
+/** Los errores de Rust llegan como texto listo para mostrar (los del PIN, con su mensaje). */
+export const textoError = (e: unknown) => (typeof e === "string" ? e : (errorPin(e)?.mensaje ?? String(e)));

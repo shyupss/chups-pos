@@ -12,4 +12,6 @@ pub struct EstadoApp {
     pub carpeta_pdf: PathBuf,
     /// Impresoras del sistema y la virtual de pruebas (escribe en la carpeta de datos).
     pub hardware: pos_hardware::Hardware,
+    /// Intentos fallidos del PIN de administrador y su bloqueo (solo en memoria).
+    pub pin: pos_core::servicios::seguridad::ControlPin,
 }

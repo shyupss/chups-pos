@@ -1,26 +1,33 @@
 import { useState } from "react";
 import type { Producto } from "../api";
-import { cantidadEditable, MAX_KG_MIL, parseKg, pesos, subtotalLinea } from "../formato";
+import { cantidad, cantidadEditable, MAX_KG_MIL, parseKg, pesos, subtotalLinea } from "../formato";
 import Dialogo from "./Dialogo";
 
 interface Props {
-  producto: Producto;
+  producto: Pick<Producto, "nombre" | "precioVenta">;
   /** Peso actual de la línea, para "Cambiar peso". */
   inicialMil?: number;
+  /** Tope en gramos; por defecto 100 kg. En una devolución, lo que queda por devolver. */
+  maximoMil?: number;
+  /** Texto del botón (por defecto "Agregar" o "Cambiar peso"). */
+  accion?: string;
   onConfirmar: (cantidadMil: number) => void;
   onCancelar: () => void;
 }
 
-export default function DialogoPeso({ producto, inicialMil, onConfirmar, onCancelar }: Props) {
+export default function DialogoPeso({ producto, inicialMil, maximoMil, accion, onConfirmar, onCancelar }: Props) {
   const [texto, setTexto] = useState(inicialMil ? cantidadEditable(inicialMil, "kg") : "");
+  const maximo = maximoMil ?? MAX_KG_MIL;
   const mil = parseKg(texto);
-  const valido = mil !== null && mil >= 1 && mil <= MAX_KG_MIL;
+  const valido = mil !== null && mil >= 1 && mil <= maximo;
   const error =
     texto.trim() === "" || valido
       ? null
       : mil === null
         ? "Escribe el peso en kg (0,532) o en gramos (532 g)"
-        : "El peso debe estar entre 1 g y 100 kg";
+        : maximoMil !== undefined
+          ? `El peso debe estar entre 1 g y ${cantidad(maximo, "kg")}`
+          : "El peso debe estar entre 1 g y 100 kg";
 
   return (
     <Dialogo titulo={`Peso de ${producto.nombre}`} onCerrar={onCancelar}>
@@ -68,7 +75,7 @@ export default function DialogoPeso({ producto, inicialMil, onConfirmar, onCance
             disabled={!valido}
             className="h-11 flex-[2] rounded-lg bg-acento font-semibold text-sobre-acento disabled:bg-linea disabled:text-tenue"
           >
-            {inicialMil ? "Cambiar peso" : "Agregar"} <span className="text-xs font-normal opacity-70">Enter</span>
+            {accion ?? (inicialMil ? "Cambiar peso" : "Agregar")} <span className="text-xs font-normal opacity-70">Enter</span>
           </button>
         </div>
       </form>

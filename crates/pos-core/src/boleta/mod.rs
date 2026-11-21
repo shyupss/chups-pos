@@ -3,7 +3,13 @@
 //! [`armar`] junta en una sola estructura todo lo que se imprime: negocio, venta y líneas.
 //! El texto para la térmica ([`texto`] y [`escpos`]) y el PDF ([`pdf`]) salen de esa misma
 //! estructura, así el papel y el PDF dicen exactamente lo mismo.
+//!
+//! Los demás comprobantes (cierre de caja, anulación, nota de devolución) implementan
+//! [`Documento`] igual que la boleta y se imprimen con el mismo encabezado y las mismas reglas.
 
+pub mod anulacion;
+pub mod cierre;
+pub mod devolucion;
 pub mod escpos;
 pub mod formato;
 pub mod pdf;
@@ -11,12 +17,65 @@ pub mod texto;
 
 use sqlx::SqlitePool;
 
+use sqlx::SqliteConnection;
+
 use crate::logo::{self, LogoBn};
 use crate::repositorios::productos::Unidad;
 use crate::repositorios::{negocio, ventas};
 use crate::servicios::config;
 use crate::servicios::ventas::MedioPago;
 use crate::{Error, Resultado};
+use texto::LineaTexto;
+
+/// Un comprobante que sale en la térmica y en PDF con las mismas líneas.
+pub trait Documento: Send + Sync {
+    /// Las líneas para papel de `columnas` caracteres (32 o 48; el PDF usa 48).
+    fn lineas(&self, columnas: usize) -> Vec<LineaTexto>;
+    /// Logo del negocio, que va donde las líneas digan [`LineaTexto::Logo`].
+    fn logo(&self) -> Option<&LogoBn>;
+    /// Título del PDF: "Comprobante de venta N° 000123".
+    fn titulo(&self) -> String;
+    /// Nombre del archivo PDF sin extensión y del trabajo de impresión: "boleta-000123".
+    fn nombre(&self) -> String;
+}
+
+impl Documento for Boleta {
+    fn lineas(&self, columnas: usize) -> Vec<LineaTexto> {
+        texto::renderizar(self, columnas)
+    }
+    fn logo(&self) -> Option<&LogoBn> {
+        self.negocio.logo.as_ref()
+    }
+    fn titulo(&self) -> String {
+        format!("Comprobante de venta N° {}", formato::folio(self.folio))
+    }
+    fn nombre(&self) -> String {
+        format!("boleta-{}", formato::folio(self.folio))
+    }
+}
+
+/// Datos del negocio para el encabezado. Sin nombre no se imprime nada: es lo primero que sale.
+pub(crate) async fn encabezado(conn: &mut SqliteConnection) -> Resultado<Encabezado> {
+    let n = negocio::obtener(conn).await?;
+    if n.nombre.trim().is_empty() {
+        return Err(Error::Validacion(
+            "Falta el nombre del negocio: complétalo en Configuración > Negocio antes de imprimir"
+                .into(),
+        ));
+    }
+    Ok(Encabezado {
+        nombre: n.nombre,
+        rut: n.rut,
+        direccion: n.direccion,
+        telefono: n.telefono,
+        mensaje_pie: n.mensaje_pie,
+        // Un logo dañado no impide imprimir: el comprobante sale sin él.
+        logo: n
+            .logo
+            .as_deref()
+            .and_then(|png| logo::decodificar(png).ok()),
+    })
+}
 
 /// Encabezado con los datos del negocio.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -58,6 +117,10 @@ pub struct Boleta {
     pub leyenda: bool,
     /// Código de barras con el folio al pie (config boleta_codigo).
     pub codigo_barras: bool,
+    /// Reimpresión: dice "COPIA" bajo la fecha.
+    pub copia: bool,
+    /// Venta anulada: fecha local de la anulación. Dice "ANULADA" bajo la fecha.
+    pub anulada: Option<String>,
 }
 
 impl Boleta {
@@ -76,13 +139,7 @@ impl Boleta {
 /// Junta negocio, venta, líneas y configuración en una [`Boleta`].
 pub async fn armar(pool: &SqlitePool, venta_id: i64) -> Resultado<Boleta> {
     let mut conn = pool.acquire().await?;
-    let n = negocio::obtener(&mut conn).await?;
-    if n.nombre.trim().is_empty() {
-        return Err(Error::Validacion(
-            "Falta el nombre del negocio: complétalo en Configuración > Negocio antes de imprimir"
-                .into(),
-        ));
-    }
+    let negocio = encabezado(&mut conn).await?;
     let cfg = config::obtener_con(&mut conn).await?;
     let v = ventas::cabecera(&mut conn, venta_id)
         .await?
@@ -99,18 +156,7 @@ pub async fn armar(pool: &SqlitePool, venta_id: i64) -> Resultado<Boleta> {
         })
         .collect();
     Ok(Boleta {
-        negocio: Encabezado {
-            nombre: n.nombre,
-            rut: n.rut,
-            direccion: n.direccion,
-            telefono: n.telefono,
-            mensaje_pie: n.mensaje_pie,
-            // Un logo dañado no impide imprimir: la boleta sale sin él.
-            logo: n
-                .logo
-                .as_deref()
-                .and_then(|png| logo::decodificar(png).ok()),
-        },
+        negocio,
         folio: v.folio,
         fecha: formato::fecha_local(&v.fecha_hora),
         lineas,
@@ -124,6 +170,8 @@ pub async fn armar(pool: &SqlitePool, venta_id: i64) -> Resultado<Boleta> {
         cliente: v.cliente,
         leyenda: cfg.boleta_leyenda,
         codigo_barras: cfg.boleta_codigo,
+        copia: false,
+        anulada: v.anulada_en.as_deref().map(formato::fecha_local),
     })
 }
 

@@ -5,6 +5,8 @@ import type { SalidaVenta, Tarea } from "../hooks/useSalidasVenta";
 
 interface Acciones {
   reimprimir: () => void;
+  /** Repite la impresión que falló (la original o la copia). */
+  reintentar: () => void;
   guardarPdf: () => void;
   abrirPdf: () => void;
   cerrar: () => void;
@@ -99,7 +101,7 @@ function Estados({ salida, acciones }: { salida: SalidaVenta | null; acciones: A
       salida.impresion,
       { trabajando: "Imprimiendo la boleta…", error: "No se imprimió la boleta (la venta quedó guardada)" },
       salida.impresion.estado === "error" ? (
-        <button type="button" onClick={acciones.reimprimir} className="h-8 rounded-lg bg-peligro px-3 font-medium text-superficie">
+        <button type="button" onClick={acciones.reintentar} className="h-8 rounded-lg bg-peligro px-3 font-medium text-superficie">
           Reintentar
         </button>
       ) : undefined,

@@ -1,40 +1,49 @@
-//! Salidas de la boleta según la configuración: PDF y bytes para la impresora térmica.
+//! Salidas de los comprobantes según la configuración: PDF y bytes para la impresora térmica.
 //! No toca hardware ni hilos: el controlador genera en segundo plano y manda los bytes.
 
 use sqlx::SqlitePool;
 
-use crate::boleta::{self, escpos, pdf, Boleta};
+use crate::boleta::{self, anulacion, cierre, devolucion, escpos, pdf, Documento};
 use crate::servicios::config::{self, FormatoPdf};
 use crate::Resultado;
 
-/// Todo lo necesario para dibujar el PDF de una venta, ya leído de la base.
+/// Todo lo necesario para dibujar el PDF de un comprobante, ya leído de la base.
 pub struct PdfPendiente {
-    pub boleta: Boleta,
+    pub documento: Box<dyn Documento>,
     pub formato: FormatoPdf,
     /// Carpeta elegida en Configuración; `None` usa Documentos\CHUPS POS\Boletas.
     pub carpeta: Option<String>,
 }
 
 impl PdfPendiente {
-    /// boleta-000123.pdf
+    /// boleta-000123.pdf, cierre-000012.pdf…
     pub fn nombre_archivo(&self) -> String {
-        pdf::nombre_archivo(self.boleta.folio)
+        format!("{}.pdf", self.documento.nombre())
     }
 
     /// Dibuja el PDF. Es trabajo de CPU: conviene llamarlo fuera de los hilos async.
     pub fn generar(&self) -> Resultado<Vec<u8>> {
-        pdf::boleta(&self.boleta, self.formato)
+        pdf::documento(self.documento.as_ref(), self.formato)
     }
 }
 
-pub async fn preparar_pdf(pool: &SqlitePool, venta_id: i64) -> Resultado<PdfPendiente> {
-    let boleta = boleta::armar(pool, venta_id).await?;
+async fn pendiente(pool: &SqlitePool, documento: Box<dyn Documento>) -> Resultado<PdfPendiente> {
     let cfg = config::obtener(pool).await?;
     Ok(PdfPendiente {
-        boleta,
+        documento,
         formato: cfg.pdf_formato,
         carpeta: cfg.pdf_carpeta,
     })
+}
+
+/// PDF de la boleta de una venta.
+pub async fn preparar_pdf(pool: &SqlitePool, venta_id: i64) -> Resultado<PdfPendiente> {
+    pendiente(pool, Box::new(boleta::armar(pool, venta_id).await?)).await
+}
+
+/// PDF del cierre de caja de un turno.
+pub async fn preparar_pdf_cierre(pool: &SqlitePool, turno_id: i64) -> Resultado<PdfPendiente> {
+    pendiente(pool, Box::new(cierre::armar(pool, turno_id).await?)).await
 }
 
 /// Bytes ESC/POS listos para la impresora elegida en Configuración.
@@ -61,18 +70,46 @@ fn opciones(cfg: &config::Config) -> escpos::Opciones {
     }
 }
 
-/// La boleta de una venta; sin `copias`, las de la configuración.
+/// Un comprobante en una copia, para la impresora elegida.
+async fn trabajo(pool: &SqlitePool, d: &dyn Documento) -> Resultado<Trabajo> {
+    let cfg = config::obtener(pool).await?;
+    Ok(Trabajo {
+        impresora: impresora(&cfg)?,
+        documento: d.nombre(),
+        bytes: escpos::documento(d, &opciones(&cfg)),
+    })
+}
+
+/// El cierre de caja de un turno.
+pub async fn trabajo_cierre(pool: &SqlitePool, turno_id: i64) -> Resultado<Trabajo> {
+    trabajo(pool, &cierre::armar(pool, turno_id).await?).await
+}
+
+/// El comprobante de anulación de una venta anulada.
+pub async fn trabajo_anulacion(pool: &SqlitePool, venta_id: i64) -> Resultado<Trabajo> {
+    trabajo(pool, &anulacion::armar(pool, venta_id).await?).await
+}
+
+/// La nota de una devolución.
+pub async fn trabajo_devolucion(pool: &SqlitePool, devolucion_id: i64) -> Resultado<Trabajo> {
+    trabajo(pool, &devolucion::armar(pool, devolucion_id).await?).await
+}
+
+/// La boleta de una venta; sin `copias`, las de la configuración. Con `copia` (una
+/// reimpresión) dice "COPIA".
 pub async fn trabajo_boleta(
     pool: &SqlitePool,
     venta_id: i64,
     copias: Option<u8>,
+    copia: bool,
 ) -> Resultado<Trabajo> {
-    let b = boleta::armar(pool, venta_id).await?;
+    let mut b = boleta::armar(pool, venta_id).await?;
+    b.copia = copia;
     let cfg = config::obtener(pool).await?;
     let copias = copias.unwrap_or(cfg.copias).clamp(1, 3);
     Ok(Trabajo {
         impresora: impresora(&cfg)?,
-        documento: format!("boleta-{}", boleta::formato::folio(b.folio)),
+        documento: b.nombre(),
         bytes: escpos::copias(&escpos::boleta(&b, &opciones(&cfg)), copias),
     })
 }

@@ -1,15 +1,20 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { ArrowDownUp, Lock } from "lucide-react";
 import {
   api,
   textoError,
   type Config,
+  type EstadoCaja,
   type ItemPedido,
   type Producto,
   type ResumenEspera,
   type VentaConfirmada,
 } from "../api";
+import AbrirCaja from "../componentes/AbrirCaja";
 import AvisoVenta from "../componentes/AvisoVenta";
+import CerrarCaja from "../componentes/CerrarCaja";
 import Cobro from "../componentes/Cobro";
+import DialogoMovimiento from "../componentes/DialogoMovimiento";
 import DialogoPeso from "../componentes/DialogoPeso";
 import ListaEspera from "../componentes/ListaEspera";
 import PonerEnEspera from "../componentes/PonerEnEspera";
@@ -29,6 +34,10 @@ interface Props {
   onEnEspera: (cantidad: number) => void;
   /** Se intentó imprimir: conviene volver a leer el estado de la impresora. */
   onImpresion: () => void;
+  /** Turno de caja; null mientras se lee. Sin turno abierto se muestra "Abrir caja". */
+  caja: EstadoCaja | null;
+  /** Se abrió o cerró la caja: App vuelve a leer el turno. */
+  onCambioCaja: () => void;
 }
 
 /** Igual que el servicio: más ventas en espera no se aceptan. */
@@ -84,7 +93,7 @@ function resolverCantidad(
     : { tipo: "error", texto: `El peso de ${p.nombre} debe estar entre 1 g y 100 kg` };
 }
 
-export default function Caja({ activa, onCrearProducto, onEnEspera, onImpresion }: Props) {
+export default function Caja({ activa, onCrearProducto, onEnEspera, onImpresion, caja, onCambioCaja }: Props) {
   const [lineas, setLineas] = useState<Linea[]>([]);
   const [entrada, setEntrada] = useState("");
   const [resultados, setResultados] = useState<Producto[]>([]);
@@ -94,13 +103,16 @@ export default function Caja({ activa, onCrearProducto, onEnEspera, onImpresion 
   const [pesando, setPesando] = useState<Pesando | null>(null);
   const [config, setConfig] = useState<Config | null>(null);
   const [ultimaVentaId, setUltimaVentaId] = useState<number | null>(null);
-  const { salida, iniciar, imprimir, guardarPdf, abrirCajon, cerrar, descartarSiTermino } =
+  const { salida, iniciar, imprimir, reintentar, guardarPdf, abrirCajon, cerrar, descartarSiTermino } =
     useSalidasVenta(onImpresion);
-  const [dialogo, setDialogo] = useState<"poner-espera" | "lista-espera" | null>(null);
+  const [dialogo, setDialogo] = useState<"poner-espera" | "lista-espera" | "movimiento" | "cerrar-caja" | null>(null);
   const [enEspera, setEnEspera] = useState<ResumenEspera[] | null>(null);
   const campo = useRef<HTMLInputElement>(null);
 
-  const dialogoAbierto = cobrando || pesando !== null || dialogo !== null;
+  const turno = caja?.turno ?? null;
+  const cerrada = caja !== null && turno === null;
+  // Con la caja cerrada se muestra "Abrir caja": los atajos de la Caja no deben actuar.
+  const dialogoAbierto = cobrando || pesando !== null || dialogo !== null || cerrada;
   const enfocar = useCallback(() => campo.current?.focus(), []);
 
   useEffect(() => {
@@ -267,7 +279,7 @@ export default function Caja({ activa, onCrearProducto, onEnEspera, onImpresion 
     await refrescarEspera();
   };
 
-  /** Ctrl+P: reimprime la última boleta (una copia). */
+  /** Ctrl+P: reimprime la última boleta (una copia, que dice "COPIA"). */
   const reimprimirUltima = useCallback(() => {
     if (ultimaVentaId === null) {
       setAviso({ tipo: "error", texto: "Todavía no hay ventas para reimprimir" });
@@ -277,7 +289,7 @@ export default function Caja({ activa, onCrearProducto, onEnEspera, onImpresion 
     if (!mostrada || salida?.ventaId !== ultimaVentaId) {
       iniciar(ultimaVentaId, mostrada && aviso?.tipo === "venta" ? aviso.venta.folio : null);
     }
-    void imprimir(ultimaVentaId, 1);
+    void imprimir(ultimaVentaId, 1, true);
   }, [ultimaVentaId, aviso, salida, iniciar, imprimir]);
 
   // Atajos y "foco pegajoso": si el lector escribe mientras el foco está en otro lado,
@@ -332,6 +344,19 @@ export default function Caja({ activa, onCrearProducto, onEnEspera, onImpresion 
     if (config.imprimirAlCobrar) void imprimir(venta.id);
   };
 
+  if (cerrada && caja) {
+    return (
+      <AbrirCaja
+        sugerido={caja.ultimoMontoInicial}
+        enEspera={enEspera?.length ?? 0}
+        onAbierta={() => {
+          onCambioCaja();
+          setAviso({ tipo: "info", texto: "Caja abierta. ¡Buen turno!", alerta: false });
+        }}
+      />
+    );
+  }
+
   return (
     <div className="flex h-full">
       <section className="flex min-w-0 flex-1 flex-col p-6">
@@ -381,8 +406,9 @@ export default function Caja({ activa, onCrearProducto, onEnEspera, onImpresion 
             salida={salida?.ventaId === aviso.venta.id ? salida : null}
             reimprimir={() => {
               if (salida?.ventaId !== aviso.venta.id) iniciar(aviso.venta.id, aviso.venta.folio);
-              void imprimir(aviso.venta.id, 1);
+              void imprimir(aviso.venta.id, 1, true);
             }}
+            reintentar={reintentar}
             guardarPdf={() => {
               if (salida?.ventaId !== aviso.venta.id) iniciar(aviso.venta.id, aviso.venta.folio);
               void guardarPdf(aviso.venta.id, false);
@@ -397,7 +423,8 @@ export default function Caja({ activa, onCrearProducto, onEnEspera, onImpresion 
               <AvisoVenta
                 venta={null}
                 salida={salida}
-                reimprimir={() => salida && void imprimir(salida.ventaId, 1)}
+                reimprimir={() => salida && void imprimir(salida.ventaId, 1, true)}
+                reintentar={reintentar}
                 guardarPdf={() => salida && void guardarPdf(salida.ventaId, false)}
                 abrirPdf={() => salida && void guardarPdf(salida.ventaId, true)}
                 cerrar={cerrar}
@@ -519,6 +546,25 @@ export default function Caja({ activa, onCrearProducto, onEnEspera, onImpresion 
           </span>
           <span className="text-xs text-tenue">F7</span>
         </button>
+        <div className="mt-4 space-y-2 border-t border-linea pt-4">
+          <button
+            disabled={!turno}
+            onClick={() => setDialogo("movimiento")}
+            className="flex h-10 w-full items-center gap-2 rounded-lg border border-linea px-3 enabled:hover:bg-fondo disabled:opacity-50"
+          >
+            <ArrowDownUp size={16} className="text-tenue" aria-hidden />
+            Ingreso o retiro de efectivo
+          </button>
+          <button
+            disabled={!turno || lineas.length > 0}
+            onClick={() => setDialogo("cerrar-caja")}
+            title={lineas.length > 0 ? "Cobra, cancela o pon en espera la venta en curso para cerrar la caja" : undefined}
+            className="flex h-10 w-full items-center gap-2 rounded-lg border border-linea px-3 enabled:hover:bg-fondo disabled:opacity-50"
+          >
+            <Lock size={16} className="text-tenue" aria-hidden />
+            Cerrar caja
+          </button>
+        </div>
         <dl className="mt-auto space-y-1 text-xs text-tenue">
           <div>Enter: agregar · Esc: limpiar búsqueda</div>
           <div>F7 en espera · F8 poner en espera</div>
@@ -553,6 +599,34 @@ export default function Caja({ activa, onCrearProducto, onEnEspera, onImpresion 
           total={total}
           onConfirmar={ponerEnEspera}
           onCancelar={() => setDialogo(null)}
+        />
+      )}
+      {dialogo === "movimiento" && activa && turno && (
+        <DialogoMovimiento
+          turnoId={turno.id}
+          onCerrar={() => setDialogo(null)}
+          onRegistrado={(m) => {
+            setDialogo(null);
+            setAviso({
+              tipo: "info",
+              texto: `${m.tipo === "ingreso" ? "Ingreso" : "Retiro"} de ${pesos(m.monto)} registrado: ${m.motivo}.`,
+              alerta: false,
+            });
+          }}
+        />
+      )}
+      {dialogo === "cerrar-caja" && activa && turno && (
+        <CerrarCaja
+          turnoId={turno.id}
+          imprimir={Boolean(config?.impresora)}
+          onImpresion={onImpresion}
+          onCancelar={() => setDialogo(null)}
+          onCerrada={() => {
+            setDialogo(null);
+            setAviso(null);
+            cerrar();
+            onCambioCaja();
+          }}
         />
       )}
       {dialogo === "lista-espera" && activa && (

@@ -5,7 +5,7 @@ use sqlx::SqlitePool;
 
 use crate::error::validacion;
 use crate::repositorios::productos::Unidad;
-use crate::repositorios::{productos, ventas};
+use crate::repositorios::{productos, turnos, ventas};
 use crate::servicios::{cantidades, config};
 use crate::{Error, Resultado};
 
@@ -122,6 +122,8 @@ pub fn redondeo_a_decena(monto: i64) -> i64 {
 /// Confirma una venta en UNA transacción: cabecera, líneas, descuento de stock y
 /// movimientos. Si algo falla (o se corta la luz) no queda nada a medias.
 ///
+/// Necesita la caja abierta: la venta queda en el turno (una consulta por el índice único).
+///
 /// El stock puede quedar negativo: en un negocio real no se debe bloquear una venta
 /// porque el inventario esté desactualizado. Se corrige con un ajuste.
 pub async fn confirmar(pool: &SqlitePool, v: &NuevaVenta) -> Resultado<VentaConfirmada> {
@@ -152,6 +154,9 @@ pub async fn confirmar(pool: &SqlitePool, v: &NuevaVenta) -> Resultado<VentaConf
     }
 
     let mut tx = pool.begin().await?;
+    let turno_id = turnos::id_abierto(&mut tx)
+        .await?
+        .ok_or_else(|| Error::Validacion("Abre la caja para vender".into()))?;
 
     let mut lineas = Vec::with_capacity(orden.len());
     let mut subtotal: i64 = 0;
@@ -211,6 +216,7 @@ pub async fn confirmar(pool: &SqlitePool, v: &NuevaVenta) -> Resultado<VentaConf
     let cabecera = ventas::insertar_cabecera(
         &mut tx,
         &ventas::NuevaCabecera {
+            turno_id,
             subtotal,
             descuento: v.descuento,
             redondeo,

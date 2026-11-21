@@ -3,7 +3,7 @@ mod comun;
 use pos_core::servicios::espera::{self, NuevaEnEspera, MAXIMO_EN_ESPERA};
 use pos_core::servicios::productos;
 use pos_core::servicios::ventas::{self, ItemPedido, MedioPago, NuevaVenta};
-use pos_core::{db, Error};
+use pos_core::Error;
 use sqlx::SqlitePool;
 
 fn carrito(nombre: Option<&str>, items: &[(i64, i64)]) -> NuevaEnEspera {
@@ -28,7 +28,7 @@ async fn contar(pool: &SqlitePool, tabla: &str) -> i64 {
 
 #[tokio::test]
 async fn pone_en_espera_y_lista_con_total_estimado() {
-    let pool = db::abrir_en_memoria().await.unwrap();
+    let pool = comun::con_caja().await;
     let pan = comun::crear_kg(&pool, "P", "Pan", 2300, 10_000).await;
     let bebida = comun::crear(&pool, "B", "Bebida", 1500, 10).await;
 
@@ -67,7 +67,7 @@ async fn pone_en_espera_y_lista_con_total_estimado() {
 
 #[tokio::test]
 async fn recuperar_devuelve_las_lineas_y_borra_la_espera() {
-    let pool = db::abrir_en_memoria().await.unwrap();
+    let pool = comun::con_caja().await;
     let pan = comun::crear_kg(&pool, "P", "Pan", 2300, 0).await;
     let bebida = comun::crear(&pool, "B", "Bebida", 1500, 0).await;
     let id = espera::poner(&pool, &carrito(None, &[(bebida.id, 3000), (pan.id, 750)]))
@@ -99,7 +99,7 @@ async fn recuperar_devuelve_las_lineas_y_borra_la_espera() {
 
 #[tokio::test]
 async fn producto_desactivado_se_salta_al_recuperar() {
-    let pool = db::abrir_en_memoria().await.unwrap();
+    let pool = comun::con_caja().await;
     let a = comun::crear(&pool, "A", "Activo", 1000, 0).await;
     let b = comun::crear(&pool, "B", "Se desactiva", 2000, 0).await;
     let id = espera::poner(&pool, &carrito(None, &[(a.id, 1000), (b.id, 1000)]))
@@ -119,7 +119,7 @@ async fn producto_desactivado_se_salta_al_recuperar() {
 
 #[tokio::test]
 async fn maximo_veinte_en_espera_e_intercambio_en_el_limite() {
-    let pool = db::abrir_en_memoria().await.unwrap();
+    let pool = comun::con_caja().await;
     let p = comun::crear(&pool, "A", "Pan", 150, 0).await;
     let mut ids = Vec::new();
     for _ in 0..MAXIMO_EN_ESPERA {
@@ -150,7 +150,7 @@ async fn maximo_veinte_en_espera_e_intercambio_en_el_limite() {
 
 #[tokio::test]
 async fn no_cambia_stock_ni_folios() {
-    let pool = db::abrir_en_memoria().await.unwrap();
+    let pool = comun::con_caja().await;
     let p = comun::crear(&pool, "A", "Leche", 1190, 10).await;
 
     let id = espera::poner(&pool, &carrito(None, &[(p.id, 4000)]))
@@ -202,7 +202,7 @@ async fn no_cambia_stock_ni_folios() {
 
 #[tokio::test]
 async fn rechazos_y_descartar() {
-    let pool = db::abrir_en_memoria().await.unwrap();
+    let pool = comun::con_caja().await;
     let p = comun::crear(&pool, "A", "Pan", 150, 0).await;
 
     let vacio = espera::poner(&pool, &carrito(None, &[])).await;
