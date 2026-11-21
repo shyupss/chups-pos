@@ -1,0 +1,39 @@
+//! Arranque de la app y controlador (la "C" de MVC).
+//!
+//! Aquí solo se conecta todo: se abre la base de datos, se guarda el estado
+//! compartido y se registran los comandos que la interfaz puede llamar.
+//! La lógica vive en `pos-core`.
+
+mod comandos;
+mod estado;
+
+use std::time::Instant;
+
+use tauri::Manager;
+
+use estado::EstadoApp;
+
+const NOMBRE_ARCHIVO_DB: &str = "chups-pos.db";
+
+pub fn run() {
+    let inicio = Instant::now();
+
+    tauri::Builder::default()
+        .setup(move |app| {
+            let carpeta = app.path().app_data_dir()?;
+            std::fs::create_dir_all(&carpeta)?;
+            let ruta_db = carpeta.join(NOMBRE_ARCHIVO_DB);
+
+            let pool = tauri::async_runtime::block_on(pos_core::db::abrir(&ruta_db))?;
+
+            app.manage(EstadoApp {
+                pool,
+                ruta_db,
+                ms_inicio: inicio.elapsed().as_millis() as u64,
+            });
+            Ok(())
+        })
+        .invoke_handler(tauri::generate_handler![comandos::sistema::estado_sistema])
+        .run(tauri::generate_context!())
+        .expect("error al iniciar CHUPS POS");
+}

@@ -1,0 +1,15 @@
+[package]
+name = "pos-core"
+description = "Modelo del POS: reglas de negocio y acceso a datos, sin depender de Tauri."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+serde.workspace = true
+sqlx.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+tempfile = "3"
+tokio.workspace = true
