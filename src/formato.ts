@@ -86,3 +86,8 @@ export function redondeoEfectivo(monto: number): number {
   const resto = ((monto % 10) + 10) % 10;
   return resto <= 5 ? -resto : 10 - resto;
 }
+
+const reloj = new Intl.DateTimeFormat("es-CL", { hour: "2-digit", minute: "2-digit" });
+
+/** Fecha ISO en UTC (como la guarda la base) -> "14:05" en la hora local del PC. */
+export const hora = (iso: string) => reloj.format(new Date(iso));

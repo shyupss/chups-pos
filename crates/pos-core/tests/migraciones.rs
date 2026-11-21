@@ -77,7 +77,7 @@ async fn migracion_0002_convierte_datos_de_la_fase_1() {
 
     // La versión nueva abre el mismo archivo y aplica el resto de las migraciones.
     let pool = db::abrir(&ruta).await.unwrap();
-    assert!(db::version_esquema(&pool).await.unwrap() >= 2);
+    assert_eq!(db::version_esquema(&pool).await.unwrap(), 3);
 
     let (unidad, stock_mil, minimo_mil): (String, i64, i64) =
         sqlx::query_as("SELECT unidad, stock_mil, stock_minimo_mil FROM productos WHERE id = 1")

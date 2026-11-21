@@ -92,6 +92,23 @@ export interface ConfigCaja {
   redondeoEfectivo: boolean;
 }
 
+/** Una venta en espera en la lista. El total usa los precios actuales de los productos activos. */
+export interface ResumenEspera {
+  id: number;
+  nombre: string | null;
+  creadaEn: string;
+  lineas: number;
+  totalEstimado: number;
+}
+
+export interface VentaRecuperada {
+  lineas: { producto: Producto; cantidadMil: number }[];
+  /** Líneas que no volvieron porque el producto se desactivó. */
+  saltados: number;
+  /** Si se intercambió, el id con que quedó en espera el carrito anterior. */
+  intercambioId: number | null;
+}
+
 export const api = {
   estadoSistema: () => invoke<EstadoSistema>("estado_sistema"),
 
@@ -128,6 +145,14 @@ export const api = {
 
   configCaja: () => invoke<ConfigCaja>("config_caja"),
   cambiarRedondeoEfectivo: (activo: boolean) => invoke<void>("cambiar_redondeo_efectivo", { activo }),
+
+  ponerEnEspera: (nombre: string | null, items: ItemPedido[]) =>
+    invoke<number>("poner_en_espera", { nombre, items }),
+  listarEnEspera: () => invoke<ResumenEspera[]>("listar_en_espera"),
+  /** Con `intercambio`, el carrito actual queda en espera en la misma transacción. */
+  recuperarEnEspera: (id: number, intercambio: { nombre: string | null; items: ItemPedido[] } | null) =>
+    invoke<VentaRecuperada>("recuperar_en_espera", { id, intercambio }),
+  descartarEnEspera: (id: number) => invoke<void>("descartar_en_espera", { id }),
 };
 
 /** Los errores de Rust llegan como texto listo para mostrar. */

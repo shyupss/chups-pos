@@ -47,6 +47,10 @@ pub fn run() {
             comandos::categorias::crear_categoria,
             comandos::categorias::renombrar_categoria,
             comandos::categorias::eliminar_categoria,
+            comandos::espera::poner_en_espera,
+            comandos::espera::listar_en_espera,
+            comandos::espera::recuperar_en_espera,
+            comandos::espera::descartar_en_espera,
         ])
         .run(tauri::generate_context!())
         .expect("error al iniciar CHUPS POS");

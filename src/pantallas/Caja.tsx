@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { api, textoError, type Producto, type VentaConfirmada } from "../api";
+import { api, textoError, type ItemPedido, type Producto, type ResumenEspera, type VentaConfirmada } from "../api";
 import Cobro from "../componentes/Cobro";
 import DialogoPeso from "../componentes/DialogoPeso";
+import ListaEspera from "../componentes/ListaEspera";
+import PonerEnEspera from "../componentes/PonerEnEspera";
 import { cantidad, folio, MAX_KG_MIL, MAX_UNIDADES_MIL, parseKg, pesos, subtotalLinea } from "../formato";
 
 interface Linea {
@@ -13,12 +15,18 @@ interface Linea {
 interface Props {
   activa: boolean;
   onCrearProducto: (codigo: string) => void;
+  /** Cuántas ventas hay en espera, para la insignia de la barra lateral. */
+  onEnEspera: (cantidad: number) => void;
 }
+
+/** Igual que el servicio: más ventas en espera no se aceptan. */
+const MAXIMO_EN_ESPERA = 20;
 
 type Aviso =
   | { tipo: "error"; texto: string }
   | { tipo: "no-existe"; codigo: string }
-  | { tipo: "venta"; venta: VentaConfirmada };
+  | { tipo: "venta"; venta: VentaConfirmada }
+  | { tipo: "info"; texto: string; alerta: boolean };
 
 /** Lo que va antes del asterisco: "3" en "3*código", "0,5" en "0,5*pan". */
 interface Multiplo {
@@ -64,7 +72,7 @@ function resolverCantidad(
     : { tipo: "error", texto: `El peso de ${p.nombre} debe estar entre 1 g y 100 kg` };
 }
 
-export default function Caja({ activa, onCrearProducto }: Props) {
+export default function Caja({ activa, onCrearProducto, onEnEspera }: Props) {
   const [lineas, setLineas] = useState<Linea[]>([]);
   const [entrada, setEntrada] = useState("");
   const [resultados, setResultados] = useState<Producto[]>([]);
@@ -73,9 +81,11 @@ export default function Caja({ activa, onCrearProducto }: Props) {
   const [cobrando, setCobrando] = useState(false);
   const [pesando, setPesando] = useState<Pesando | null>(null);
   const [redondeoActivo, setRedondeoActivo] = useState(true);
+  const [dialogo, setDialogo] = useState<"poner-espera" | "lista-espera" | null>(null);
+  const [enEspera, setEnEspera] = useState<ResumenEspera[] | null>(null);
   const campo = useRef<HTMLInputElement>(null);
 
-  const dialogoAbierto = cobrando || pesando !== null;
+  const dialogoAbierto = cobrando || pesando !== null || dialogo !== null;
   const enfocar = useCallback(() => campo.current?.focus(), []);
 
   useEffect(() => {
@@ -164,6 +174,68 @@ export default function Caja({ activa, onCrearProducto }: Props) {
   // Total mostrado mientras se escanea. El total que vale lo calcula Rust al confirmar,
   // con los precios de la base de datos.
   const total = lineas.reduce((s, l) => s + subtotalLinea(l.producto.precioVenta, l.cantidadMil), 0);
+  const itemsDelCarrito = (): ItemPedido[] =>
+    lineas.map((l) => ({ productoId: l.producto.id, cantidadMil: l.cantidadMil }));
+
+  // --- Ventas en espera ---------------------------------------------------------------------
+
+  const refrescarEspera = useCallback(async () => {
+    try {
+      const lista = await api.listarEnEspera();
+      setEnEspera(lista);
+      onEnEspera(lista.length);
+    } catch (e) {
+      setAviso({ tipo: "error", texto: textoError(e) });
+    }
+  }, [onEnEspera]);
+
+  // Al abrir la app pueden quedar ventas en espera de la sesión anterior.
+  useEffect(() => {
+    void refrescarEspera();
+  }, [refrescarEspera]);
+
+  const abrirListaEspera = useCallback(() => {
+    setDialogo("lista-espera");
+    void refrescarEspera(); // totales con los precios del momento
+  }, [refrescarEspera]);
+
+  const ponerEnEspera = async (nombre: string | null) => {
+    await api.ponerEnEspera(nombre, itemsDelCarrito());
+    setLineas([]);
+    setDialogo(null);
+    setAviso({ tipo: "info", texto: nombre ? `«${nombre}» quedó en espera.` : "La venta quedó en espera.", alerta: false });
+    void refrescarEspera();
+  };
+
+  const recuperarEspera = async (id: number) => {
+    // Si hay algo en la caja, pasa a espera en la misma transacción (intercambio).
+    const intercambio = lineas.length > 0 ? { nombre: null, items: itemsDelCarrito() } : null;
+    const r = await api.recuperarEnEspera(id, intercambio);
+    const porProducto = new Map<number, Linea>();
+    for (const l of r.lineas) {
+      const previa = porProducto.get(l.producto.id)?.cantidadMil ?? 0;
+      porProducto.set(l.producto.id, { producto: l.producto, cantidadMil: previa + l.cantidadMil });
+    }
+    setLineas([...porProducto.values()]);
+    setResultados([]);
+    setDialogo(null);
+    const partes = ["Venta recuperada."];
+    if (intercambio) partes.push("La que estaba en la caja quedó en espera.");
+    if (r.saltados > 0) {
+      partes.push(
+        r.saltados === 1
+          ? "Se saltó 1 producto que ya no está activo."
+          : `Se saltaron ${r.saltados} productos que ya no están activos.`,
+      );
+    }
+    setAviso({ tipo: "info", texto: partes.join(" "), alerta: intercambio !== null || r.saltados > 0 });
+    void refrescarEspera();
+  };
+
+  const descartarEspera = async (id: number) => {
+    await api.descartarEnEspera(id);
+    await refrescarEspera();
+  };
 
   // Atajos y "foco pegajoso": si el lector escribe mientras el foco está en otro lado,
   // las teclas van igual al campo de escaneo.
@@ -173,6 +245,16 @@ export default function Caja({ activa, onCrearProducto }: Props) {
       if (e.key === "F12") {
         e.preventDefault();
         if (lineas.length > 0) setCobrando(true);
+        return;
+      }
+      if (e.key === "F7") {
+        e.preventDefault();
+        abrirListaEspera();
+        return;
+      }
+      if (e.key === "F8") {
+        e.preventDefault();
+        if (lineas.length > 0) setDialogo("poner-espera");
         return;
       }
       if (e.key === "Escape") {
@@ -186,7 +268,7 @@ export default function Caja({ activa, onCrearProducto }: Props) {
     };
     window.addEventListener("keydown", alPresionar);
     return () => window.removeEventListener("keydown", alPresionar);
-  }, [activa, dialogoAbierto, lineas.length, enfocar]);
+  }, [activa, dialogoAbierto, lineas.length, enfocar, abrirListaEspera]);
 
   const alConfirmar = (venta: VentaConfirmada) => {
     setCobrando(false);
@@ -332,13 +414,29 @@ export default function Caja({ activa, onCrearProducto }: Props) {
           >
             Cancelar venta
           </button>
-          {/* Reserva su lugar en el diseño; la venta en espera llega en la parte 4. */}
-          <button disabled title="Llega en la fase 2" className="h-10 flex-1 rounded-lg text-tenue opacity-50">
+          <button
+            disabled={lineas.length === 0}
+            onClick={() => setDialogo("poner-espera")}
+            title="Poner en espera (F8)"
+            aria-keyshortcuts="F8"
+            className="h-10 flex-1 rounded-lg text-tenue enabled:hover:bg-fondo enabled:hover:text-texto disabled:opacity-50"
+          >
             Poner en espera
           </button>
         </div>
+        <button
+          onClick={abrirListaEspera}
+          aria-keyshortcuts="F7"
+          className="mt-2 flex h-10 items-center justify-between rounded-lg border border-linea px-3 hover:bg-fondo"
+        >
+          <span>
+            En espera <span className="tabular-nums">({enEspera?.length ?? 0})</span>
+          </span>
+          <span className="text-xs text-tenue">F7</span>
+        </button>
         <dl className="mt-auto space-y-1 text-xs text-tenue">
           <div>Enter: agregar · Esc: limpiar búsqueda</div>
+          <div>F7 en espera · F8 poner en espera</div>
           <div>F1 caja · F2 productos · F12 cobrar</div>
         </dl>
       </aside>
@@ -361,6 +459,24 @@ export default function Caja({ activa, onCrearProducto }: Props) {
           }
           onConfirmar={alPesar}
           onCancelar={() => setPesando(null)}
+        />
+      )}
+      {dialogo === "poner-espera" && activa && (
+        <PonerEnEspera
+          productos={lineas.length}
+          total={total}
+          onConfirmar={ponerEnEspera}
+          onCancelar={() => setDialogo(null)}
+        />
+      )}
+      {dialogo === "lista-espera" && activa && (
+        <ListaEspera
+          ventas={enEspera}
+          maximo={MAXIMO_EN_ESPERA}
+          intercambia={lineas.length > 0}
+          onRecuperar={recuperarEspera}
+          onDescartar={descartarEspera}
+          onCerrar={() => setDialogo(null)}
         />
       )}
     </div>
@@ -410,6 +526,15 @@ function AvisoCaja({
         >
           Crear producto
         </button>
+      </div>
+    );
+  }
+  if (aviso.tipo === "info") {
+    return (
+      <div
+        className={`mt-3 rounded-lg px-4 py-3 ${aviso.alerta ? "bg-aviso-fondo text-aviso" : "bg-exito-fondo text-exito"}`}
+      >
+        {aviso.texto}
       </div>
     );
   }
