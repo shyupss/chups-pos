@@ -10,6 +10,7 @@ pub fn datos(codigo: Option<&str>, nombre: &str, precio: i64, stock: i64) -> Dat
     DatosProducto {
         codigo_barras: codigo.map(str::to_owned),
         nombre: nombre.into(),
+        categoria_id: None,
         unidad: Unidad::Unidad,
         precio_venta: precio,
         costo: None,

@@ -1,8 +1,9 @@
 use serde::Deserialize;
-use sqlx::SqlitePool;
+use sqlx::{SqliteConnection, SqlitePool};
 
 use crate::error::validacion;
-use crate::repositorios::productos::{self as repo, Campos, Producto, Unidad};
+use crate::repositorios::categorias;
+use crate::repositorios::productos::{self as repo, Campos, FiltroCategoria, Producto, Unidad};
 use crate::servicios::cantidades;
 use crate::{Error, Resultado};
 
@@ -15,6 +16,8 @@ pub const LIMITE_MAXIMO: i64 = 200;
 pub struct DatosProducto {
     pub codigo_barras: Option<String>,
     pub nombre: String,
+    #[serde(default)]
+    pub categoria_id: Option<i64>,
     #[serde(default)]
     pub unidad: Unidad,
     /// Precio por unidad o, en productos por kg, precio por kilo.
@@ -61,13 +64,28 @@ fn validar(d: &DatosProducto) -> Resultado<Limpios> {
     Ok(Limpios { codigo, nombre })
 }
 
+/// La categoría elegida debe existir (la base lo exige, pero así el mensaje es claro).
+async fn validar_categoria(
+    conn: &mut SqliteConnection,
+    categoria_id: Option<i64>,
+) -> Resultado<()> {
+    match categoria_id {
+        Some(id) if !categorias::existe(conn, id).await? => {
+            validacion("La categoría elegida no existe")
+        }
+        _ => Ok(()),
+    }
+}
+
 pub async fn crear(pool: &SqlitePool, d: &DatosProducto) -> Resultado<Producto> {
     let l = validar(d)?;
     cantidades::validar_stock(d.unidad, d.stock_inicial_mil, "stock inicial")?;
     let mut tx = pool.begin().await?;
+    validar_categoria(&mut tx, d.categoria_id).await?;
     let campos = Campos {
         codigo_barras: l.codigo.as_deref(),
         nombre: &l.nombre,
+        categoria_id: d.categoria_id,
         unidad: d.unidad,
         precio_venta: d.precio_venta,
         costo: d.costo,
@@ -97,9 +115,11 @@ pub async fn editar(pool: &SqlitePool, id: i64, d: &DatosProducto) -> Resultado<
     let anterior = repo::por_id(&mut tx, id)
         .await?
         .ok_or_else(|| Error::NoEncontrado("El producto no existe".into()))?;
+    validar_categoria(&mut tx, d.categoria_id).await?;
     let campos = Campos {
         codigo_barras: l.codigo.as_deref(),
         nombre: &l.nombre,
+        categoria_id: d.categoria_id,
         unidad: d.unidad,
         precio_venta: d.precio_venta,
         costo: d.costo,
@@ -130,11 +150,13 @@ pub async fn buscar_por_codigo(pool: &SqlitePool, codigo: &str) -> Resultado<Opt
     repo::por_codigo(pool, codigo).await
 }
 
-/// Búsqueda por nombre (sin importar tildes ni mayúsculas) o por inicio del código.
+/// Búsqueda por nombre (sin importar tildes ni mayúsculas) o por inicio del código,
+/// opcionalmente dentro de una categoría.
 pub async fn buscar(
     pool: &SqlitePool,
     texto: &str,
     incluir_inactivos: bool,
+    categoria: FiltroCategoria,
     limite: i64,
     desplazamiento: i64,
 ) -> Resultado<Vec<Producto>> {
@@ -151,6 +173,7 @@ pub async fn buscar(
         fts.as_deref(),
         prefijo,
         incluir_inactivos,
+        categoria,
         limite,
         desplazamiento,
     )

@@ -23,3 +23,8 @@ SET cantidad_mil = cantidad_mil * 1000, stock_resultante_mil = stock_resultante_
 -- Puede ser negativo. Solo se aplica en efectivo y se puede desactivar con la clave de config.
 ALTER TABLE ventas ADD COLUMN redondeo INTEGER NOT NULL DEFAULT 0;
 INSERT OR IGNORE INTO config (clave, valor) VALUES ('redondeo_efectivo', '1');
+
+-- Categorías: la tabla existe desde la 0001. Este índice sirve al filtro por categoría de la lista
+-- de productos, que ordena por nombre, y reemplaza al índice simple por categoría.
+DROP INDEX idx_productos_categoria;
+CREATE INDEX idx_productos_categoria_nombre ON productos (categoria_id, nombre COLLATE NOCASE);

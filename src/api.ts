@@ -18,6 +18,7 @@ export interface Producto {
   id: number;
   codigoBarras: string | null;
   nombre: string;
+  categoriaId: number | null;
   unidad: Unidad;
   precioVenta: number;
   costo: number | null;
@@ -29,6 +30,7 @@ export interface Producto {
 export interface DatosProducto {
   codigoBarras: string | null;
   nombre: string;
+  categoriaId: number | null;
   unidad: Unidad;
   precioVenta: number;
   costo: number | null;
@@ -36,6 +38,16 @@ export interface DatosProducto {
   /** Solo se usa al crear. */
   stockInicialMil: number;
 }
+
+export interface Categoria {
+  id: number;
+  nombre: string;
+  /** Productos activos de la categoría. */
+  productos: number;
+}
+
+/** Filtro de la búsqueda de productos: todas, solo las sin categoría o una categoría. */
+export type FiltroCategoria = "todas" | "sin" | number;
 
 export type MedioPago = "efectivo" | "debito" | "credito" | "transferencia" | "fiado";
 
@@ -85,13 +97,32 @@ export const api = {
 
   buscarProductoPorCodigo: (codigo: string) =>
     invoke<Producto | null>("buscar_producto_por_codigo", { codigo }),
-  buscarProductos: (texto: string, incluirInactivos: boolean, limite: number, desplazamiento: number) =>
-    invoke<Producto[]>("buscar_productos", { texto, incluirInactivos, limite, desplazamiento }),
+  buscarProductos: (
+    texto: string,
+    incluirInactivos: boolean,
+    limite: number,
+    desplazamiento: number,
+    categoria: FiltroCategoria = "todas",
+  ) =>
+    invoke<Producto[]>("buscar_productos", {
+      texto,
+      incluirInactivos,
+      categoriaId: typeof categoria === "number" ? categoria : null,
+      sinCategoria: categoria === "sin",
+      limite,
+      desplazamiento,
+    }),
   crearProducto: (datos: DatosProducto) => invoke<Producto>("crear_producto", { datos }),
   editarProducto: (id: number, datos: DatosProducto) =>
     invoke<Producto>("editar_producto", { id, datos }),
   cambiarEstadoProducto: (id: number, activo: boolean) =>
     invoke<void>("cambiar_estado_producto", { id, activo }),
+
+  listarCategorias: () => invoke<Categoria[]>("listar_categorias"),
+  crearCategoria: (nombre: string) => invoke<Categoria>("crear_categoria", { nombre }),
+  renombrarCategoria: (id: number, nombre: string) =>
+    invoke<Categoria>("renombrar_categoria", { id, nombre }),
+  eliminarCategoria: (id: number) => invoke<void>("eliminar_categoria", { id }),
 
   confirmarVenta: (venta: NuevaVenta) => invoke<VentaConfirmada>("confirmar_venta", { venta }),
 

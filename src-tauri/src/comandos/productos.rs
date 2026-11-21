@@ -1,4 +1,4 @@
-use pos_core::repositorios::productos::Producto;
+use pos_core::repositorios::productos::{FiltroCategoria, Producto};
 use pos_core::servicios::productos::{self as srv, DatosProducto};
 use tauri::State;
 
@@ -16,18 +16,28 @@ pub async fn buscar_producto_por_codigo(
         .map_err(a_texto)
 }
 
+/// Búsqueda paginada. `categoria_id` filtra por una categoría y `sin_categoria` muestra
+/// solo los productos sin categoría; sin ninguno de los dos, busca en todas.
 #[tauri::command]
 pub async fn buscar_productos(
     estado: State<'_, EstadoApp>,
     texto: String,
     incluir_inactivos: bool,
+    categoria_id: Option<i64>,
+    sin_categoria: Option<bool>,
     limite: i64,
     desplazamiento: i64,
 ) -> ResultadoComando<Vec<Producto>> {
+    let categoria = match (categoria_id, sin_categoria.unwrap_or(false)) {
+        (_, true) => FiltroCategoria::SinCategoria,
+        (Some(id), false) => FiltroCategoria::Una(id),
+        (None, false) => FiltroCategoria::Todas,
+    };
     srv::buscar(
         &estado.pool,
         &texto,
         incluir_inactivos,
+        categoria,
         limite,
         desplazamiento,
     )

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { api, textoError, type Producto, type Unidad } from "../api";
+import { api, textoError, type Categoria, type Producto, type Unidad } from "../api";
 import { aEntero, cantidad, cantidadEditable, parseCantidad, pesos, soloDigitos } from "../formato";
 import Opciones, { type Opcion } from "./Opciones";
 
@@ -7,6 +7,9 @@ interface Props {
   /** null = producto nuevo */
   producto: Producto | null;
   codigoInicial?: string;
+  categorias: Categoria[];
+  /** Categoría para un producto nuevo (la del filtro de la lista, si hay una). */
+  categoriaInicial: number | null;
   onGuardado: (p: Producto) => void;
   onCerrar: () => void;
 }
@@ -16,10 +19,18 @@ const UNIDADES: Opcion<Unidad>[] = [
   { id: "kg", nombre: "Kilo" },
 ];
 
-export default function FormularioProducto({ producto, codigoInicial, onGuardado, onCerrar }: Props) {
+export default function FormularioProducto({
+  producto,
+  codigoInicial,
+  categorias,
+  categoriaInicial,
+  onGuardado,
+  onCerrar,
+}: Props) {
   const nuevo = producto === null;
   const [codigo, setCodigo] = useState(producto?.codigoBarras ?? codigoInicial ?? "");
   const [nombre, setNombre] = useState(producto?.nombre ?? "");
+  const [categoriaId, setCategoriaId] = useState<number | null>(producto ? producto.categoriaId : categoriaInicial);
   const [unidad, setUnidad] = useState<Unidad>(producto?.unidad ?? "unidad");
   const [precio, setPrecio] = useState(producto ? String(producto.precioVenta) : "");
   const [costo, setCosto] = useState(producto?.costo != null ? String(producto.costo) : "");
@@ -57,6 +68,7 @@ export default function FormularioProducto({ producto, codigoInicial, onGuardado
     const datos = {
       codigoBarras: codigo.trim() || null,
       nombre,
+      categoriaId,
       unidad,
       precioVenta,
       costo: aEntero(costo),
@@ -122,6 +134,20 @@ export default function FormularioProducto({ producto, codigoInicial, onGuardado
           maxLength={120}
           autoComplete="off"
         />
+      </Campo>
+      <Campo etiqueta="Categoría">
+        <select
+          value={categoriaId ?? ""}
+          onChange={(e) => setCategoriaId(e.target.value === "" ? null : Number(e.target.value))}
+          className={claseCampo}
+        >
+          <option value="">Sin categoría</option>
+          {categorias.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.nombre}
+            </option>
+          ))}
+        </select>
       </Campo>
       <div>
         <span className="text-xs text-tenue">Se vende por</span>

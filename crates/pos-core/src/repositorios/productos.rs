@@ -20,6 +20,7 @@ pub struct Producto {
     pub id: i64,
     pub codigo_barras: Option<String>,
     pub nombre: String,
+    pub categoria_id: Option<i64>,
     pub unidad: Unidad,
     pub precio_venta: i64,
     pub costo: Option<i64>,
@@ -28,13 +29,14 @@ pub struct Producto {
     pub activo: bool,
 }
 
-const COLUMNAS: &str = "p.id, p.codigo_barras, p.nombre, p.unidad, p.precio_venta, p.costo, \
-                        p.stock_mil, p.stock_minimo_mil, p.activo";
+const COLUMNAS: &str = "p.id, p.codigo_barras, p.nombre, p.categoria_id, p.unidad, \
+                        p.precio_venta, p.costo, p.stock_mil, p.stock_minimo_mil, p.activo";
 
 /// Campos que se guardan al crear o editar.
 pub struct Campos<'a> {
     pub codigo_barras: Option<&'a str>,
     pub nombre: &'a str,
+    pub categoria_id: Option<i64>,
     pub unidad: Unidad,
     pub precio_venta: i64,
     pub costo: Option<i64>,
@@ -64,6 +66,15 @@ pub async fn por_id(conn: &mut SqliteConnection, id: i64) -> Resultado<Option<Pr
     Ok(sqlx::query_as(&sql).bind(id).fetch_optional(conn).await?)
 }
 
+/// Filtro de categoría de la búsqueda.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub enum FiltroCategoria {
+    #[default]
+    Todas,
+    SinCategoria,
+    Una(i64),
+}
+
 /// Lista paginada ordenada por nombre. `consulta_fts` filtra por nombre (FTS5);
 /// `prefijo_codigo` además acepta productos cuyo código empiece así.
 pub async fn listar(
@@ -71,6 +82,7 @@ pub async fn listar(
     consulta_fts: Option<&str>,
     prefijo_codigo: Option<&str>,
     incluir_inactivos: bool,
+    categoria: FiltroCategoria,
     limite: i64,
     desplazamiento: i64,
 ) -> Resultado<Vec<Producto>> {
@@ -89,11 +101,22 @@ pub async fn listar(
         (false, true) => sql.push_str(" AND p.codigo_barras LIKE ?2 || '%'"),
         (false, false) => {}
     }
-    sql.push_str(" ORDER BY p.nombre COLLATE NOCASE, p.id LIMIT ?3 OFFSET ?4");
+    match categoria {
+        FiltroCategoria::Todas => {}
+        FiltroCategoria::SinCategoria => sql.push_str(" AND p.categoria_id IS NULL"),
+        FiltroCategoria::Una(_) => sql.push_str(" AND p.categoria_id = ?3"),
+    }
+    // LIMIT y OFFSET van al final (?4 y ?5) para que los cinco parámetros siempre existan.
+    sql.push_str(" ORDER BY p.nombre COLLATE NOCASE, p.id LIMIT ?4 OFFSET ?5");
+    let categoria_id = match categoria {
+        FiltroCategoria::Una(id) => id,
+        _ => 0,
+    };
 
     Ok(sqlx::query_as(&sql)
         .bind(consulta_fts.unwrap_or_default())
         .bind(prefijo_codigo.unwrap_or_default())
+        .bind(categoria_id)
         .bind(limite)
         .bind(desplazamiento)
         .fetch_all(pool)
@@ -102,11 +125,13 @@ pub async fn listar(
 
 pub async fn insertar(conn: &mut SqliteConnection, c: &Campos<'_>) -> Resultado<i64> {
     let id = sqlx::query_scalar(
-        "INSERT INTO productos (codigo_barras, nombre, unidad, precio_venta, costo, stock_minimo_mil)
-         VALUES (?, ?, ?, ?, ?, ?) RETURNING id",
+        "INSERT INTO productos
+            (codigo_barras, nombre, categoria_id, unidad, precio_venta, costo, stock_minimo_mil)
+         VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING id",
     )
     .bind(c.codigo_barras)
     .bind(c.nombre)
+    .bind(c.categoria_id)
     .bind(c.unidad)
     .bind(c.precio_venta)
     .bind(c.costo)
@@ -119,12 +144,13 @@ pub async fn insertar(conn: &mut SqliteConnection, c: &Campos<'_>) -> Resultado<
 pub async fn actualizar(conn: &mut SqliteConnection, id: i64, c: &Campos<'_>) -> Resultado<()> {
     sqlx::query(
         "UPDATE productos
-         SET codigo_barras = ?, nombre = ?, unidad = ?, precio_venta = ?, costo = ?,
-             stock_minimo_mil = ?
+         SET codigo_barras = ?, nombre = ?, categoria_id = ?, unidad = ?, precio_venta = ?,
+             costo = ?, stock_minimo_mil = ?
          WHERE id = ?",
     )
     .bind(c.codigo_barras)
     .bind(c.nombre)
+    .bind(c.categoria_id)
     .bind(c.unidad)
     .bind(c.precio_venta)
     .bind(c.costo)

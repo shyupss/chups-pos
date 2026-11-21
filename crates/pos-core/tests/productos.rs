@@ -1,5 +1,6 @@
 mod comun;
 
+use pos_core::repositorios::productos::FiltroCategoria::Todas;
 use pos_core::servicios::productos::{self as srv};
 use pos_core::{db, Error};
 
@@ -71,19 +72,37 @@ async fn busca_por_codigo_nombre_y_respeta_inactivos() {
         v.into_iter().map(|p| p.nombre).collect::<Vec<_>>()
     };
     assert_eq!(
-        nombres(srv::buscar(&pool, "coca", false, 50, 0).await.unwrap()),
+        nombres(
+            srv::buscar(&pool, "coca", false, Todas, 50, 0)
+                .await
+                .unwrap()
+        ),
         ["Coca-Cola 1.5L"]
     );
     assert_eq!(
-        nombres(srv::buscar(&pool, "te sup", false, 50, 0).await.unwrap()),
+        nombres(
+            srv::buscar(&pool, "te sup", false, Todas, 50, 0)
+                .await
+                .unwrap()
+        ),
         ["Té Supremo 20 bolsitas"]
     );
     assert_eq!(
-        nombres(srv::buscar(&pool, "7802", false, 50, 0).await.unwrap()),
+        nombres(
+            srv::buscar(&pool, "7802", false, Todas, 50, 0)
+                .await
+                .unwrap()
+        ),
         ["Té Supremo 20 bolsitas"]
     );
-    assert_eq!(srv::buscar(&pool, "", false, 50, 0).await.unwrap().len(), 2);
-    assert!(srv::buscar(&pool, "\"*", false, 50, 0)
+    assert_eq!(
+        srv::buscar(&pool, "", false, Todas, 50, 0)
+            .await
+            .unwrap()
+            .len(),
+        2
+    );
+    assert!(srv::buscar(&pool, "\"*", false, Todas, 50, 0)
         .await
         .unwrap()
         .is_empty());
@@ -94,14 +113,17 @@ async fn busca_por_codigo_nombre_y_respeta_inactivos() {
         .unwrap()
         .is_none());
     assert_eq!(
-        srv::buscar(&pool, "coca", false, 50, 0)
+        srv::buscar(&pool, "coca", false, Todas, 50, 0)
             .await
             .unwrap()
             .len(),
         0
     );
     assert_eq!(
-        srv::buscar(&pool, "coca", true, 50, 0).await.unwrap().len(),
+        srv::buscar(&pool, "coca", true, Todas, 50, 0)
+            .await
+            .unwrap()
+            .len(),
         1
     );
 }
@@ -119,8 +141,8 @@ async fn pagina_resultados() {
         )
         .await;
     }
-    let primera = srv::buscar(&pool, "", false, 10, 0).await.unwrap();
-    let tercera = srv::buscar(&pool, "", false, 10, 20).await.unwrap();
+    let primera = srv::buscar(&pool, "", false, Todas, 10, 0).await.unwrap();
+    let tercera = srv::buscar(&pool, "", false, Todas, 10, 20).await.unwrap();
     assert_eq!(primera.len(), 10);
     assert_eq!(primera[0].nombre, "Producto 000");
     assert_eq!(tercera.len(), 5);
