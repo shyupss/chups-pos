@@ -2,11 +2,13 @@ import Boton from "../../componentes/Boton";
 import { FolderOpen, HardDriveDownload, RotateCcw, TriangleAlert } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { api, textoError, type EstadoRespaldos, type InfoRespaldo } from "../../api";
+import { Ajuste, Columnas, Tarjeta } from "../../componentes/Ajustes";
 import Dialogo from "../../componentes/Dialogo";
 import Opciones, { type Opcion } from "../../componentes/Opciones";
 import type { ConfigEditable } from "../../hooks/useConfig";
 import { esCancelado, useConPin } from "../../componentes/PedirPin";
 import { fechaHora } from "../../formato";
+import ExcelTarjeta from "./Datos";
 
 const DIAS_AVISO = 3;
 const CONSERVAR: Opcion<string>[] = ["7", "14", "30", "60"].map((n) => ({ id: n, nombre: n }));
@@ -18,7 +20,7 @@ export function tamano(bytes: number): string {
 
 const diasDesde = (iso: string) => Math.floor((Date.now() - new Date(iso).getTime()) / 86_400_000);
 
-/** Configuración > Datos > Respaldos: la base, el último respaldo, la lista y restaurar. */
+/** Configuración > Datos y respaldos: respaldos, la base, Excel, restaurar y la lista de respaldos. */
 export default function Respaldos({ cfg }: { cfg: ConfigEditable }) {
   const conPin = useConPin();
   const [estado, setEstado] = useState<EstadoRespaldos | null>(null);
@@ -55,127 +57,140 @@ export default function Respaldos({ cfg }: { cfg: ConfigEditable }) {
   const viejo = !ultimo || diasDesde(ultimo.fecha) > DIAS_AVISO;
 
   return (
-    <div className="space-y-4">
-      <dl className="grid grid-cols-[10rem_1fr] gap-x-4 gap-y-1 text-sm">
-        <dt className="text-tenue">Base de datos</dt>
-        <dd className="min-w-0 break-all select-text">
-          {estado.rutaBase} <span className="text-tenue">({tamano(estado.bytesBase)})</span>
-        </dd>
-        <dt className="text-tenue">Carpeta de respaldos</dt>
-        <dd className="min-w-0 break-all select-text">
-          {estado.carpeta}{" "}
-          <button
-            type="button"
-            onClick={() =>
-              void api.elegirCarpetaRespaldos().then((c) => c && void cfg.cambiar({ respaldosCarpeta: c }))
-            }
-            className="text-acento hover:underline"
-          >
-            Cambiar…
-          </button>
-          {cfg.config?.respaldosCarpeta && (
-            <>
-              {" · "}
-              <button type="button" onClick={() => void cfg.cambiar({ respaldosCarpeta: null })} className="text-acento hover:underline">
-                Usar la predeterminada
-              </button>
-            </>
-          )}
-        </dd>
-      </dl>
-      <div className="flex items-center gap-3 text-sm">
-        <span className="text-tenue">Respaldos automáticos que se conservan</span>
-        <Opciones
-          nombre="respaldos-conservar"
-          etiqueta="Respaldos que se conservan"
-          opciones={CONSERVAR.some((o) => o.id === conservar) ? CONSERVAR : [...CONSERVAR, { id: conservar, nombre: conservar }]}
-          valor={conservar}
-          onCambiar={(v) => void cfg.cambiar({ respaldosConservar: Number(v) })}
-        />
-      </div>
+    <>
+      <Columnas
+        izquierda={
+          <Tarjeta titulo="Respaldos" ayuda="Una copia completa de la base, hecha sin detener la caja.">
+            {estado.error && (
+              <p className="flex items-start gap-2 rounded-lg bg-peligro-fondo px-3 py-2 text-peligro">
+                <TriangleAlert size={18} className="mt-0.5 shrink-0" aria-hidden /> {estado.error}
+              </p>
+            )}
+            <p
+              className={`rounded-lg px-3 py-2 ${viejo ? "bg-aviso-fondo text-aviso" : "bg-exito-fondo text-exito"}`}
+              role={viejo ? "alert" : undefined}
+            >
+              {ultimo
+                ? `Último respaldo: ${fechaHora(ultimo.fecha)}${viejo ? ` (hace ${diasDesde(ultimo.fecha)} días: conviene respaldar ahora)` : ""}`
+                : "Todavía no hay respaldos: conviene respaldar ahora."}
+            </p>
+            <Ajuste etiqueta="Respaldos automáticos que se conservan" ayuda="Los más viejos se borran al hacer uno nuevo.">
+              <Opciones
+                nombre="respaldos-conservar"
+                etiqueta="Respaldos que se conservan"
+                opciones={CONSERVAR.some((o) => o.id === conservar) ? CONSERVAR : [...CONSERVAR, { id: conservar, nombre: conservar }]}
+                valor={conservar}
+                onCambiar={(v) => void cfg.cambiar({ respaldosConservar: Number(v) })}
+              />
+            </Ajuste>
+            <div className="flex flex-wrap gap-2">
+              <Boton
+                variante="primario"
+                icono={HardDriveDownload}
+                disabled={trabajando}
+                onClick={() => void accion(async () => `Respaldo guardado: ${(await api.respaldarAhora()).nombre}`)}
+              >
+                {trabajando ? "Respaldando…" : "Respaldar ahora"}
+              </Boton>
+              <Boton
+                disabled={trabajando}
+                onClick={() =>
+                  void accion(async () => {
+                    const r = await api.respaldarEn();
+                    return r ? `Respaldo guardado en ${r.ruta}` : null;
+                  })
+                }
+              >
+                Respaldar en…
+              </Boton>
+              <Boton
+                icono={FolderOpen}
+                onClick={() => void api.abrirCarpetaRespaldos().catch((e) => setAviso({ texto: textoError(e), error: true }))}
+              >
+                Abrir carpeta
+              </Boton>
+            </div>
+            {aviso && <p className={`text-sm break-all ${aviso.error ? "text-peligro" : "text-exito"}`}>{aviso.texto}</p>}
+          </Tarjeta>
+        }
+        derecha={
+          <>
+            <Tarjeta titulo="Base de datos">
+              <dl className="grid grid-cols-[9rem_1fr] gap-x-4 gap-y-2 text-sm">
+                <dt className="text-tenue">Archivo</dt>
+                <dd className="min-w-0 break-all select-text">
+                  {estado.rutaBase} <span className="text-tenue">({tamano(estado.bytesBase)})</span>
+                </dd>
+                <dt className="text-tenue">Carpeta de respaldos</dt>
+                <dd className="min-w-0 break-all select-text">
+                  {estado.carpeta}
+                  <span className="mt-1 -ml-2.5 flex flex-wrap gap-1">
+                    <Boton
+                      variante="terciario"
+                      tamano="chico"
+                      onClick={() =>
+                        void api.elegirCarpetaRespaldos().then((c) => c && void cfg.cambiar({ respaldosCarpeta: c }))
+                      }
+                    >
+                      Cambiar…
+                    </Boton>
+                    {cfg.config?.respaldosCarpeta && (
+                      <Boton variante="terciario" tamano="chico" onClick={() => void cfg.cambiar({ respaldosCarpeta: null })}>
+                        Usar la predeterminada
+                      </Boton>
+                    )}
+                  </span>
+                </dd>
+              </dl>
+            </Tarjeta>
+            <ExcelTarjeta />
+            <Tarjeta titulo="Restaurar" ayuda="Reemplaza toda la base por la de un respaldo. Siempre pide el PIN, si hay uno.">
+              <div>
+                <Boton
+                  variante="peligro"
+                  icono={RotateCcw}
+                  disabled={trabajando}
+                  onClick={() =>
+                    void accion(async () => {
+                      const ruta = await api.elegirRespaldo();
+                      if (ruta) setRestaurar(await api.inspeccionarRespaldo(ruta));
+                      return null;
+                    })
+                  }
+                >
+                  Restaurar un respaldo…
+                </Boton>
+              </div>
+            </Tarjeta>
+          </>
+        }
+      />
 
-      {estado.error && (
-        <p className="flex items-start gap-2 rounded-lg bg-peligro-fondo px-3 py-2 text-peligro">
-          <TriangleAlert size={18} className="mt-0.5 shrink-0" aria-hidden /> {estado.error}
-        </p>
-      )}
-      <p
-        className={`rounded-lg px-3 py-2 ${viejo ? "bg-aviso-fondo text-aviso" : "bg-exito-fondo text-exito"}`}
-        role={viejo ? "alert" : undefined}
-      >
-        {ultimo
-          ? `Último respaldo: ${fechaHora(ultimo.fecha)}${viejo ? ` (hace ${diasDesde(ultimo.fecha)} días: conviene respaldar ahora)` : ""}`
-          : "Todavía no hay respaldos: conviene respaldar ahora."}
-      </p>
-
-      <div className="flex flex-wrap gap-2">
-        <button
-          type="button"
-          disabled={trabajando}
-          onClick={() => void accion(async () => `Respaldo guardado: ${(await api.respaldarAhora()).nombre}`)}
-          className="flex h-10 items-center gap-2 rounded-lg bg-acento px-4 font-semibold text-sobre-acento disabled:bg-linea disabled:text-tenue"
-        >
-          <HardDriveDownload size={16} aria-hidden /> {trabajando ? "Respaldando…" : "Respaldar ahora"}
-        </button>
-        <button
-          type="button"
-          disabled={trabajando}
-          onClick={() =>
-            void accion(async () => {
-              const r = await api.respaldarEn();
-              return r ? `Respaldo guardado en ${r.ruta}` : null;
-            })
-          }
-          className="h-10 rounded-lg border border-linea px-4 hover:bg-suave"
-        >
-          Respaldar en…
-        </button>
-        <button
-          type="button"
-          onClick={() => void api.abrirCarpetaRespaldos().catch((e) => setAviso({ texto: textoError(e), error: true }))}
-          className="flex h-10 items-center gap-2 rounded-lg border border-linea px-4 hover:bg-suave"
-        >
-          <FolderOpen size={16} aria-hidden /> Abrir carpeta
-        </button>
-        <span className="flex-1" />
-        <button
-          type="button"
-          disabled={trabajando}
-          onClick={() =>
-            void accion(async () => {
-              const ruta = await api.elegirRespaldo();
-              if (ruta) setRestaurar(await api.inspeccionarRespaldo(ruta));
-              return null;
-            })
-          }
-          className="flex h-10 items-center gap-2 rounded-lg border border-linea px-4 text-peligro hover:bg-peligro-fondo"
-        >
-          <RotateCcw size={16} aria-hidden /> Restaurar un respaldo…
-        </button>
-      </div>
-      {aviso && <p className={`text-sm break-all ${aviso.error ? "text-peligro" : "text-exito"}`}>{aviso.texto}</p>}
-
-      <div className="overflow-hidden rounded-lg border border-linea">
-        <div className="grid grid-cols-[minmax(0,1fr)_10rem_6rem] gap-3 border-b border-linea bg-suave px-3 py-2 text-xs font-medium text-tenue">
-          <span>Respaldo</span>
-          <span>Fecha</span>
-          <span className="text-right">Tamaño</span>
-        </div>
-        {estado.respaldos.length === 0 ? (
-          <p className="p-4 text-center text-tenue">No hay respaldos en la carpeta.</p>
-        ) : (
-          <ul className="max-h-64 overflow-auto">
-            {estado.respaldos.map((r) => (
-              <li key={r.ruta} className="grid grid-cols-[minmax(0,1fr)_10rem_6rem] gap-3 border-b border-linea px-3 py-2 text-sm tabular-nums">
-                <span className="truncate" title={r.ruta}>
-                  {r.nombre}
-                </span>
-                <span className="text-tenue">{fechaHora(r.fecha)}</span>
-                <span className="text-right">{tamano(r.bytes)}</span>
-              </li>
-            ))}
-          </ul>
-        )}
+      <div className="mt-5">
+        <Tarjeta titulo="Respaldos guardados" ayuda={`En ${estado.carpeta}`}>
+          <div className="overflow-hidden rounded-lg border border-linea">
+            <div className="grid grid-cols-[minmax(0,1fr)_10rem_6rem] gap-3 border-b border-linea bg-suave px-3 py-2 text-[13px] font-medium text-tenue">
+              <span>Respaldo</span>
+              <span>Fecha</span>
+              <span className="text-right">Tamaño</span>
+            </div>
+            {estado.respaldos.length === 0 ? (
+              <p className="p-4 text-center text-tenue">No hay respaldos en la carpeta.</p>
+            ) : (
+              <ul className="max-h-64 overflow-auto">
+                {estado.respaldos.map((r) => (
+                  <li key={r.ruta} className="grid grid-cols-[minmax(0,1fr)_10rem_6rem] gap-3 border-b border-linea px-3 py-2 text-sm tabular-nums last:border-b-0">
+                    <span className="truncate" title={r.ruta}>
+                      {r.nombre}
+                    </span>
+                    <span className="text-tenue">{fechaHora(r.fecha)}</span>
+                    <span className="text-right">{tamano(r.bytes)}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </Tarjeta>
       </div>
 
       {restaurar && (
@@ -189,7 +204,7 @@ export default function Respaldos({ cfg }: { cfg: ConfigEditable }) {
           }
         />
       )}
-    </div>
+    </>
   );
 }
 
@@ -249,14 +264,9 @@ function DialogoRestaurar({
         <Boton variante="terciario" atajo="Esc" onClick={onCerrar} className="flex-1">
           Cancelar
         </Boton>
-        <button
-          type="button"
-          onClick={() => void restaurar()}
-          disabled={trabajando}
-          className="h-11 flex-[2] rounded-lg bg-peligro font-semibold text-superficie disabled:bg-linea disabled:text-tenue"
-        >
+        <Boton variante="peligro" onClick={() => void restaurar()} disabled={trabajando} className="flex-[2]">
           {trabajando ? "Restaurando…" : "Restaurar y reiniciar"}
-        </button>
+        </Boton>
       </div>
     </Dialogo>
   );

@@ -1,6 +1,6 @@
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { Search } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   api,
   textoError,
@@ -12,7 +12,7 @@ import {
 } from "../api";
 import DetalleVentaPanel from "../componentes/DetalleVentaPanel";
 import InsigniaEstado from "../componentes/InsigniaEstado";
-import { diaLocal, fechaHora, folio, horaODia, NOMBRE_MEDIO, pesos } from "../formato";
+import { diaLocal, etiquetaDia, folio, hora, horaODia, NOMBRE_MEDIO, pesos } from "../formato";
 
 interface Props {
   activa: boolean;
@@ -25,6 +25,25 @@ interface Props {
 
 const POR_PAGINA = 100;
 const ALTO_FILA = 40;
+const ALTO_DIA = 34;
+
+/** Lo que muestra la lista virtual: el encabezado de cada día y las ventas de ese día, en orden. */
+type Item = { tipo: "dia"; clave: string; texto: string } | { tipo: "venta"; venta: VentaListada };
+
+/** Intercala un encabezado de día antes de la primera venta de cada día (las ventas ya vienen ordenadas). */
+function agruparPorDia(ventas: VentaListada[]): Item[] {
+  const items: Item[] = [];
+  let ultimoDia = "";
+  for (const venta of ventas) {
+    const dia = diaLocal(new Date(venta.fechaHora));
+    if (dia !== ultimoDia) {
+      items.push({ tipo: "dia", clave: dia, texto: etiquetaDia(venta.fechaHora) });
+      ultimoDia = dia;
+    }
+    items.push({ tipo: "venta", venta });
+  }
+  return items;
+}
 // Columnas según el ancho de la lista (container queries): con el detalle abierto o la ventana
 // angosta se ocultan productos y medio de pago, como en Productos.
 const COLUMNAS =
@@ -144,19 +163,23 @@ export default function Ventas({ activa, onImpresion, folioInicial = null, onFol
     void cargar(0);
   }, [cargar]);
 
+  // Los encabezados de día son ítems de la misma lista virtual: nada se carga de más.
+  const items = useMemo(() => agruparPorDia(filas), [filas]);
   const virtual = useVirtualizer({
-    count: filas.length,
+    count: items.length,
     getScrollElement: () => contenedor.current,
-    estimateSize: () => ALTO_FILA,
+    estimateSize: (i) => (items[i]?.tipo === "dia" ? ALTO_DIA : ALTO_FILA),
     overscan: 10,
   });
+  // Las alturas dependen del tipo de ítem: si la lista cambia, se vuelven a calcular.
+  useEffect(() => virtual.measure(), [items, virtual]);
   const visibles = virtual.getVirtualItems();
   const ultimaVisible = visibles.at(-1)?.index ?? 0;
   useEffect(() => {
-    if (hayMas && !cargando.current && ultimaVisible >= filas.length - 20 && filas.length > 0) {
+    if (hayMas && !cargando.current && ultimaVisible >= items.length - 20 && filas.length > 0) {
       void cargar(filas.length);
     }
-  }, [ultimaVisible, filas.length, hayMas, cargar]);
+  }, [ultimaVisible, items.length, filas.length, hayMas, cargar]);
 
   /** Enter en el buscador: el folio escrito o escaneado (CODE128 de la boleta) abre esa venta. */
   const abrirPorFolio = async () => {
@@ -218,7 +241,7 @@ export default function Ventas({ activa, onImpresion, folioInicial = null, onFol
               className={`${claseCampo} w-full pl-9`}
             />
           </form>
-          <div role="radiogroup" aria-label="Período" className="inline-flex rounded-lg border border-linea bg-superficie p-0.5">
+          <div role="radiogroup" aria-label="Período" className="inline-flex rounded-lg border border-borde-control bg-suave p-0.5">
             {PERIODOS.map((p) => (
               <button
                 key={p.id}
@@ -227,7 +250,7 @@ export default function Ventas({ activa, onImpresion, folioInicial = null, onFol
                 aria-checked={periodo === p.id}
                 onClick={() => cambiar({ ...rango(p.id), turnoId: p.id === "todas" ? filtros.turnoId : null })}
                 className={`h-8 rounded-md px-3 ${
-                  periodo === p.id ? "bg-texto font-medium text-superficie" : "text-tenue hover:text-texto"
+                  periodo === p.id ? "bg-seleccion font-semibold text-acento shadow-s1" : "text-tenue hover:text-texto"
                 }`}
               >
                 {p.nombre}
@@ -312,7 +335,7 @@ export default function Ventas({ activa, onImpresion, folioInicial = null, onFol
 
         <div className={`mt-4 grid ${COLUMNAS} gap-2 px-4 text-xs font-medium text-tenue`}>
           <span>Folio</span>
-          <span>Fecha y hora</span>
+          <span>Hora</span>
           <span className={`${COL_ANCHA} text-right`}>Productos</span>
           <span className="text-right">Total</span>
           <span className={COL_ANCHA}>Pago</span>
@@ -329,7 +352,19 @@ export default function Ventas({ activa, onImpresion, folioInicial = null, onFol
           ) : (
             <div style={{ height: virtual.getTotalSize(), position: "relative" }}>
               {visibles.map((v) => {
-                const venta = filas[v.index];
+                const item = items[v.index];
+                if (item.tipo === "dia") {
+                  return (
+                    <div
+                      key={`dia-${item.clave}`}
+                      style={{ position: "absolute", top: 0, left: 0, width: "100%", height: ALTO_DIA, transform: `translateY(${v.start}px)` }}
+                      className="flex items-center border-b border-linea bg-suave px-4 text-[13px] font-semibold text-tenue"
+                    >
+                      {item.texto}
+                    </div>
+                  );
+                }
+                const venta = item.venta;
                 const seleccionada = abierta === venta.id;
                 return (
                   <button
@@ -349,7 +384,7 @@ export default function Ventas({ activa, onImpresion, folioInicial = null, onFol
                     } ${venta.estado === "anulada" ? "text-tenue" : ""}`}
                   >
                     <span className="font-medium">{folio(venta.folio)}</span>
-                    <span className="truncate">{fechaHora(venta.fechaHora)}</span>
+                    <span className="truncate">{hora(venta.fechaHora)}</span>
                     <span className={`${COL_ANCHA} text-right`}>{venta.productos}</span>
                     <span className={`text-right ${venta.estado === "anulada" ? "line-through" : ""}`}>
                       {pesos(venta.total)}

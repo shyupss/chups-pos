@@ -1,16 +1,13 @@
+import Interruptor from "../../componentes/Interruptor";
 import Boton from "../../componentes/Boton";
 import { KeyRound, ShieldCheck } from "lucide-react";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { api, textoError, type AccionesProtegidas, type EstadoSeguridad } from "../../api";
-import { Fila } from "../../componentes/Ajustes";
+import { Ajuste, Columnas, Tarjeta } from "../../componentes/Ajustes";
 import Dialogo from "../../componentes/Dialogo";
-import Opciones, { type Opcion } from "../../componentes/Opciones";
+
 import { esCancelado, type ConPin } from "../../componentes/PedirPin";
 
-const SI_NO: Opcion<"si" | "no">[] = [
-  { id: "si", nombre: "Pide PIN" },
-  { id: "no", nombre: "Libre" },
-];
 
 const ACCIONES: { clave: keyof AccionesProtegidas; nombre: string; ayuda: string }[] = [
   { clave: "anularVenta", nombre: "Anular una venta", ayuda: "Repone el stock y devuelve el dinero de toda la venta." },
@@ -41,9 +38,7 @@ const ACCIONES: { clave: keyof AccionesProtegidas; nombre: string; ayuda: string
 
 const claseCampo =
   "h-10 w-full rounded-lg border border-borde-control bg-superficie px-3 text-center text-lg tracking-[0.4em] tabular-nums [-webkit-text-security:disc] focus:border-acento";
-const claseBoton = "h-10 rounded-lg border border-linea px-4 hover:bg-suave disabled:opacity-50";
-const clasePrincipal =
-  "h-10 rounded-lg bg-acento px-5 font-semibold text-sobre-acento disabled:bg-linea disabled:text-tenue";
+
 
 const digitos = (texto: string) => texto.replace(/\D/g, "").slice(0, 6);
 
@@ -99,62 +94,74 @@ export default function SeguridadConfig({ conPin, onPinCambiado }: Props) {
   if (!estado) return mensaje ? <p className="text-peligro">{mensaje.texto}</p> : <p className="text-tenue">Cargando…</p>;
 
   return (
-    <div className="space-y-4">
-      {estado.tienePin ? (
-        <>
-          <div className="flex flex-wrap items-center gap-3">
-            <span className="flex items-center gap-2 rounded-lg bg-exito-fondo px-3 py-2 font-medium text-exito">
-              <ShieldCheck size={16} aria-hidden /> PIN de administrador activo
-            </span>
-            <span className="ml-auto flex flex-wrap gap-2">
-              <button type="button" onClick={() => setDialogo({ tipo: "cambiar" })} className={claseBoton}>
-                Cambiar PIN
-              </button>
-              <button type="button" onClick={() => setDialogo({ tipo: "recuperar" })} className={claseBoton}>
-                Olvidé el PIN
-              </button>
-              <button
-                type="button"
-                onClick={() => void quitar()}
-                className="h-10 rounded-lg px-4 text-tenue hover:bg-peligro-fondo hover:text-peligro"
-              >
-                Quitar PIN
-              </button>
-            </span>
-          </div>
-          <div className="space-y-3 border-t border-linea pt-4">
-            <p className="text-tenue">Qué acciones piden el PIN. Cambiar esta lista siempre lo pide.</p>
-            {ACCIONES.map((a) => (
-              <Fila key={a.clave} etiqueta={a.nombre} ayuda={a.ayuda}>
-                <Opciones
-                  nombre={`proteger-${a.clave}`}
-                  etiqueta={a.nombre}
-                  opciones={SI_NO}
-                  valor={estado.protegidas[a.clave] ? "si" : "no"}
-                  onCambiar={(v) => void cambiarProtegida(a.clave, v === "si")}
+    <>
+      <Columnas
+        izquierda={
+          <>
+            <Tarjeta titulo="PIN de administrador" ayuda="Protege las acciones sensibles con un PIN de 4 a 6 dígitos.">
+              {estado.tienePin ? (
+                <>
+                  <span className="flex w-fit items-center gap-2 rounded-lg bg-exito-fondo px-3 py-2 font-medium text-exito">
+                    <ShieldCheck size={16} aria-hidden /> PIN activo
+                  </span>
+                  <div className="flex flex-wrap gap-2">
+                    <Boton onClick={() => setDialogo({ tipo: "cambiar" })}>Cambiar PIN</Boton>
+                    <Boton onClick={() => setDialogo({ tipo: "recuperar" })}>Olvidé el PIN</Boton>
+                    <Boton variante="terciario" onClick={() => void quitar()}>
+                      Quitar PIN
+                    </Boton>
+                  </div>
+                </>
+              ) : (
+                <CrearPin
+                  onCreado={(codigo) => {
+                    setDialogo({ tipo: "codigo", codigo });
+                    setMensaje(null);
+                    leer();
+                  }}
                 />
-              </Fila>
-            ))}
-            <Fila etiqueta="Restaurar un respaldo" ayuda="Reemplaza toda la base de datos: siempre pide el PIN.">
-              <span className="text-tenue">Siempre pide PIN</span>
-            </Fila>
-          </div>
-        </>
-      ) : (
-        <CrearPin
-          onCreado={(codigo) => {
-            setDialogo({ tipo: "codigo", codigo });
-            setMensaje(null);
-            leer();
-          }}
-        />
-      )}
-
-      {mensaje && (
-        <p role="status" className={mensaje.error ? "text-peligro" : "text-exito"}>
-          {mensaje.texto}
-        </p>
-      )}
+              )}
+              {mensaje && (
+                <p role="status" className={mensaje.error ? "text-peligro" : "text-exito"}>
+                  {mensaje.texto}
+                </p>
+              )}
+            </Tarjeta>
+            <Tarjeta titulo="Código de recuperación" ayuda="Para poner un PIN nuevo si olvidas el actual.">
+              <p className="text-tenue">
+                Al crear el PIN se muestra una sola vez un código de 10 caracteres. Anótalo y guárdalo fuera del
+                computador: con él, «Olvidé el PIN» pone uno nuevo y entrega un código nuevo (el usado deja de servir).
+              </p>
+              <p className="rounded-lg bg-info-fondo px-3 py-2 text-[13px] text-info">
+                Si se pierden el PIN y el código, no hay otra forma de recuperarlo desde la app.
+              </p>
+            </Tarjeta>
+          </>
+        }
+        derecha={
+          <Tarjeta titulo="Acciones que piden el PIN" ayuda="Cambiar esta lista siempre lo pide.">
+            {estado.tienePin ? (
+              <>
+                {ACCIONES.map((a) => (
+                  <Ajuste key={a.clave} etiqueta={a.nombre} ayuda={a.ayuda}>
+                    <Interruptor
+                      etiqueta={`Pide PIN: ${a.nombre}`}
+                      marcado={estado.protegidas[a.clave]}
+                      desactivado={ocupado}
+                      onCambiar={(v) => void cambiarProtegida(a.clave, v)}
+                    />
+                  </Ajuste>
+                ))}
+                <Ajuste etiqueta="Restaurar un respaldo" ayuda="Reemplaza toda la base de datos: siempre pide el PIN.">
+                  <span className="text-tenue">Siempre</span>
+                </Ajuste>
+              </>
+            ) : (
+              <p className="text-tenue">Sin un PIN creado, ninguna acción lo pide. Crea uno para elegir cuáles proteger.</p>
+            )}
+          </Tarjeta>
+        }
+      />
 
       {dialogo?.tipo === "codigo" && <CodigoRecuperacion codigo={dialogo.codigo} onCerrar={() => setDialogo(null)} />}
       {dialogo?.tipo === "cambiar" && (
@@ -177,7 +184,7 @@ export default function SeguridadConfig({ conPin, onPinCambiado }: Props) {
           }}
         />
       )}
-    </div>
+    </>
   );
 }
 
@@ -255,10 +262,9 @@ function CrearPin({ onCreado }: { onCreado: (codigo: string) => void }) {
       </div>
       {p.distinto && <p className="mt-2 text-xs text-peligro">Los dos PIN no coinciden.</p>}
       <MensajeError texto={error} />
-      <button type="submit" disabled={!p.listo || enviando} className={`mt-3 ${clasePrincipal}`}>
-        <KeyRound size={16} className="mr-2 inline" aria-hidden />
+      <Boton type="submit" variante="primario" icono={KeyRound} disabled={!p.listo || enviando} className="mt-3">
         Crear PIN
-      </button>
+      </Boton>
     </form>
   );
 }
@@ -380,20 +386,15 @@ function CodigoRecuperacion({ codigo, onCerrar }: { codigo: string; onCerrar: ()
   return (
     <Dialogo titulo="Código de recuperación" onCerrar={onCerrar}>
       <p className="mt-2 text-tenue">Sirve para poner un PIN nuevo si olvidas el actual. No se vuelve a mostrar.</p>
-      <p className="mt-4 rounded-lg border border-linea bg-fondo py-4 text-center font-mono text-3xl font-semibold tracking-widest select-text">
+      <p className="mt-4 rounded-lg border border-linea bg-suave py-4 text-center font-mono text-3xl font-semibold tracking-widest select-text">
         {codigo}
       </p>
       <p className="mt-4 rounded-lg bg-aviso-fondo px-3 py-2 font-medium text-aviso">
         Anótalo y guárdalo fuera del computador.
       </p>
-      <button
-        type="button"
-        autoFocus
-        onClick={onCerrar}
-        className="mt-5 h-11 w-full rounded-lg bg-acento font-semibold text-sobre-acento"
-      >
+      <Boton variante="primario" autoFocus onClick={onCerrar} className="mt-5 w-full">
         Ya lo anoté
-      </button>
+      </Boton>
     </Dialogo>
   );
 }

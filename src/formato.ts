@@ -104,6 +104,21 @@ export function fechaHora(iso: string): string {
   return `${d}-${m}-${a} ${hora(iso)}`;
 }
 
+const diaLargo = new Intl.DateTimeFormat("es-CL", { weekday: "long", day: "numeric", month: "long" });
+const diaLargoConAnio = new Intl.DateTimeFormat("es-CL", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+
+/** "Hoy, sábado 21 de noviembre", "Ayer, viernes 20 de noviembre" o "jueves 19 de noviembre" (con año si no es el actual). */
+export function etiquetaDia(iso: string): string {
+  const fecha = new Date(iso);
+  const hoy = new Date();
+  const dia = diaLocal(fecha);
+  const texto = (fecha.getFullYear() === hoy.getFullYear() ? diaLargo : diaLargoConAnio).format(fecha);
+  const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+  if (dia === diaLocal(hoy)) return `Hoy, ${texto}`;
+  if (dia === diaLocal(new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate() - 1))) return `Ayer, ${texto}`;
+  return cap(texto);
+}
+
 /** "09:12" si fue hoy; "20-11 09:12" si fue otro día. */
 export function horaODia(iso: string): string {
   const dia = diaLocal(new Date(iso));

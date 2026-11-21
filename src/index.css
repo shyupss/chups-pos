@@ -283,6 +283,22 @@ table {
     color: var(--sobre-acento);
   }
 
+  /* Miniaturas de tema en Apariencia: colores propios, sin depender del tema activo. */
+  .muestra-claro {
+    --m-fondo: #f3f5f8;
+    --m-sup: #ffffff;
+    --m-linea: #e3e7ec;
+    --m-texto: #14181d;
+    --m-acento: #1d5bd6;
+  }
+  .muestra-oscuro {
+    --m-fondo: #0f1216;
+    --m-sup: #181c22;
+    --m-linea: #29303a;
+    --m-texto: #eef1f4;
+    --m-acento: #6f9dff;
+  }
+
   /* Interruptor de sí/no: un checkbox real con role="switch". */
   .interruptor {
     appearance: none;
