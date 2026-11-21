@@ -9,6 +9,7 @@
 
 pub mod anulacion;
 pub mod cierre;
+pub mod devolucion;
 pub mod escpos;
 pub mod formato;
 pub mod pdf;

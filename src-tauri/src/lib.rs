@@ -60,6 +60,8 @@ pub fn run() {
             comandos::ventas::venta_por_folio,
             comandos::ventas::anular_venta,
             comandos::ventas::imprimir_anulacion,
+            comandos::ventas::registrar_devolucion,
+            comandos::ventas::imprimir_devolucion,
             comandos::config::obtener_config,
             comandos::config::guardar_config,
             comandos::categorias::listar_categorias,

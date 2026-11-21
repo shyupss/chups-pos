@@ -1,0 +1,29 @@
+A l m a c é n   D o n   P e p e
+        RUT 12.345.678-5
+  Av. Siempre Viva 742, Talca
+--------------------------------
+       NOTA DE DEVOLUCIÓN
+        Venta N° 000123
+        21-11-2026 16:10
+--------------------------------
+Venta del       21-11-2026 14:05
+Devolución N°             000005
+--------------------------------
+DEVUELTO
+Pan corriente (marraqueta)
+0,266 kg x $2.300/kg        $612
+Leche entera Colun 1 L
+1 x $1.190                $1.190
+(no vuelve al stock: merma)
+--------------------------------
+Subtotal                  $1.802
+Redondeo                     -$2
+TOTAL DEVUELTO            $1.800
+Reembolso en            Efectivo
+--------------------------------
+Motivo: La leche venía vencida
+--------------------------------
+
+
+     _____________________
+             Firma

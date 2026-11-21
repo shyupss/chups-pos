@@ -364,6 +364,22 @@ export interface DetalleVenta {
   tieneAbonos: boolean;
 }
 
+/** Una línea a devolver; la cantidad en milésimas, como al vender. */
+export interface ItemDevuelto {
+  ventaItemId: number;
+  cantidadMil: number;
+  /** false: dañado o vencido, queda como merma. */
+  vuelveAStock: boolean;
+}
+
+export interface DevolucionRegistrada {
+  devolucionId: number;
+  /** Lo devuelto (o lo que bajó la deuda), con el redondeo: lo calcula Rust. */
+  monto: number;
+  redondeo: number;
+  venta: DetalleVenta;
+}
+
 /** Etiqueta de balanza leída: producto por kg y los gramos de la etiqueta. */
 export interface LecturaBalanza {
   producto: Producto;
@@ -438,6 +454,15 @@ export const api = {
   anularVenta: (id: number, motivo: string, medioReembolso: MedioPago | null, pin: string | null) =>
     invoke<DetalleVenta>("anular_venta", { id, motivo, medioReembolso, pin }),
   imprimirAnulacion: (ventaId: number) => invoke<void>("imprimir_anulacion", { ventaId }),
+  /** Devuelve parte de una venta; medioReembolso null en una fiada. Protegido con PIN. */
+  registrarDevolucion: (
+    ventaId: number,
+    items: ItemDevuelto[],
+    medioReembolso: MedioPago | null,
+    motivo: string,
+    pin: string | null,
+  ) => invoke<DevolucionRegistrada>("registrar_devolucion", { ventaId, items, medioReembolso, motivo, pin }),
+  imprimirDevolucion: (devolucionId: number) => invoke<void>("imprimir_devolucion", { devolucionId }),
 
   obtenerConfig: () => invoke<Config>("obtener_config"),
   guardarConfig: (config: Config, pin: string | null) => invoke<Config>("guardar_config", { config, pin }),

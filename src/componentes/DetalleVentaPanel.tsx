@@ -1,10 +1,11 @@
-import { Ban, FileDown, Printer, X } from "lucide-react";
+import { Ban, FileDown, Printer, Undo2, X } from "lucide-react";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { api, textoError, type Config, type DetalleVenta, type LineaDetalle, type MedioPago } from "../api";
 import { cantidad, fechaHora, folio, NOMBRE_MEDIO, pesos, pesosConSigno } from "../formato";
 import { useSalidasVenta } from "../hooks/useSalidasVenta";
 import AvisoVenta from "./AvisoVenta";
 import DialogoAnular from "./DialogoAnular";
+import DialogoDevolucion from "./DialogoDevolucion";
 import InsigniaEstado from "./InsigniaEstado";
 
 interface Props {
@@ -38,6 +39,14 @@ function motivoSinAnular(v: DetalleVenta): string | null {
   return null;
 }
 
+/** Por qué no se puede devolver, o null si se puede. */
+function motivoSinDevolver(v: DetalleVenta): string | null {
+  if (v.estado === "anulada") return "La venta está anulada";
+  if (v.estado === "devuelta") return "Ya se devolvió todo lo vendido";
+  if (v.medioPago === "fiado" && v.tieneAbonos) return "La venta fiada tiene abonos: todavía no se puede devolver";
+  return null;
+}
+
 const reembolso = (m: MedioPago | null) => (m === null ? "sin reembolso (baja la deuda)" : NOMBRE_MEDIO[m].toLowerCase());
 
 /** Detalle de una venta del historial: líneas, pago, turno, anulación y devoluciones. */
@@ -45,7 +54,7 @@ export default function DetalleVentaPanel({ ventaId, activa, onImpresion, onCamb
   const [venta, setVenta] = useState<DetalleVenta | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [config, setConfig] = useState<Config | null>(null);
-  const [dialogo, setDialogo] = useState<"anular" | null>(null);
+  const [dialogo, setDialogo] = useState<"anular" | "devolver" | null>(null);
   const [comprobante, setComprobante] = useState<Comprobante | null>(null);
 
   useEffect(() => {
@@ -292,6 +301,14 @@ export default function DetalleVentaPanel({ ventaId, activa, onImpresion, onCamb
                 Guardar PDF
               </Boton>
               <Boton
+                onClick={() => setDialogo("devolver")}
+                disabled={motivoSinDevolver(venta) !== null}
+                titulo={motivoSinDevolver(venta) ?? "Devolver parte de lo vendido"}
+                icono={<Undo2 size={16} aria-hidden />}
+              >
+                Devolver productos
+              </Boton>
+              <Boton
                 onClick={() => setDialogo("anular")}
                 disabled={motivoSinAnular(venta) !== null}
                 titulo={motivoSinAnular(venta) ?? "Repone el stock y devuelve el dinero"}
@@ -302,6 +319,14 @@ export default function DetalleVentaPanel({ ventaId, activa, onImpresion, onCamb
               </Boton>
             </div>
           </div>
+          {dialogo === "devolver" && activa && (
+            <DialogoDevolucion
+              venta={venta}
+              redondeoActivo={config?.redondeoEfectivo ?? true}
+              onCerrar={() => setDialogo(null)}
+              onDevuelta={(r) => alCambiar(r.venta, "devolución", () => api.imprimirDevolucion(r.devolucionId))}
+            />
+          )}
           {dialogo === "anular" && activa && (
             <DialogoAnular
               venta={venta}

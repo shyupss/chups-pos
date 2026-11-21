@@ -6,6 +6,7 @@ use std::path::Path;
 
 use pos_core::boleta::anulacion::ComprobanteAnulacion;
 use pos_core::boleta::cierre::CierreCaja;
+use pos_core::boleta::devolucion::{LineaNota, NotaDevolucion};
 use pos_core::boleta::texto::{self, COLUMNAS_58MM, COLUMNAS_80MM};
 use pos_core::boleta::{escpos, Documento, Encabezado, LineaBoleta};
 use pos_core::repositorios::productos::Unidad;
@@ -252,4 +253,68 @@ fn anulacion_de_una_venta_fiada() {
         motivo: "Se anotó en la cuenta equivocada".into(),
     };
     comparar("anulacion-fiada", &c);
+}
+
+#[test]
+fn nota_de_devolucion_en_efectivo_con_merma() {
+    // Media marraqueta ($612) y una leche vencida que no vuelve al stock ($1.190): $1.802,
+    // que en efectivo son $1.800.
+    let n = NotaDevolucion {
+        negocio: negocio(),
+        numero: 5,
+        folio_venta: 123,
+        fecha: "21-11-2026 16:10".into(),
+        fecha_venta: "21-11-2026 14:05".into(),
+        cliente: None,
+        lineas: vec![
+            LineaNota {
+                nombre: "Pan corriente (marraqueta)".into(),
+                unidad: Unidad::Kg,
+                cantidad_mil: 266,
+                precio_unitario: 2300,
+                monto: 612,
+                vuelve_a_stock: true,
+            },
+            LineaNota {
+                nombre: "Leche entera Colun 1 L".into(),
+                unidad: Unidad::Unidad,
+                cantidad_mil: 1000,
+                precio_unitario: 1190,
+                monto: 1190,
+                vuelve_a_stock: false,
+            },
+        ],
+        redondeo: -2,
+        monto: 1800,
+        medio_reembolso: Some(MedioPago::Efectivo),
+        motivo: "La leche venía vencida".into(),
+    };
+    assert_eq!(n.titulo(), "Nota de devolución N° 000005");
+    assert_eq!(n.nombre(), "devolucion-000005");
+    comparar("devolucion-efectivo", &n);
+}
+
+#[test]
+fn nota_de_devolucion_de_una_fiada() {
+    let n = NotaDevolucion {
+        negocio: negocio(),
+        numero: 6,
+        folio_venta: 7,
+        fecha: "21-11-2026 09:30".into(),
+        fecha_venta: "20-11-2026 19:30".into(),
+        cliente: Some("Rosa Martínez".into()),
+        lineas: vec![LineaNota {
+            nombre: "Arroz grado 1, 1 kg".into(),
+            unidad: Unidad::Unidad,
+            cantidad_mil: 1000,
+            precio_unitario: 1590,
+            monto: 1590,
+            vuelve_a_stock: true,
+        }],
+        redondeo: 0,
+        monto: 1590,
+        medio_reembolso: None,
+        motivo: "Compró de más".into(),
+    };
+    comparar("devolucion-fiada", &n);
 }

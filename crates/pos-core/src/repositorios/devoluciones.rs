@@ -57,3 +57,60 @@ pub async fn items_de_venta(
     .fetch_all(conn)
     .await?)
 }
+
+pub struct NuevaDevolucion<'a> {
+    pub venta_id: i64,
+    pub turno_id: Option<i64>,
+    pub monto: i64,
+    pub redondeo: i64,
+    pub medio_reembolso: Option<&'a str>,
+    pub motivo: &'a str,
+}
+
+pub async fn insertar(conn: &mut SqliteConnection, d: &NuevaDevolucion<'_>) -> Resultado<i64> {
+    Ok(sqlx::query_scalar(
+        "INSERT INTO devoluciones (venta_id, turno_id, monto, redondeo, medio_reembolso, motivo)
+         VALUES (?, ?, ?, ?, ?, ?) RETURNING id",
+    )
+    .bind(d.venta_id)
+    .bind(d.turno_id)
+    .bind(d.monto)
+    .bind(d.redondeo)
+    .bind(d.medio_reembolso)
+    .bind(d.motivo)
+    .fetch_one(conn)
+    .await?)
+}
+
+pub async fn insertar_item(
+    conn: &mut SqliteConnection,
+    devolucion_id: i64,
+    venta_item_id: i64,
+    cantidad_mil: i64,
+    monto: i64,
+    vuelve_a_stock: bool,
+) -> Resultado<()> {
+    sqlx::query(
+        "INSERT INTO devolucion_items
+            (devolucion_id, venta_item_id, cantidad_mil, monto, vuelve_a_stock)
+         VALUES (?, ?, ?, ?, ?)",
+    )
+    .bind(devolucion_id)
+    .bind(venta_item_id)
+    .bind(cantidad_mil)
+    .bind(monto)
+    .bind(vuelve_a_stock)
+    .execute(conn)
+    .await?;
+    Ok(())
+}
+
+/// La venta de una devolución.
+pub async fn venta_de(conn: &mut SqliteConnection, devolucion_id: i64) -> Resultado<Option<i64>> {
+    Ok(
+        sqlx::query_scalar("SELECT venta_id FROM devoluciones WHERE id = ?")
+            .bind(devolucion_id)
+            .fetch_optional(conn)
+            .await?,
+    )
+}

@@ -366,3 +366,23 @@ pub async fn anular(
     .await?;
     Ok(r.rows_affected() == 1)
 }
+
+/// Suma lo devuelto a la venta y marca si quedó todo devuelto. `false` si ya no estaba pagada
+/// o fiada (se anuló entremedio).
+pub async fn sumar_devolucion(
+    conn: &mut SqliteConnection,
+    venta_id: i64,
+    monto: i64,
+    total: bool,
+) -> Resultado<bool> {
+    let r = sqlx::query(
+        "UPDATE ventas SET monto_devuelto = monto_devuelto + ?, devolucion = ?
+         WHERE id = ? AND estado IN ('pagada', 'fiada')",
+    )
+    .bind(monto)
+    .bind(if total { "total" } else { "parcial" })
+    .bind(venta_id)
+    .execute(conn)
+    .await?;
+    Ok(r.rows_affected() == 1)
+}

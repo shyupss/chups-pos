@@ -1,3 +1,4 @@
+use pos_core::servicios::devoluciones::{self, DevolucionRegistrada, ItemDevuelto};
 use pos_core::servicios::historial::{self, DetalleVenta, FiltrosVentas, PaginaVentas};
 use pos_core::servicios::ventas::{self as srv, MedioPago, NuevaVenta, VentaConfirmada};
 use pos_core::servicios::{anulacion, impresion};
@@ -73,6 +74,40 @@ pub async fn imprimir_anulacion(
     venta_id: i64,
 ) -> ResultadoComando<()> {
     let trabajo = impresion::trabajo_anulacion(&estado.pool, venta_id)
+        .await
+        .map_err(a_texto)?;
+    super::impresion::enviar(&estado, trabajo).await
+}
+
+/// Devuelve parte de una venta. Pide el PIN si "devolución" está protegida.
+#[tauri::command]
+pub async fn registrar_devolucion(
+    estado: State<'_, EstadoApp>,
+    venta_id: i64,
+    items: Vec<ItemDevuelto>,
+    medio_reembolso: Option<MedioPago>,
+    motivo: String,
+    pin: Option<String>,
+) -> ResultadoProtegido<DevolucionRegistrada> {
+    Ok(devoluciones::registrar(
+        &estado.pool,
+        &estado.pin,
+        venta_id,
+        &items,
+        medio_reembolso,
+        &motivo,
+        pin.as_deref(),
+    )
+    .await?)
+}
+
+/// Imprime la "NOTA DE DEVOLUCIÓN" en la impresora configurada.
+#[tauri::command]
+pub async fn imprimir_devolucion(
+    estado: State<'_, EstadoApp>,
+    devolucion_id: i64,
+) -> ResultadoComando<()> {
+    let trabajo = impresion::trabajo_devolucion(&estado.pool, devolucion_id)
         .await
         .map_err(a_texto)?;
     super::impresion::enviar(&estado, trabajo).await
