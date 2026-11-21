@@ -22,6 +22,11 @@ const ACCIONES: { clave: keyof AccionesProtegidas; nombre: string; ayuda: string
     ayuda: "Ajustes por conteo, mermas y anular compras.",
   },
   {
+    clave: "fiarSobreLimite",
+    nombre: "Fiar sobre el límite",
+    ayuda: "Vender fiado aunque la deuda pase el límite de crédito del cliente.",
+  },
+  {
     clave: "cambiarConfiguracion",
     nombre: "Cambiar la configuración",
     ayuda: "Todo lo de esta pantalla menos la apariencia. El PIN se pide una vez mientras estás aquí.",

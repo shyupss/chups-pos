@@ -168,8 +168,16 @@ pub async fn abonos_por_medio(
     turno_id: i64,
 ) -> Resultado<Vec<PorMedio>> {
     Ok(sqlx::query_as(
-        "SELECT medio_pago AS medio, COUNT(*) AS cantidad, SUM(monto) AS monto, 0 AS redondeo
-         FROM abonos WHERE turno_id = ? GROUP BY medio_pago",
+        "SELECT medio, COUNT(*) AS cantidad, SUM(monto) AS monto, SUM(redondeo) AS redondeo
+         FROM (
+             -- Pagos de clientes: en efectivo entró monto + redondeo.
+             SELECT medio_pago AS medio, monto + redondeo AS monto, redondeo
+             FROM pagos_cliente WHERE turno_id = ?1
+             UNION ALL
+             -- Abonos de antes de los pagos (sin pago ni traslado): solo dinero que entró.
+             SELECT medio_pago, monto, 0 FROM abonos
+             WHERE turno_id = ?1 AND pago_id IS NULL AND traslado_de_venta_id IS NULL
+         ) GROUP BY medio",
     )
     .bind(turno_id)
     .fetch_all(conn)
@@ -184,7 +192,7 @@ pub async fn anulaciones_por_medio(
     Ok(sqlx::query_as(
         "SELECT COALESCE(medio_reembolso_anulacion, 'fiado') AS medio, COUNT(*) AS cantidad,
                 SUM(COALESCE(reembolso_anulacion, total)) AS monto,
-                SUM(COALESCE(reembolso_anulacion - total, 0)) AS redondeo
+                SUM(COALESCE(redondeo_anulacion, 0)) AS redondeo
          FROM ventas WHERE turno_anulacion_id = ? GROUP BY 1",
     )
     .bind(turno_id)
@@ -198,9 +206,16 @@ pub async fn devoluciones_por_medio(
     turno_id: i64,
 ) -> Resultado<Vec<PorMedio>> {
     Ok(sqlx::query_as(
-        "SELECT COALESCE(medio_reembolso, 'fiado') AS medio, COUNT(*) AS cantidad,
-                SUM(monto) AS monto, SUM(redondeo) AS redondeo
-         FROM devoluciones WHERE turno_id = ? GROUP BY 1",
+        "SELECT medio, COUNT(*) AS cantidad, SUM(monto) AS monto, SUM(redondeo) AS redondeo
+         FROM (
+             -- Lo que salió en dinero.
+             SELECT medio_reembolso AS medio, monto - rebaja_deuda AS monto, redondeo
+             FROM devoluciones WHERE turno_id = ?1 AND medio_reembolso IS NOT NULL
+             UNION ALL
+             -- Lo que bajó deudas de fiados (o pasó como saldo a favor): no es efectivo.
+             SELECT 'fiado', rebaja_deuda, 0
+             FROM devoluciones WHERE turno_id = ?1 AND rebaja_deuda > 0
+         ) GROUP BY medio",
     )
     .bind(turno_id)
     .fetch_all(conn)

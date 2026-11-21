@@ -246,8 +246,11 @@ pub struct DetalleVenta {
     pub anulacion: Option<Anulacion>,
     pub devoluciones: Vec<Devolucion>,
     pub monto_devuelto: i64,
-    /// Una fiada con abonos no se anula ni se devuelve todavía (los abonos llegan en la fase 5).
     pub tiene_abonos: bool,
+    /// Fiado: el cliente, lo abonado y lo que todavía debe de esta venta.
+    pub cliente_id: Option<i64>,
+    pub abonado: i64,
+    pub saldo: Option<i64>,
 }
 
 pub async fn detalle(pool: &SqlitePool, id: i64) -> Resultado<DetalleVenta> {
@@ -295,6 +298,11 @@ pub async fn detalle(pool: &SqlitePool, id: i64) -> Resultado<DetalleVenta> {
             motivo: d.motivo,
         })
         .collect();
+    let fiada = if v.medio_pago == "fiado" {
+        crate::repositorios::fiados::venta(&mut conn, id).await?
+    } else {
+        None
+    };
     let anulacion = v.anulada_en.clone().map(|fecha| Anulacion {
         fecha,
         motivo: v.motivo_anulacion.clone().unwrap_or_default(),
@@ -321,6 +329,11 @@ pub async fn detalle(pool: &SqlitePool, id: i64) -> Resultado<DetalleVenta> {
         devoluciones,
         monto_devuelto: v.monto_devuelto,
         tiene_abonos: v.abonos > 0,
+        cliente_id: fiada.as_ref().and_then(|f| f.cliente_id),
+        abonado: fiada.as_ref().map_or(0, |f| f.abonado),
+        saldo: fiada
+            .filter(|_| v.estado != "anulada")
+            .map(|f| f.saldo.max(0)),
     })
 }
 

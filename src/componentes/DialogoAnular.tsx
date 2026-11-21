@@ -24,7 +24,7 @@ interface Props {
 /** Anular toda la venta: repone el stock y devuelve el dinero (o anula la deuda si fue fiada). */
 export default function DialogoAnular({ venta, redondeoActivo, onAnulada, onCerrar }: Props) {
   const conPin = useConPin();
-  const fiada = venta.estado === "fiada";
+  const fiada = venta.medioPago === "fiado";
   const [medio, setMedio] = useState<Exclude<MedioPago, "fiado">>(
     venta.medioPago === "fiado" ? "efectivo" : venta.medioPago,
   );
@@ -40,7 +40,7 @@ export default function DialogoAnular({ venta, redondeoActivo, onAnulada, onCerr
     setEnviando(true);
     setError(null);
     try {
-      const d = await conPin((pin) => api.anularVenta(venta.id, motivo, fiada ? null : medio, pin), {
+      const d = await conPin((pin) => api.anularVenta(venta.id, motivo, fiada && venta.abonado === 0 ? null : medio, pin), {
         accion: `Anular la venta ${folio(venta.folio)}`,
       });
       onAnulada(d);
@@ -64,9 +64,19 @@ export default function DialogoAnular({ venta, redondeoActivo, onAnulada, onCerr
           borra.
         </p>
         {fiada ? (
-          <p className="rounded-lg bg-acento/12 px-3 py-2 text-acento">
-            Venta fiada{venta.cliente ? ` de ${venta.cliente}` : ""}: deja de contar como deuda. No se devuelve dinero.
-          </p>
+          <>
+            <p className="rounded-lg bg-acento/12 px-3 py-2 text-acento">
+              Venta fiada{venta.cliente ? ` de ${venta.cliente}` : ""}: deja de contar como deuda.
+              {venta.abonado > 0 &&
+                ` Lo que ya abonó (${pesos(venta.abonado)}) pasa como saldo a favor a sus otras deudas; si no tiene, se le devuelve.`}
+            </p>
+            {venta.abonado > 0 && <div>
+            <span className="text-tenue">Si sobra, devolver en</span>
+            <div className="mt-1">
+              <Opciones nombre="medio-reembolso" etiqueta="Medio de reembolso" opciones={MEDIOS_REEMBOLSO} valor={medio} onCambiar={setMedio} />
+            </div>
+          </div>}
+          </>
         ) : (
           <div>
             <span className="text-tenue">Devolver el dinero en</span>
@@ -81,7 +91,7 @@ export default function DialogoAnular({ venta, redondeoActivo, onAnulada, onCerr
         )}
         <div className="flex items-baseline justify-between tabular-nums">
           <span className="text-tenue">{fiada ? "Deuda que se anula" : "A devolver"}</span>
-          <span className="text-3xl font-semibold">{pesos(monto)}</span>
+          <span className="text-3xl font-semibold">{pesos(fiada ? (venta.saldo ?? 0) : monto)}</span>
         </div>
         <label className="block">
           <span className="text-tenue">Motivo (obligatorio)</span>

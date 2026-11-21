@@ -203,6 +203,8 @@ pub struct NuevaCabecera<'a> {
     pub vuelto: Option<i64>,
     pub estado: &'a str,
     pub cliente_id: Option<i64>,
+    /// Fiado: la deuda total del cliente justo después de esta venta (sale en la boleta).
+    pub deuda_tras_venta: Option<i64>,
 }
 
 pub struct CabeceraGuardada {
@@ -220,8 +222,8 @@ pub async fn insertar_cabecera(
     let (id, folio, fecha_hora): (i64, i64, String) = sqlx::query_as(
         "INSERT INTO ventas
             (folio, turno_id, subtotal, descuento, redondeo, total, medio_pago, monto_recibido,
-             vuelto, estado, cliente_id)
-         VALUES ((SELECT COALESCE(MAX(folio), 0) + 1 FROM ventas), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+             vuelto, estado, cliente_id, deuda_tras_venta)
+         VALUES ((SELECT COALESCE(MAX(folio), 0) + 1 FROM ventas), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
          RETURNING id, folio, fecha_hora",
     )
     .bind(v.turno_id)
@@ -234,6 +236,7 @@ pub async fn insertar_cabecera(
     .bind(v.vuelto)
     .bind(v.estado)
     .bind(v.cliente_id)
+    .bind(v.deuda_tras_venta)
     .fetch_one(conn)
     .await?;
     Ok(CabeceraGuardada {
@@ -289,6 +292,7 @@ pub struct CabeceraVenta {
     pub vuelto: Option<i64>,
     pub cliente: Option<String>,
     pub anulada_en: Option<String>,
+    pub deuda_tras_venta: Option<i64>,
 }
 
 pub async fn cabecera(
@@ -297,7 +301,7 @@ pub async fn cabecera(
 ) -> Resultado<Option<CabeceraVenta>> {
     Ok(sqlx::query_as(
         "SELECT v.folio, v.fecha_hora, v.subtotal, v.descuento, v.redondeo, v.total, v.medio_pago,
-                v.monto_recibido, v.vuelto, c.nombre AS cliente, v.anulada_en
+                v.monto_recibido, v.vuelto, c.nombre AS cliente, v.anulada_en, v.deuda_tras_venta
          FROM ventas v LEFT JOIN clientes c ON c.id = v.cliente_id
          WHERE v.id = ?",
     )
@@ -341,6 +345,8 @@ pub struct DatosAnulacion<'a> {
     /// `None` en una venta fiada (no se devuelve dinero).
     pub medio_reembolso: Option<&'a str>,
     pub reembolso: Option<i64>,
+    /// Ajuste a la decena del reembolso en efectivo.
+    pub redondeo: Option<i64>,
 }
 
 /// Marca la venta como anulada si sigue pagada o fiada y sin devoluciones.
@@ -354,13 +360,14 @@ pub async fn anular(
         "UPDATE ventas
          SET estado = 'anulada', anulada_en = strftime('%Y-%m-%dT%H:%M:%fZ', 'now'),
              motivo_anulacion = ?, turno_anulacion_id = ?, medio_reembolso_anulacion = ?,
-             reembolso_anulacion = ?
+             reembolso_anulacion = ?, redondeo_anulacion = ?
          WHERE id = ? AND estado IN ('pagada', 'fiada') AND devolucion IS NULL",
     )
     .bind(a.motivo)
     .bind(a.turno_id)
     .bind(a.medio_reembolso)
     .bind(a.reembolso)
+    .bind(a.redondeo)
     .bind(venta_id)
     .execute(conn)
     .await?;

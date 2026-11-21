@@ -49,7 +49,7 @@ export default function DialogoDevolucion({ venta, redondeoActivo, onDevuelta, o
 
   const items = venta.lineas.filter((l) => de(l).mil > 0);
   const subtotal = items.reduce((s, l) => s + montoLinea(l, de(l).mil), 0);
-  const redondeo = !fiada && medio === "efectivo" && redondeoActivo ? redondeoEfectivo(subtotal) : 0;
+  const redondeo = (!fiada || venta.abonado > 0) && medio === "efectivo" && redondeoActivo ? redondeoEfectivo(subtotal) : 0;
   const listo = items.length > 0 && motivo.trim() !== "";
 
   const devolver = async () => {
@@ -62,7 +62,7 @@ export default function DialogoDevolucion({ venta, redondeoActivo, onDevuelta, o
           api.registrarDevolucion(
             venta.id,
             items.map((l) => ({ ventaItemId: l.id, cantidadMil: de(l).mil, vuelveAStock: de(l).vuelve })),
-            fiada ? null : medio,
+            fiada && venta.abonado === 0 ? null : medio,
             motivo,
             pin,
           ),
@@ -175,9 +175,19 @@ export default function DialogoDevolucion({ venta, redondeoActivo, onDevuelta, o
         <div className="mt-4 grid grid-cols-2 gap-6 border-t border-linea pt-4">
           <div className="space-y-4">
             {fiada ? (
-              <p className="rounded-lg bg-acento/12 px-3 py-2 text-acento">
-                Venta fiada{venta.cliente ? ` de ${venta.cliente}` : ""}: no se devuelve dinero, baja la deuda.
-              </p>
+              <>
+                <p className="rounded-lg bg-acento/12 px-3 py-2 text-acento">
+                  Venta fiada{venta.cliente ? ` de ${venta.cliente}` : ""}: baja la deuda (debe {pesos(venta.saldo ?? 0)} de
+                  esta venta).
+                  {venta.abonado > 0 && " Si devuelve más de lo que debe, lo que sobra pasa a sus otras deudas o se le devuelve."}
+                </p>
+                {venta.abonado > 0 && <div>
+            <span className="text-tenue">Si sobra, devolver en</span>
+            <div className="mt-1">
+              <Opciones nombre="medio-devolucion" etiqueta="Medio de reembolso" opciones={MEDIOS_REEMBOLSO} valor={medio} onCambiar={setMedio} />
+            </div>
+          </div>}
+              </>
             ) : (
               <div>
                 <span className="text-tenue">Devolver el dinero en</span>

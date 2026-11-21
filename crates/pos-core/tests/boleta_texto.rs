@@ -56,6 +56,7 @@ fn boleta(
         codigo_barras: true,
         copia: false,
         anulada: None,
+        deuda_cliente: None,
     }
 }
 
@@ -167,6 +168,7 @@ fn fiado_sin_leyenda_ni_codigo() {
         0,
     );
     b.cliente = Some("Rosa Martínez".into());
+    b.deuda_cliente = Some(12_480);
     b.leyenda = false;
     b.codigo_barras = false;
     b.descuento = 180;

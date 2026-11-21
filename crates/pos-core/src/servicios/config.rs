@@ -155,6 +155,8 @@ pub struct AccionesProtegidas {
     pub cambiar_configuracion: bool,
     /// Ajustes de stock por conteo, mermas y anular compras.
     pub ajustar_inventario: bool,
+    /// Vender fiado por sobre el límite de crédito del cliente.
+    pub fiar_sobre_limite: bool,
 }
 
 impl Default for AccionesProtegidas {
@@ -166,6 +168,7 @@ impl Default for AccionesProtegidas {
             cerrar_caja: false,
             cambiar_configuracion: true,
             ajustar_inventario: true,
+            fiar_sobre_limite: true,
         }
     }
 }
@@ -230,6 +233,7 @@ const PROTEGER_RETIRO: &str = "proteger_retiro_efectivo";
 const PROTEGER_CIERRE: &str = "proteger_cerrar_caja";
 const PROTEGER_CONFIG: &str = "proteger_cambiar_configuracion";
 const PROTEGER_INVENTARIO: &str = "proteger_ajustar_inventario";
+const PROTEGER_LIMITE: &str = "proteger_fiar_sobre_limite";
 
 fn si_no(valor: bool) -> String {
     if valor { "1" } else { "0" }.into()
@@ -257,11 +261,12 @@ impl Seguridad {
                 cerrar_caja: bool_de(claves, PROTEGER_CIERRE, d.cerrar_caja),
                 cambiar_configuracion: bool_de(claves, PROTEGER_CONFIG, d.cambiar_configuracion),
                 ajustar_inventario: bool_de(claves, PROTEGER_INVENTARIO, d.ajustar_inventario),
+                fiar_sobre_limite: bool_de(claves, PROTEGER_LIMITE, d.fiar_sobre_limite),
             },
         }
     }
 
-    fn a_claves(&self) -> [(&'static str, String); 8] {
+    fn a_claves(&self) -> [(&'static str, String); 9] {
         let p = &self.protegidas;
         [
             (PIN_HASH, self.pin_hash.clone().unwrap_or_default()),
@@ -275,6 +280,7 @@ impl Seguridad {
             (PROTEGER_CIERRE, si_no(p.cerrar_caja)),
             (PROTEGER_CONFIG, si_no(p.cambiar_configuracion)),
             (PROTEGER_INVENTARIO, si_no(p.ajustar_inventario)),
+            (PROTEGER_LIMITE, si_no(p.fiar_sobre_limite)),
         ]
     }
 }

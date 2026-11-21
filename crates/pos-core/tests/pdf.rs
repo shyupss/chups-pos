@@ -63,6 +63,7 @@ fn boleta(lineas: usize) -> Boleta {
         codigo_barras: true,
         copia: false,
         anulada: None,
+        deuda_cliente: None,
     }
 }
 

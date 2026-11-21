@@ -311,12 +311,8 @@ async fn una_fiada_devuelta_baja_la_deuda_sin_reembolso() {
     let v = vender(&pool, &[(leche.id, 2000)], MedioPago::Fiado).await;
     let id = lineas(&pool, v.id).await[0];
 
-    assert!(
-        devolver(&pool, v.id, &[item(id, 1000)], Some(MedioPago::Efectivo))
-            .await
-            .is_err()
-    );
-    let r = devolver(&pool, v.id, &[item(id, 1000)], None)
+    // Sin abonos todo baja la deuda: el medio elegido no se usa.
+    let r = devolver(&pool, v.id, &[item(id, 1000)], Some(MedioPago::Efectivo))
         .await
         .unwrap();
     assert_eq!((r.monto, r.redondeo), (1190, 0));

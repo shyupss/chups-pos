@@ -86,6 +86,9 @@ export interface VentaConfirmada {
   montoRecibido: number | null;
   vuelto: number | null;
   lineas: LineaVendida[];
+  /** Fiado: el cliente y su deuda total después de esta venta. */
+  cliente: string | null;
+  deudaCliente: number | null;
 }
 
 export type TablaCaracteres = "cp858" | "cp850" | "wpc1252";
@@ -173,6 +176,8 @@ export interface AccionesProtegidas {
   cambiarConfiguracion: boolean;
   /** Ajustes por conteo, mermas y anular compras. */
   ajustarInventario: boolean;
+  /** Vender fiado por sobre el límite de crédito del cliente. */
+  fiarSobreLimite: boolean;
 }
 
 export interface EstadoSeguridad {
@@ -364,6 +369,10 @@ export interface DetalleVenta {
   devoluciones: Devolucion[];
   montoDevuelto: number;
   tieneAbonos: boolean;
+  /** Fiado: el cliente, lo abonado y lo que todavía debe de esta venta (lo calcula Rust). */
+  clienteId: number | null;
+  abonado: number;
+  saldo: number | null;
 }
 
 /** Una línea a devolver; la cantidad en milésimas, como al vender. */
@@ -542,6 +551,25 @@ export interface FiltrosCompras {
   hasta: string | null;
 }
 
+export interface Cliente {
+  id: number;
+  nombre: string;
+  telefono: string | null;
+  rut: string | null;
+  direccion: string | null;
+  nota: string | null;
+  /** null = sin límite. */
+  limiteCredito: number | null;
+  activo: boolean;
+  creadoEn: string | null;
+  /** Lo que debe hoy (lo calcula Rust). */
+  deuda: number;
+  /** Cuánto más se le puede fiar; null si no tiene límite. */
+  disponible: number | null;
+}
+
+export type DatosCliente = Pick<Cliente, "nombre" | "telefono" | "rut" | "direccion" | "nota" | "limiteCredito">;
+
 /** Etiqueta de balanza leída: producto por kg y los gramos de la etiqueta. */
 export interface LecturaBalanza {
   producto: Producto;
@@ -606,7 +634,16 @@ export const api = {
     invoke<Categoria>("renombrar_categoria", { id, nombre }),
   eliminarCategoria: (id: number) => invoke<void>("eliminar_categoria", { id }),
 
-  confirmarVenta: (venta: NuevaVenta) => invoke<VentaConfirmada>("confirmar_venta", { venta }),
+  /** Una fiada sobre el límite se rechaza salvo con `sobreLimite` (pide PIN si está protegido). */
+  confirmarVenta: (venta: NuevaVenta, sobreLimite = false, pin: string | null = null) =>
+    invoke<VentaConfirmada>("confirmar_venta", { venta, sobreLimite, pin }),
+
+  buscarClientes: (texto: string, limite: number) => invoke<Cliente[]>("buscar_clientes", { texto, limite }),
+  obtenerCliente: (id: number) => invoke<Cliente>("obtener_cliente", { id }),
+  crearCliente: (datos: DatosCliente) => invoke<Cliente>("crear_cliente", { datos }),
+  editarCliente: (id: number, datos: DatosCliente) => invoke<Cliente>("editar_cliente", { id, datos }),
+  /** Desactivar solo si no debe nada. */
+  cambiarEstadoCliente: (id: number, activo: boolean) => invoke<Cliente>("cambiar_estado_cliente", { id, activo }),
   listarVentas: (filtros: FiltrosVentas, limite: number, desplazamiento: number) =>
     invoke<PaginaVentas>("listar_ventas", { filtros, limite, desplazamiento }),
   detalleVenta: (id: number) => invoke<DetalleVenta>("detalle_venta", { id }),
