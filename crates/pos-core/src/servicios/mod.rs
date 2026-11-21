@@ -9,6 +9,7 @@ pub mod compras;
 pub mod config;
 pub mod devoluciones;
 pub mod espera;
+pub mod exportar_reportes;
 pub mod fiados;
 pub mod historial;
 pub mod impresion;

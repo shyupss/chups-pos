@@ -9,6 +9,7 @@
 
 pub mod balanza;
 pub mod boleta;
+pub mod datos;
 pub mod db;
 pub mod error;
 pub mod logo;

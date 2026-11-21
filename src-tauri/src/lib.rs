@@ -126,6 +126,8 @@ pub fn run() {
             comandos::reportes::reporte_ganancia,
             comandos::reportes::reporte_turnos,
             comandos::reportes::reporte_fiados,
+            comandos::reportes::exportar_reporte,
+            comandos::reportes::abrir_archivo,
             comandos::fiados::listar_deudores,
             comandos::fiados::ficha_cliente,
             comandos::fiados::registrar_pago,

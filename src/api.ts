@@ -791,6 +791,9 @@ export interface ReporteFiados {
   deudores: { clienteId: number; nombre: string; deuda: number }[];
 }
 
+export type TipoReporte = "ventas" | "productos" | "ganancia" | "turnos" | "fiados";
+export type FormatoExportacion = "excel" | "pdf";
+
 /** Rust avisa cuando cambia algo de la pantalla Hoy (ventas, caja, fiados, stock). */
 export function escucharCambiosDelDia(alCambiar: () => void): () => void {
   let dejar: (() => void) | null = null;
@@ -881,6 +884,10 @@ export const api = {
   reporteGanancia: (desde: string, hasta: string) => invoke<ReporteGanancia>("reporte_ganancia", { desde, hasta }),
   reporteTurnos: (desde: string, hasta: string) => invoke<ReporteTurnos>("reporte_turnos", { desde, hasta }),
   reporteFiados: (desde: string, hasta: string) => invoke<ReporteFiados>("reporte_fiados", { desde, hasta }),
+  /** Pregunta dónde guardar; null si se cancela. */
+  exportarReporte: (tipo: TipoReporte, desde: string, hasta: string, categoria: number | null, formato: FormatoExportacion) =>
+    invoke<string | null>("exportar_reporte", { tipo, desde, hasta, categoria, formato }),
+  abrirArchivo: (ruta: string) => invoke<void>("abrir_archivo", { ruta }),
   listarDeudores: (texto: string, todos: boolean, limite: number, desplazamiento: number) =>
     invoke<PaginaDeudores>("listar_deudores", { texto, todos, limite, desplazamiento }),
   fichaCliente: (id: number) => invoke<FichaCliente>("ficha_cliente", { id }),
