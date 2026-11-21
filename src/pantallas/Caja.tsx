@@ -163,7 +163,7 @@ export default function Caja({ activa, onCrearProducto, onEnEspera, onImpresion 
       if (porCodigo) return elegir(porCodigo, multiplo);
 
       // Etiqueta de balanza (EAN-13 que empieza con 2): producto por kg con su peso, sin diálogo.
-      if (config?.balanzaActiva && /^2d{12}$/.test(texto)) {
+      if (config?.balanzaActiva && /^2\d{12}$/.test(texto)) {
         const etiqueta = await api.leerCodigoBalanza(texto);
         if (etiqueta) return agregar(etiqueta.producto, etiqueta.cantidadMil);
       }
