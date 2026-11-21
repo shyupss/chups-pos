@@ -188,6 +188,7 @@ export const api = {
   imprimirPrueba: () => invoke<void>("imprimir_prueba"),
   abrirCajon: () => invoke<void>("abrir_cajon"),
   carpetaImpresoraPruebas: () => invoke<string>("carpeta_impresora_pruebas"),
+  ultimaVenta: () => invoke<number | null>("ultima_venta"),
 
   buscarProductoPorCodigo: (codigo: string) =>
     invoke<Producto | null>("buscar_producto_por_codigo", { codigo }),

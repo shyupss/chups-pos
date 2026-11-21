@@ -68,3 +68,11 @@ pub async fn elegir_carpeta_pdf(app: AppHandle) -> ResultadoComando<Option<Strin
         .and_then(|c| c.into_path().ok())
         .map(|c| c.to_string_lossy().into_owned()))
 }
+
+/// Id de la última venta (para Ctrl+P "reimprimir la última boleta" al abrir la app).
+#[tauri::command]
+pub async fn ultima_venta(estado: State<'_, EstadoApp>) -> ResultadoComando<Option<i64>> {
+    pos_core::boleta::ultima_venta(&estado.pool)
+        .await
+        .map_err(a_texto)
+}

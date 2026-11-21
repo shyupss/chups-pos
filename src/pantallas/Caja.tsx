@@ -1,10 +1,20 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { api, textoError, type ItemPedido, type Producto, type ResumenEspera, type VentaConfirmada } from "../api";
+import {
+  api,
+  textoError,
+  type Config,
+  type ItemPedido,
+  type Producto,
+  type ResumenEspera,
+  type VentaConfirmada,
+} from "../api";
+import AvisoVenta from "../componentes/AvisoVenta";
 import Cobro from "../componentes/Cobro";
 import DialogoPeso from "../componentes/DialogoPeso";
 import ListaEspera from "../componentes/ListaEspera";
 import PonerEnEspera from "../componentes/PonerEnEspera";
-import { cantidad, folio, MAX_KG_MIL, MAX_UNIDADES_MIL, parseKg, pesos, subtotalLinea } from "../formato";
+import { cantidad, MAX_KG_MIL, MAX_UNIDADES_MIL, parseKg, pesos, subtotalLinea } from "../formato";
+import { useSalidasVenta } from "../hooks/useSalidasVenta";
 
 interface Linea {
   producto: Producto;
@@ -17,6 +27,8 @@ interface Props {
   onCrearProducto: (codigo: string) => void;
   /** Cuántas ventas hay en espera, para la insignia de la barra lateral. */
   onEnEspera: (cantidad: number) => void;
+  /** Se intentó imprimir: conviene volver a leer el estado de la impresora. */
+  onImpresion: () => void;
 }
 
 /** Igual que el servicio: más ventas en espera no se aceptan. */
@@ -72,7 +84,7 @@ function resolverCantidad(
     : { tipo: "error", texto: `El peso de ${p.nombre} debe estar entre 1 g y 100 kg` };
 }
 
-export default function Caja({ activa, onCrearProducto, onEnEspera }: Props) {
+export default function Caja({ activa, onCrearProducto, onEnEspera, onImpresion }: Props) {
   const [lineas, setLineas] = useState<Linea[]>([]);
   const [entrada, setEntrada] = useState("");
   const [resultados, setResultados] = useState<Producto[]>([]);
@@ -80,7 +92,10 @@ export default function Caja({ activa, onCrearProducto, onEnEspera }: Props) {
   const [aviso, setAviso] = useState<Aviso | null>(null);
   const [cobrando, setCobrando] = useState(false);
   const [pesando, setPesando] = useState<Pesando | null>(null);
-  const [redondeoActivo, setRedondeoActivo] = useState(true);
+  const [config, setConfig] = useState<Config | null>(null);
+  const [ultimaVentaId, setUltimaVentaId] = useState<number | null>(null);
+  const { salida, iniciar, imprimir, guardarPdf, abrirCajon, cerrar, descartarSiTermino } =
+    useSalidasVenta(onImpresion);
   const [dialogo, setDialogo] = useState<"poner-espera" | "lista-espera" | null>(null);
   const [enEspera, setEnEspera] = useState<ResumenEspera[] | null>(null);
   const campo = useRef<HTMLInputElement>(null);
@@ -97,9 +112,17 @@ export default function Caja({ activa, onCrearProducto, onEnEspera }: Props) {
     if (!activa) return;
     api
       .obtenerConfig()
-      .then((c) => setRedondeoActivo(c.redondeoEfectivo))
+      .then(setConfig)
       .catch(() => {});
   }, [activa]);
+
+  // Para Ctrl+P aunque la app recién se haya abierto.
+  useEffect(() => {
+    api
+      .ultimaVenta()
+      .then(setUltimaVentaId)
+      .catch(() => {});
+  }, []);
 
   const agregar = useCallback((producto: Producto, mil: number) => {
     setLineas((ls) => {
@@ -111,7 +134,8 @@ export default function Caja({ activa, onCrearProducto, onEnEspera }: Props) {
     });
     setResultados([]);
     setAviso(null);
-  }, []);
+    descartarSiTermino();
+  }, [descartarSiTermino]);
 
   /** Agrega lo escaneado o elegido; los productos por kg sin cantidad abren el diálogo de peso. */
   const elegir = useCallback(
@@ -237,6 +261,19 @@ export default function Caja({ activa, onCrearProducto, onEnEspera }: Props) {
     await refrescarEspera();
   };
 
+  /** Ctrl+P: reimprime la última boleta (una copia). */
+  const reimprimirUltima = useCallback(() => {
+    if (ultimaVentaId === null) {
+      setAviso({ tipo: "error", texto: "Todavía no hay ventas para reimprimir" });
+      return;
+    }
+    const mostrada = aviso?.tipo === "venta" && aviso.venta.id === ultimaVentaId;
+    if (!mostrada || salida?.ventaId !== ultimaVentaId) {
+      iniciar(ultimaVentaId, mostrada && aviso?.tipo === "venta" ? aviso.venta.folio : null);
+    }
+    void imprimir(ultimaVentaId, 1);
+  }, [ultimaVentaId, aviso, salida, iniciar, imprimir]);
+
   // Atajos y "foco pegajoso": si el lector escribe mientras el foco está en otro lado,
   // las teclas van igual al campo de escaneo.
   useEffect(() => {
@@ -245,6 +282,11 @@ export default function Caja({ activa, onCrearProducto, onEnEspera }: Props) {
       if (e.key === "F12") {
         e.preventDefault();
         if (lineas.length > 0) setCobrando(true);
+        return;
+      }
+      if (e.ctrlKey && e.key.toLowerCase() === "p") {
+        e.preventDefault();
+        reimprimirUltima();
         return;
       }
       if (e.key === "F7") {
@@ -268,12 +310,20 @@ export default function Caja({ activa, onCrearProducto, onEnEspera }: Props) {
     };
     window.addEventListener("keydown", alPresionar);
     return () => window.removeEventListener("keydown", alPresionar);
-  }, [activa, dialogoAbierto, lineas.length, enfocar, abrirListaEspera]);
+  }, [activa, dialogoAbierto, lineas.length, enfocar, abrirListaEspera, reimprimirUltima]);
 
+  // La venta ya está guardada: la boleta y el cajón van en segundo plano y nada de eso la deshace.
   const alConfirmar = (venta: VentaConfirmada) => {
     setCobrando(false);
     setLineas([]);
     setAviso({ tipo: "venta", venta });
+    setUltimaVentaId(venta.id);
+    iniciar(venta.id, venta.folio);
+    if (!config?.impresora) return;
+    if (config.cajonActivo && (venta.medioPago === "efectivo" || !config.cajonSoloEfectivo)) {
+      void abrirCajon(venta.id);
+    }
+    if (config.imprimirAlCobrar) void imprimir(venta.id);
   };
 
   return (
@@ -319,7 +369,36 @@ export default function Caja({ activa, onCrearProducto, onEnEspera }: Props) {
           )}
         </form>
 
-        {aviso && <AvisoCaja aviso={aviso} onCrearProducto={onCrearProducto} />}
+        {aviso?.tipo === "venta" ? (
+          <AvisoVenta
+            venta={aviso.venta}
+            salida={salida?.ventaId === aviso.venta.id ? salida : null}
+            reimprimir={() => {
+              if (salida?.ventaId !== aviso.venta.id) iniciar(aviso.venta.id, aviso.venta.folio);
+              void imprimir(aviso.venta.id, 1);
+            }}
+            guardarPdf={() => {
+              if (salida?.ventaId !== aviso.venta.id) iniciar(aviso.venta.id, aviso.venta.folio);
+              void guardarPdf(aviso.venta.id, false);
+            }}
+            abrirPdf={() => void guardarPdf(aviso.venta.id, true)}
+            cerrar={cerrar}
+          />
+        ) : (
+          <>
+            {aviso && <AvisoCaja aviso={aviso} onCrearProducto={onCrearProducto} />}
+            {salida && (
+              <AvisoVenta
+                venta={null}
+                salida={salida}
+                reimprimir={() => salida && void imprimir(salida.ventaId, 1)}
+                guardarPdf={() => salida && void guardarPdf(salida.ventaId, false)}
+                abrirPdf={() => salida && void guardarPdf(salida.ventaId, true)}
+                cerrar={cerrar}
+              />
+            )}
+          </>
+        )}
 
         <div className="mt-4 min-h-0 flex-1 overflow-auto rounded-lg border border-linea bg-superficie">
           {lineas.length === 0 ? (
@@ -437,6 +516,7 @@ export default function Caja({ activa, onCrearProducto, onEnEspera }: Props) {
         <dl className="mt-auto space-y-1 text-xs text-tenue">
           <div>Enter: agregar · Esc: limpiar búsqueda</div>
           <div>F7 en espera · F8 poner en espera</div>
+          <div>Ctrl+P reimprimir la última boleta</div>
           <div>F1 caja · F2 productos · F12 cobrar</div>
         </dl>
       </aside>
@@ -446,7 +526,7 @@ export default function Caja({ activa, onCrearProducto, onEnEspera }: Props) {
         <Cobro
           items={lineas.map((l) => ({ productoId: l.producto.id, cantidadMil: l.cantidadMil }))}
           totalEstimado={total}
-          redondeoActivo={redondeoActivo}
+          redondeoActivo={config?.redondeoEfectivo ?? true}
           onCancelar={() => setCobrando(false)}
           onConfirmada={alConfirmar}
         />
@@ -499,21 +579,9 @@ function AvisoCaja({
   aviso,
   onCrearProducto,
 }: {
-  aviso: Aviso;
+  aviso: Exclude<Aviso, { tipo: "venta" }>;
   onCrearProducto: (codigo: string) => void;
 }) {
-  if (aviso.tipo === "venta") {
-    const v = aviso.venta;
-    return (
-      <div className="mt-3 flex items-baseline gap-4 rounded-lg bg-exito-fondo px-4 py-3 text-exito tabular-nums">
-        <span className="font-semibold">Venta {folio(v.folio)} registrada</span>
-        <span>Total {pesos(v.total)}</span>
-        {v.medioPago === "efectivo" && v.vuelto !== null && (
-          <span className="text-lg font-semibold">Vuelto {pesos(v.vuelto)}</span>
-        )}
-      </div>
-    );
-  }
   if (aviso.tipo === "no-existe") {
     return (
       <div className="mt-3 flex items-center gap-4 rounded-lg bg-aviso-fondo px-4 py-3 text-aviso">

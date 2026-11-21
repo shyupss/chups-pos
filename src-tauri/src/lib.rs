@@ -70,6 +70,7 @@ pub fn run() {
             comandos::boletas::guardar_boleta_pdf,
             comandos::boletas::carpeta_pdf_predeterminada,
             comandos::boletas::elegir_carpeta_pdf,
+            comandos::boletas::ultima_venta,
             comandos::impresion::listar_impresoras,
             comandos::impresion::estado_impresora,
             comandos::impresion::imprimir_boleta,
