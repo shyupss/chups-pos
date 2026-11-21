@@ -41,6 +41,8 @@ pub fn run() {
             comandos::productos::editar_producto,
             comandos::productos::cambiar_estado_producto,
             comandos::ventas::confirmar_venta,
+            comandos::config::config_caja,
+            comandos::config::cambiar_redondeo_efectivo,
         ])
         .run(tauri::generate_context!())
         .expect("error al iniciar CHUPS POS");

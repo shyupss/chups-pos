@@ -24,6 +24,10 @@ export const folio = (n: number) => `N° ${String(n).padStart(6, "0")}`;
 // Cantidades en milésimas (enteros): 1 unidad = 1000, 0,532 kg = 532.
 // Los decimales solo existen al mostrar o al leer lo que escribe el usuario.
 
+/** Máximo por línea, en milésimas: 100 kg o 100.000 unidades. */
+export const MAX_KG_MIL = 100_000;
+export const MAX_UNIDADES_MIL = 100_000_000;
+
 /** 1532 -> "1,532"; -532 -> "-0,532". Parte entera y resto por separado, sin aritmética decimal. */
 function conTresDecimales(mil: number, separarMiles: boolean): string {
   const signo = mil < 0 ? "-" : "";
@@ -73,3 +77,12 @@ export function parseCantidad(texto: string, unidad: Unidad): number | null {
  */
 export const subtotalLinea = (precio: number, cantidadMil: number) =>
   Math.floor((precio * cantidadMil + 500) / 1000);
+
+/**
+ * Ajuste del efectivo a la decena (1 a 5 baja, 6 a 9 sube): 1224 -> -4, 1226 -> +4.
+ * Solo para mostrarlo antes de cobrar; el redondeo que vale lo aplica Rust al confirmar.
+ */
+export function redondeoEfectivo(monto: number): number {
+  const resto = ((monto % 10) + 10) % 10;
+  return resto <= 5 ? -resto : 10 - resto;
+}

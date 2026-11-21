@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api, textoError, type Producto, type VentaConfirmada } from "../api";
 import Cobro from "../componentes/Cobro";
-import { cantidad, folio, pesos, subtotalLinea } from "../formato";
+import DialogoPeso from "../componentes/DialogoPeso";
+import { cantidad, folio, MAX_KG_MIL, MAX_UNIDADES_MIL, parseKg, pesos, subtotalLinea } from "../formato";
 
 interface Linea {
   producto: Producto;
@@ -19,37 +20,81 @@ type Aviso =
   | { tipo: "no-existe"; codigo: string }
   | { tipo: "venta"; venta: VentaConfirmada };
 
-const PARECE_CODIGO = /^[A-Za-z0-9-]+$/;
-/** Máximo por línea, en milésimas: 100.000 unidades o 100 kg. */
-const maximoMil = (p: Producto) => (p.unidad === "kg" ? 100_000 : 100_000_000);
+/** Lo que va antes del asterisco: "3" en "3*código", "0,5" en "0,5*pan". */
+interface Multiplo {
+  texto: string;
+  decimal: boolean;
+}
 
-/** "3*7801234" -> cantidad 3 del código 7801234 */
-function separarCantidad(entrada: string): { cantidad: number; texto: string } {
-  const m = entrada.match(/^(\d{1,5})\s*[*xX]\s*(.+)$/);
-  if (m) return { cantidad: Math.max(1, Number(m[1])), texto: m[2].trim() };
-  return { cantidad: 1, texto: entrada.trim() };
+/** Diálogo de peso abierto: para agregar el producto o para cambiar el peso de su línea. */
+interface Pesando {
+  producto: Producto;
+  cambiar: boolean;
+}
+
+const PARECE_CODIGO = /^[A-Za-z0-9-]+$/;
+const maximoMil = (p: Producto) => (p.unidad === "kg" ? MAX_KG_MIL : MAX_UNIDADES_MIL);
+
+/** "3*7801234" -> 3 del código 7801234; "0,5*pan" o "0.5x pan" -> 0,5 kg de pan. */
+function separarCantidad(entrada: string): { multiplo: Multiplo | null; texto: string } {
+  const m = entrada.match(/^(\d{1,6}(?:[.,]\d{1,3})?)\s*[*xX]\s*(.+)$/);
+  if (m) return { multiplo: { texto: m[1], decimal: /[.,]/.test(m[1]) }, texto: m[2].trim() };
+  return { multiplo: null, texto: entrada.trim() };
+}
+
+/** Cuánto agregar de un producto: milésimas, pedir el peso o un error para mostrar. */
+function resolverCantidad(
+  p: Producto,
+  multiplo: Multiplo | null,
+): { tipo: "mil"; mil: number } | { tipo: "pesar" } | { tipo: "error"; texto: string } {
+  if (!multiplo) return p.unidad === "kg" ? { tipo: "pesar" } : { tipo: "mil", mil: 1000 };
+  if (p.unidad === "unidad") {
+    if (multiplo.decimal) {
+      return { tipo: "error", texto: `${p.nombre} se vende por unidad: usa un número entero, como 3*código` };
+    }
+    const unidades = Number(multiplo.texto);
+    return unidades >= 1
+      ? { tipo: "mil", mil: Math.min(unidades * 1000, MAX_UNIDADES_MIL) }
+      : { tipo: "error", texto: "La cantidad debe ser al menos 1" };
+  }
+  // Por kg, "2*pan" son 2 kg y "0,5*pan" medio kilo.
+  const mil = parseKg(multiplo.texto);
+  return mil !== null && mil >= 1 && mil <= MAX_KG_MIL
+    ? { tipo: "mil", mil }
+    : { tipo: "error", texto: `El peso de ${p.nombre} debe estar entre 1 g y 100 kg` };
 }
 
 export default function Caja({ activa, onCrearProducto }: Props) {
   const [lineas, setLineas] = useState<Linea[]>([]);
   const [entrada, setEntrada] = useState("");
   const [resultados, setResultados] = useState<Producto[]>([]);
-  const [cantidadPendiente, setCantidadPendiente] = useState(1);
+  const [multiploPendiente, setMultiploPendiente] = useState<Multiplo | null>(null);
   const [aviso, setAviso] = useState<Aviso | null>(null);
   const [cobrando, setCobrando] = useState(false);
+  const [pesando, setPesando] = useState<Pesando | null>(null);
+  const [redondeoActivo, setRedondeoActivo] = useState(true);
   const campo = useRef<HTMLInputElement>(null);
 
+  const dialogoAbierto = cobrando || pesando !== null;
   const enfocar = useCallback(() => campo.current?.focus(), []);
 
   useEffect(() => {
-    if (activa && !cobrando) enfocar();
-  }, [activa, cobrando, enfocar]);
+    if (activa && !dialogoAbierto) enfocar();
+  }, [activa, dialogoAbierto, enfocar]);
 
-  const agregar = useCallback((producto: Producto, cantidad: number) => {
-    const mil = cantidad * 1000;
+  // Se vuelve a leer al entrar a la Caja, por si cambió en Configuración.
+  useEffect(() => {
+    if (!activa) return;
+    api
+      .configCaja()
+      .then((c) => setRedondeoActivo(c.redondeoEfectivo))
+      .catch(() => {});
+  }, [activa]);
+
+  const agregar = useCallback((producto: Producto, mil: number) => {
     setLineas((ls) => {
       const i = ls.findIndex((l) => l.producto.id === producto.id);
-      if (i === -1) return [...ls, { producto, cantidadMil: mil }];
+      if (i === -1) return [...ls, { producto, cantidadMil: Math.min(maximoMil(producto), mil) }];
       const copia = ls.slice();
       copia[i] = { producto, cantidadMil: Math.min(maximoMil(producto), copia[i].cantidadMil + mil) };
       return copia;
@@ -58,19 +103,35 @@ export default function Caja({ activa, onCrearProducto }: Props) {
     setAviso(null);
   }, []);
 
+  /** Agrega lo escaneado o elegido; los productos por kg sin cantidad abren el diálogo de peso. */
+  const elegir = useCallback(
+    (producto: Producto, multiplo: Multiplo | null) => {
+      const r = resolverCantidad(producto, multiplo);
+      if (r.tipo === "mil") return agregar(producto, r.mil);
+      setResultados([]);
+      if (r.tipo === "pesar") {
+        setAviso(null);
+        setPesando({ producto, cambiar: false });
+      } else {
+        setAviso({ tipo: "error", texto: r.texto });
+      }
+    },
+    [agregar],
+  );
+
   const procesarEntrada = useCallback(async () => {
-    const { cantidad, texto } = separarCantidad(entrada);
+    const { multiplo, texto } = separarCantidad(entrada);
     setEntrada("");
     if (!texto) return;
     try {
       // Primero el código exacto (el caso del lector): una consulta por índice.
       const porCodigo = PARECE_CODIGO.test(texto) ? await api.buscarProductoPorCodigo(texto) : null;
-      if (porCodigo) return agregar(porCodigo, cantidad);
+      if (porCodigo) return elegir(porCodigo, multiplo);
 
       const encontrados = await api.buscarProductos(texto, false, 8, 0);
-      if (encontrados.length === 1) return agregar(encontrados[0], cantidad);
+      if (encontrados.length === 1) return elegir(encontrados[0], multiplo);
       if (encontrados.length > 1) {
-        setCantidadPendiente(cantidad);
+        setMultiploPendiente(multiplo);
         setResultados(encontrados);
         setAviso(null);
         return;
@@ -84,17 +145,21 @@ export default function Caja({ activa, onCrearProducto }: Props) {
     } catch (e) {
       setAviso({ tipo: "error", texto: textoError(e) });
     }
-  }, [entrada, agregar]);
+  }, [entrada, elegir]);
 
-  const cambiarUnidades = (id: number, unidades: number) =>
+  const fijarCantidad = (id: number, mil: number) =>
     setLineas((ls) =>
-      ls.map((l) =>
-        l.producto.id === id
-          ? { ...l, cantidadMil: Math.min(maximoMil(l.producto), Math.max(1, unidades) * 1000) }
-          : l,
-      ),
+      ls.map((l) => (l.producto.id === id ? { ...l, cantidadMil: Math.min(maximoMil(l.producto), mil) } : l)),
     );
+  const cambiarUnidades = (id: number, unidades: number) => fijarCantidad(id, Math.max(1, unidades) * 1000);
   const quitar = (id: number) => setLineas((ls) => ls.filter((l) => l.producto.id !== id));
+
+  const alPesar = (mil: number) => {
+    if (!pesando) return;
+    if (pesando.cambiar) fijarCantidad(pesando.producto.id, mil);
+    else agregar(pesando.producto, mil);
+    setPesando(null);
+  };
 
   // Total mostrado mientras se escanea. El total que vale lo calcula Rust al confirmar,
   // con los precios de la base de datos.
@@ -103,7 +168,7 @@ export default function Caja({ activa, onCrearProducto }: Props) {
   // Atajos y "foco pegajoso": si el lector escribe mientras el foco está en otro lado,
   // las teclas van igual al campo de escaneo.
   useEffect(() => {
-    if (!activa || cobrando) return;
+    if (!activa || dialogoAbierto) return;
     const alPresionar = (e: KeyboardEvent) => {
       if (e.key === "F12") {
         e.preventDefault();
@@ -121,7 +186,7 @@ export default function Caja({ activa, onCrearProducto }: Props) {
     };
     window.addEventListener("keydown", alPresionar);
     return () => window.removeEventListener("keydown", alPresionar);
-  }, [activa, cobrando, lineas.length, enfocar]);
+  }, [activa, dialogoAbierto, lineas.length, enfocar]);
 
   const alConfirmar = (venta: VentaConfirmada) => {
     setCobrando(false);
@@ -143,7 +208,7 @@ export default function Caja({ activa, onCrearProducto }: Props) {
             ref={campo}
             value={entrada}
             onChange={(e) => setEntrada(e.target.value)}
-            placeholder="Escanea un código o escribe un nombre y presiona Enter  (3*código = 3 unidades)"
+            placeholder="Escanea o escribe y presiona Enter  (3*código = 3 unidades, 0,5*código = 0,5 kg)"
             className="h-12 w-full rounded-lg border-2 border-acento bg-superficie px-4 text-lg outline-none"
             autoComplete="off"
             spellCheck={false}
@@ -155,13 +220,16 @@ export default function Caja({ activa, onCrearProducto }: Props) {
                   <button
                     type="button"
                     onClick={() => {
-                      agregar(p, cantidadPendiente);
+                      elegir(p, multiploPendiente);
                       enfocar();
                     }}
                     className="flex h-10 w-full items-center justify-between px-4 text-left hover:bg-fondo"
                   >
                     <span>{p.nombre}</span>
-                    <span className="text-tenue tabular-nums">{pesos(p.precioVenta)}</span>
+                    <span className="text-tenue tabular-nums">
+                      {pesos(p.precioVenta)}
+                      {p.unidad === "kg" && "/kg"}
+                    </span>
                   </button>
                 </li>
               ))}
@@ -195,7 +263,16 @@ export default function Caja({ activa, onCrearProducto }: Props) {
                     </td>
                     <td className="px-4">
                       {l.producto.unidad === "kg" ? (
-                        <div className="text-center">{cantidad(l.cantidadMil, "kg")}</div>
+                        <div className="flex items-center justify-center gap-2">
+                          <span>{cantidad(l.cantidadMil, "kg")}</span>
+                          <button
+                            type="button"
+                            onClick={() => setPesando({ producto: l.producto, cambiar: true })}
+                            className="h-7 rounded-lg border border-linea px-2 text-xs text-tenue hover:bg-fondo hover:text-texto"
+                          >
+                            Cambiar peso
+                          </button>
+                        </div>
                       ) : (
                         <div className="flex items-center justify-center gap-1">
                           <BotonChico onClick={() => cambiarUnidades(l.producto.id, l.cantidadMil / 1000 - 1)}>−</BotonChico>
@@ -205,6 +282,7 @@ export default function Caja({ activa, onCrearProducto }: Props) {
                             onKeyDown={(e) => e.key === "Enter" && enfocar()}
                             className="h-7 w-14 rounded-lg border border-linea bg-superficie px-1 text-center outline-none focus:border-texto"
                             inputMode="numeric"
+                            aria-label={`Cantidad de ${l.producto.nombre}`}
                           />
                           <BotonChico onClick={() => cambiarUnidades(l.producto.id, l.cantidadMil / 1000 + 1)}>+</BotonChico>
                         </div>
@@ -254,7 +332,7 @@ export default function Caja({ activa, onCrearProducto }: Props) {
           >
             Cancelar venta
           </button>
-          {/* Reserva su lugar en el diseño; la venta en espera llega en la fase 2. */}
+          {/* Reserva su lugar en el diseño; la venta en espera llega en la parte 4. */}
           <button disabled title="Llega en la fase 2" className="h-10 flex-1 rounded-lg text-tenue opacity-50">
             Poner en espera
           </button>
@@ -270,8 +348,19 @@ export default function Caja({ activa, onCrearProducto }: Props) {
         <Cobro
           items={lineas.map((l) => ({ productoId: l.producto.id, cantidadMil: l.cantidadMil }))}
           totalEstimado={total}
+          redondeoActivo={redondeoActivo}
           onCancelar={() => setCobrando(false)}
           onConfirmada={alConfirmar}
+        />
+      )}
+      {pesando && activa && (
+        <DialogoPeso
+          producto={pesando.producto}
+          inicialMil={
+            pesando.cambiar ? lineas.find((l) => l.producto.id === pesando.producto.id)?.cantidadMil : undefined
+          }
+          onConfirmar={alPesar}
+          onCancelar={() => setPesando(null)}
         />
       )}
     </div>

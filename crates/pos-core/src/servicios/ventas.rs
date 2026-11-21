@@ -5,7 +5,7 @@ use sqlx::SqlitePool;
 
 use crate::error::validacion;
 use crate::repositorios::{productos, ventas};
-use crate::servicios::cantidades;
+use crate::servicios::{cantidades, config};
 use crate::{Error, Resultado};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -71,6 +71,8 @@ pub struct VentaConfirmada {
     pub fecha_hora: String,
     pub subtotal: i64,
     pub descuento: i64,
+    /// Ajuste del efectivo a la decena (puede ser negativo). total = subtotal - descuento + redondeo.
+    pub redondeo: i64,
     pub total: i64,
     pub medio_pago: MedioPago,
     pub monto_recibido: Option<i64>,
@@ -80,6 +82,17 @@ pub struct VentaConfirmada {
 
 fn desborde() -> Error {
     Error::Validacion("El monto de la venta es demasiado grande".into())
+}
+
+/// Ajuste para llevar un monto a la decena, porque en Chile no hay monedas de 1 ni de 5 pesos.
+/// Si termina en 1 a 5 baja y si termina en 6 a 9 sube: 1224 → -4, 1225 → -5, 1226 → +4.
+pub fn redondeo_a_decena(monto: i64) -> i64 {
+    let resto = monto.rem_euclid(10);
+    if resto <= 5 {
+        -resto
+    } else {
+        10 - resto
+    }
 }
 
 /// Confirma una venta en UNA transacción: cabecera, líneas, descuento de stock y
@@ -142,7 +155,16 @@ pub async fn confirmar(pool: &SqlitePool, v: &NuevaVenta) -> Resultado<VentaConf
     if v.descuento < 0 || v.descuento > subtotal {
         return validacion("El descuento debe estar entre 0 y el subtotal");
     }
-    let total = subtotal - v.descuento;
+    let a_pagar = subtotal - v.descuento;
+    // El redondeo lo decide el servicio, no la interfaz: solo efectivo y solo si está activo.
+    let redondeo = if v.medio_pago == MedioPago::Efectivo
+        && config::redondeo_efectivo_activo(&mut tx).await?
+    {
+        redondeo_a_decena(a_pagar)
+    } else {
+        0
+    };
+    let total = a_pagar.checked_add(redondeo).ok_or_else(desborde)?;
 
     let (monto_recibido, vuelto) = match v.medio_pago {
         MedioPago::Efectivo => {
@@ -166,6 +188,7 @@ pub async fn confirmar(pool: &SqlitePool, v: &NuevaVenta) -> Resultado<VentaConf
         &ventas::NuevaCabecera {
             subtotal,
             descuento: v.descuento,
+            redondeo,
             total,
             medio_pago: v.medio_pago.como_texto(),
             monto_recibido,
@@ -206,10 +229,27 @@ pub async fn confirmar(pool: &SqlitePool, v: &NuevaVenta) -> Resultado<VentaConf
         fecha_hora: cabecera.fecha_hora,
         subtotal,
         descuento: v.descuento,
+        redondeo,
         total,
         medio_pago: v.medio_pago,
         monto_recibido,
         vuelto,
         lineas,
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::redondeo_a_decena;
+
+    #[test]
+    fn redondea_a_la_decena() {
+        assert_eq!(redondeo_a_decena(1220), 0);
+        assert_eq!(redondeo_a_decena(1221), -1);
+        assert_eq!(redondeo_a_decena(1224), -4);
+        assert_eq!(redondeo_a_decena(1225), -5);
+        assert_eq!(redondeo_a_decena(1226), 4);
+        assert_eq!(redondeo_a_decena(1229), 1);
+        assert_eq!(redondeo_a_decena(3), -3);
+    }
 }

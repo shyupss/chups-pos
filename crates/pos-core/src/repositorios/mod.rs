@@ -3,5 +3,6 @@
 //! Las funciones que escriben reciben una conexión (`&mut SqliteConnection`)
 //! para poder ejecutarse dentro de la transacción que abre el servicio.
 
+pub mod config;
 pub mod productos;
 pub mod ventas;

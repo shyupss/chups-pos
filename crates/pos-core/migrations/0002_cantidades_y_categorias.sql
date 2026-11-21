@@ -18,3 +18,8 @@ ALTER TABLE movimientos_stock RENAME COLUMN cantidad TO cantidad_mil;
 ALTER TABLE movimientos_stock RENAME COLUMN stock_resultante TO stock_resultante_mil;
 UPDATE movimientos_stock
 SET cantidad_mil = cantidad_mil * 1000, stock_resultante_mil = stock_resultante_mil * 1000;
+
+-- Redondeo del efectivo (Chile no tiene monedas de 1 ni 5 pesos): total = subtotal - descuento + redondeo.
+-- Puede ser negativo. Solo se aplica en efectivo y se puede desactivar con la clave de config.
+ALTER TABLE ventas ADD COLUMN redondeo INTEGER NOT NULL DEFAULT 0;
+INSERT OR IGNORE INTO config (clave, valor) VALUES ('redondeo_efectivo', '1');

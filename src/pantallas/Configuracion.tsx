@@ -1,6 +1,6 @@
 import { Monitor, Moon, Sun } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
-import { api, type EstadoSistema } from "../api";
+import { api, textoError, type EstadoSistema } from "../api";
 import type { ModoBarra } from "../componentes/BarraLateral";
 import Opciones, { type Opcion } from "../componentes/Opciones";
 import { useTema, type Tema } from "../hooks/useTema";
@@ -20,6 +20,11 @@ const MODOS_BARRA: Opcion<ModoBarra>[] = [
   { id: "auto", nombre: "Automática" },
   { id: "expandida", nombre: "Expandida" },
   { id: "colapsada", nombre: "Colapsada" },
+];
+
+const SI_NO: Opcion<"si" | "no">[] = [
+  { id: "si", nombre: "Activado" },
+  { id: "no", nombre: "Desactivado" },
 ];
 
 export default function Configuracion({ modoBarra, onModoBarra }: Props) {
@@ -45,6 +50,10 @@ export default function Configuracion({ modoBarra, onModoBarra }: Props) {
               />
             </Fila>
           </div>
+        </Bloque>
+
+        <Bloque titulo="Caja">
+          <RedondeoEfectivo />
         </Bloque>
 
         <Bloque titulo="Negocio" fase={3}>
@@ -95,6 +104,49 @@ function Fila({ etiqueta, ayuda, children }: { etiqueta: string; ayuda: string; 
       </div>
       <div className="shrink-0">{children}</div>
     </div>
+  );
+}
+
+/** Interruptor de la clave redondeo_efectivo de la tabla config. */
+function RedondeoEfectivo() {
+  const [activo, setActivo] = useState<boolean | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    api
+      .configCaja()
+      .then((c) => setActivo(c.redondeoEfectivo))
+      .catch((e) => setError(textoError(e)));
+  }, []);
+
+  const cambiar = (valor: "si" | "no") => {
+    const nuevo = valor === "si";
+    setActivo(nuevo);
+    api.cambiarRedondeoEfectivo(nuevo).catch((e) => {
+      setActivo(!nuevo);
+      setError(textoError(e));
+    });
+  };
+
+  return (
+    <Fila
+      etiqueta="Redondeo del efectivo"
+      ayuda="Cobra en efectivo a la decena: 1 a 5 pesos hacia abajo, 6 a 9 hacia arriba. Tarjetas y transferencias no se redondean."
+    >
+      {error ? (
+        <span className="text-peligro">{error}</span>
+      ) : activo === null ? (
+        <span className="text-tenue">Cargando…</span>
+      ) : (
+        <Opciones
+          nombre="redondeo"
+          etiqueta="Redondeo del efectivo"
+          opciones={SI_NO}
+          valor={activo ? "si" : "no"}
+          onCambiar={cambiar}
+        />
+      )}
+    </Fila>
   );
 }
 

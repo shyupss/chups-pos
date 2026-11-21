@@ -67,11 +67,17 @@ export interface VentaConfirmada {
   fechaHora: string;
   subtotal: number;
   descuento: number;
+  /** Ajuste del efectivo a la decena (puede ser negativo). total = subtotal - descuento + redondeo. */
+  redondeo: number;
   total: number;
   medioPago: MedioPago;
   montoRecibido: number | null;
   vuelto: number | null;
   lineas: LineaVendida[];
+}
+
+export interface ConfigCaja {
+  redondeoEfectivo: boolean;
 }
 
 export const api = {
@@ -88,6 +94,9 @@ export const api = {
     invoke<void>("cambiar_estado_producto", { id, activo }),
 
   confirmarVenta: (venta: NuevaVenta) => invoke<VentaConfirmada>("confirmar_venta", { venta }),
+
+  configCaja: () => invoke<ConfigCaja>("config_caja"),
+  cambiarRedondeoEfectivo: (activo: boolean) => invoke<void>("cambiar_redondeo_efectivo", { activo }),
 };
 
 /** Los errores de Rust llegan como texto listo para mostrar. */
