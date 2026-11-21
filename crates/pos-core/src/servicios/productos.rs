@@ -2,24 +2,28 @@ use serde::Deserialize;
 use sqlx::SqlitePool;
 
 use crate::error::validacion;
-use crate::repositorios::productos::{self as repo, Campos, Producto};
+use crate::repositorios::productos::{self as repo, Campos, Producto, Unidad};
+use crate::servicios::cantidades;
 use crate::{Error, Resultado};
 
 /// Máximo de filas por página: la interfaz nunca pide el catálogo completo.
 pub const LIMITE_MAXIMO: i64 = 200;
 
-/// Lo que llega desde el formulario de producto.
+/// Lo que llega desde el formulario de producto. Stocks en milésimas.
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DatosProducto {
     pub codigo_barras: Option<String>,
     pub nombre: String,
+    #[serde(default)]
+    pub unidad: Unidad,
+    /// Precio por unidad o, en productos por kg, precio por kilo.
     pub precio_venta: i64,
     pub costo: Option<i64>,
-    pub stock_minimo: i64,
+    pub stock_minimo_mil: i64,
     /// Solo se usa al crear. Después el stock cambia con ventas y movimientos.
     #[serde(default)]
-    pub stock_inicial: i64,
+    pub stock_inicial_mil: i64,
 }
 
 struct Limpios {
@@ -41,9 +45,7 @@ fn validar(d: &DatosProducto) -> Resultado<Limpios> {
     if d.costo.is_some_and(|c| c < 0) {
         return validacion("El costo no puede ser negativo");
     }
-    if d.stock_minimo < 0 {
-        return validacion("El stock mínimo no puede ser negativo");
-    }
+    cantidades::validar_stock(d.unidad, d.stock_minimo_mil, "stock mínimo")?;
     let codigo = d
         .codigo_barras
         .as_deref()
@@ -61,23 +63,22 @@ fn validar(d: &DatosProducto) -> Resultado<Limpios> {
 
 pub async fn crear(pool: &SqlitePool, d: &DatosProducto) -> Resultado<Producto> {
     let l = validar(d)?;
-    if d.stock_inicial < 0 {
-        return validacion("El stock inicial no puede ser negativo");
-    }
+    cantidades::validar_stock(d.unidad, d.stock_inicial_mil, "stock inicial")?;
     let mut tx = pool.begin().await?;
     let campos = Campos {
         codigo_barras: l.codigo.as_deref(),
         nombre: &l.nombre,
+        unidad: d.unidad,
         precio_venta: d.precio_venta,
         costo: d.costo,
-        stock_minimo: d.stock_minimo,
+        stock_minimo_mil: d.stock_minimo_mil,
     };
     let id = repo::insertar(&mut tx, &campos).await?;
-    if d.stock_inicial > 0 {
+    if d.stock_inicial_mil > 0 {
         repo::mover_stock(
             &mut tx,
             id,
-            d.stock_inicial,
+            d.stock_inicial_mil,
             "ajuste",
             None,
             Some("Stock inicial"),
@@ -99,9 +100,10 @@ pub async fn editar(pool: &SqlitePool, id: i64, d: &DatosProducto) -> Resultado<
     let campos = Campos {
         codigo_barras: l.codigo.as_deref(),
         nombre: &l.nombre,
+        unidad: d.unidad,
         precio_venta: d.precio_venta,
         costo: d.costo,
-        stock_minimo: d.stock_minimo,
+        stock_minimo_mil: d.stock_minimo_mil,
     };
     repo::actualizar(&mut tx, id, &campos).await?;
     if anterior.precio_venta != d.precio_venta {

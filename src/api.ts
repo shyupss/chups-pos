@@ -10,31 +10,42 @@ export interface EstadoSistema {
   msInicio: number;
 }
 
+/** En productos por kg, precioVenta es el precio por kilo. */
+export type Unidad = "unidad" | "kg";
+
+// Cantidades y stocks en milésimas (enteros): 1 unidad = 1000, 0,532 kg = 532.
 export interface Producto {
   id: number;
   codigoBarras: string | null;
   nombre: string;
+  unidad: Unidad;
   precioVenta: number;
   costo: number | null;
-  stock: number;
-  stockMinimo: number;
+  stockMil: number;
+  stockMinimoMil: number;
   activo: boolean;
 }
 
 export interface DatosProducto {
   codigoBarras: string | null;
   nombre: string;
+  unidad: Unidad;
   precioVenta: number;
   costo: number | null;
-  stockMinimo: number;
+  stockMinimoMil: number;
   /** Solo se usa al crear. */
-  stockInicial: number;
+  stockInicialMil: number;
 }
 
 export type MedioPago = "efectivo" | "debito" | "credito" | "transferencia" | "fiado";
 
+export interface ItemPedido {
+  productoId: number;
+  cantidadMil: number;
+}
+
 export interface NuevaVenta {
-  items: { productoId: number; cantidad: number }[];
+  items: ItemPedido[];
   medioPago: MedioPago;
   montoRecibido: number | null;
   descuento: number;
@@ -45,9 +56,9 @@ export interface LineaVendida {
   productoId: number;
   nombre: string;
   precioUnitario: number;
-  cantidad: number;
+  cantidadMil: number;
   subtotal: number;
-  stockResultante: number;
+  stockResultanteMil: number;
 }
 
 export interface VentaConfirmada {

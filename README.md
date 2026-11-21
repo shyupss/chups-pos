@@ -16,6 +16,11 @@ o PDF. La prioridad es el rendimiento: debe correr sin lag en PCs modestos.
 Reglas del proyecto:
 
 - Montos en pesos como enteros, nunca `float`.
+- Cantidades y stocks en milésimas, también enteros: 1 unidad = 1000 y 0,532 kg = 532. Las columnas
+  terminan en `_mil` (`stock_mil`, `cantidad_mil`). En productos por kg, `precio_venta` es el precio por
+  kilo. El subtotal de una línea es `(precio × cantidad_mil + 500) / 1000` con división entera, o sea,
+  redondeado al peso más cercano. En la interfaz los decimales solo aparecen al mostrar o al leer lo
+  que escribe el usuario.
 - Ventas y movimientos de stock no se borran: se anulan o se compensan.
 - La interfaz nunca carga el catálogo completo; cada comando devuelve solo lo que la pantalla muestra.
 

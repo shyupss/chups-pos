@@ -2,7 +2,7 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api, textoError, type Producto } from "../api";
 import FormularioProducto from "../componentes/FormularioProducto";
-import { pesos } from "../formato";
+import { cantidad, pesos } from "../formato";
 
 interface Props {
   codigoNuevo: string | null;
@@ -115,7 +115,7 @@ export default function Productos({ codigoNuevo, onCodigoUsado }: Props) {
 
         {error && <p className="mt-3 rounded-lg bg-peligro/10 px-3 py-2 text-peligro">{error}</p>}
 
-        <div className="mt-4 grid grid-cols-[1fr_10rem_7rem_5rem] gap-2 px-4 text-xs font-medium uppercase text-tenue">
+        <div className="mt-4 grid grid-cols-[1fr_10rem_7rem_6rem] gap-2 px-4 text-xs font-medium uppercase text-tenue">
           <span>Nombre</span>
           <span>Código</span>
           <span className="text-right">Precio</span>
@@ -130,22 +130,22 @@ export default function Productos({ codigoNuevo, onCodigoUsado }: Props) {
             <div style={{ height: virtual.getTotalSize(), position: "relative" }}>
               {visibles.map((v) => {
                 const p = filas[v.index];
-                const bajo = p.stockMinimo > 0 && p.stock <= p.stockMinimo;
+                const bajo = p.stockMinimoMil > 0 && p.stockMil <= p.stockMinimoMil;
                 const seleccionado = edicion?.tipo === "editar" && edicion.producto.id === p.id;
                 return (
                   <button
                     key={p.id}
                     onClick={() => setEdicion({ tipo: "editar", producto: p })}
                     style={{ position: "absolute", top: 0, left: 0, width: "100%", height: ALTO_FILA, transform: `translateY(${v.start}px)` }}
-                    className={`grid grid-cols-[1fr_10rem_7rem_5rem] items-center gap-2 border-b border-linea px-4 text-left ${
+                    className={`grid grid-cols-[1fr_10rem_7rem_6rem] items-center gap-2 border-b border-linea px-4 text-left ${
                       seleccionado ? "bg-linea/70" : "hover:bg-fondo"
                     } ${p.activo ? "" : "text-tenue line-through"}`}
                   >
                     <span className="truncate">{p.nombre}</span>
                     <span className="truncate text-tenue">{p.codigoBarras ?? "—"}</span>
-                    <span className="text-right">{pesos(p.precioVenta)}</span>
-                    <span className={`text-right ${bajo || p.stock < 0 ? "font-semibold text-peligro" : ""}`}>
-                      {p.stock}
+                    <span className="text-right">{pesos(p.precioVenta)}{p.unidad === "kg" && <span className="text-tenue">/kg</span>}</span>
+                    <span className={`text-right ${bajo || p.stockMil < 0 ? "font-semibold text-peligro" : ""}`}>
+                      {cantidad(p.stockMil, p.unidad)}
                     </span>
                   </button>
                 );

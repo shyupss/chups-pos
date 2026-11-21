@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api, textoError, type Producto, type VentaConfirmada } from "../api";
 import Cobro from "../componentes/Cobro";
-import { folio, pesos } from "../formato";
+import { cantidad, folio, pesos, subtotalLinea } from "../formato";
 
 interface Linea {
   producto: Producto;
-  cantidad: number;
+  /** En milésimas: 3 unidades = 3000, 0,532 kg = 532. */
+  cantidadMil: number;
 }
 
 interface Props {
@@ -19,7 +20,8 @@ type Aviso =
   | { tipo: "venta"; venta: VentaConfirmada };
 
 const PARECE_CODIGO = /^[A-Za-z0-9-]+$/;
-const MAX_CANTIDAD = 100_000;
+/** Máximo por línea, en milésimas: 100.000 unidades o 100 kg. */
+const maximoMil = (p: Producto) => (p.unidad === "kg" ? 100_000 : 100_000_000);
 
 /** "3*7801234" -> cantidad 3 del código 7801234 */
 function separarCantidad(entrada: string): { cantidad: number; texto: string } {
@@ -44,11 +46,12 @@ export default function Caja({ activa, onCrearProducto }: Props) {
   }, [activa, cobrando, enfocar]);
 
   const agregar = useCallback((producto: Producto, cantidad: number) => {
+    const mil = cantidad * 1000;
     setLineas((ls) => {
       const i = ls.findIndex((l) => l.producto.id === producto.id);
-      if (i === -1) return [...ls, { producto, cantidad }];
+      if (i === -1) return [...ls, { producto, cantidadMil: mil }];
       const copia = ls.slice();
-      copia[i] = { producto, cantidad: Math.min(MAX_CANTIDAD, copia[i].cantidad + cantidad) };
+      copia[i] = { producto, cantidadMil: Math.min(maximoMil(producto), copia[i].cantidadMil + mil) };
       return copia;
     });
     setResultados([]);
@@ -83,18 +86,19 @@ export default function Caja({ activa, onCrearProducto }: Props) {
     }
   }, [entrada, agregar]);
 
-  const cambiarCantidad = (id: number, cantidad: number) =>
+  const cambiarUnidades = (id: number, unidades: number) =>
     setLineas((ls) =>
       ls.map((l) =>
-        l.producto.id === id ? { ...l, cantidad: Math.min(MAX_CANTIDAD, Math.max(1, cantidad)) } : l,
+        l.producto.id === id
+          ? { ...l, cantidadMil: Math.min(maximoMil(l.producto), Math.max(1, unidades) * 1000) }
+          : l,
       ),
     );
   const quitar = (id: number) => setLineas((ls) => ls.filter((l) => l.producto.id !== id));
 
   // Total mostrado mientras se escanea. El total que vale lo calcula Rust al confirmar,
   // con los precios de la base de datos.
-  const total = lineas.reduce((s, l) => s + l.producto.precioVenta * l.cantidad, 0);
-  const unidades = lineas.reduce((s, l) => s + l.cantidad, 0);
+  const total = lineas.reduce((s, l) => s + subtotalLinea(l.producto.precioVenta, l.cantidadMil), 0);
 
   // Atajos y "foco pegajoso": si el lector escribe mientras el foco está en otro lado,
   // las teclas van igual al campo de escaneo.
@@ -185,21 +189,30 @@ export default function Caja({ activa, onCrearProducto }: Props) {
                 {lineas.map((l) => (
                   <tr key={l.producto.id} className="h-10 border-t border-linea">
                     <td className="px-4">{l.producto.nombre}</td>
-                    <td className="px-4 text-right">{pesos(l.producto.precioVenta)}</td>
-                    <td className="px-4">
-                      <div className="flex items-center justify-center gap-1">
-                        <BotonChico onClick={() => cambiarCantidad(l.producto.id, l.cantidad - 1)}>−</BotonChico>
-                        <input
-                          value={l.cantidad}
-                          onChange={(e) => cambiarCantidad(l.producto.id, Number(e.target.value.replace(/\D/g, "")) || 1)}
-                          onKeyDown={(e) => e.key === "Enter" && enfocar()}
-                          className="h-7 w-14 rounded-lg border border-linea bg-superficie px-1 text-center outline-none focus:border-texto"
-                          inputMode="numeric"
-                        />
-                        <BotonChico onClick={() => cambiarCantidad(l.producto.id, l.cantidad + 1)}>+</BotonChico>
-                      </div>
+                    <td className="px-4 text-right">
+                      {pesos(l.producto.precioVenta)}
+                      {l.producto.unidad === "kg" && <span className="text-tenue">/kg</span>}
                     </td>
-                    <td className="px-4 text-right font-medium">{pesos(l.producto.precioVenta * l.cantidad)}</td>
+                    <td className="px-4">
+                      {l.producto.unidad === "kg" ? (
+                        <div className="text-center">{cantidad(l.cantidadMil, "kg")}</div>
+                      ) : (
+                        <div className="flex items-center justify-center gap-1">
+                          <BotonChico onClick={() => cambiarUnidades(l.producto.id, l.cantidadMil / 1000 - 1)}>−</BotonChico>
+                          <input
+                            value={l.cantidadMil / 1000}
+                            onChange={(e) => cambiarUnidades(l.producto.id, Number(e.target.value.replace(/\D/g, "")) || 1)}
+                            onKeyDown={(e) => e.key === "Enter" && enfocar()}
+                            className="h-7 w-14 rounded-lg border border-linea bg-superficie px-1 text-center outline-none focus:border-texto"
+                            inputMode="numeric"
+                          />
+                          <BotonChico onClick={() => cambiarUnidades(l.producto.id, l.cantidadMil / 1000 + 1)}>+</BotonChico>
+                        </div>
+                      )}
+                    </td>
+                    <td className="px-4 text-right font-medium">
+                      {pesos(subtotalLinea(l.producto.precioVenta, l.cantidadMil))}
+                    </td>
                     <td className="pr-2 text-center">
                       <button
                         onClick={() => quitar(l.producto.id)}
@@ -219,7 +232,7 @@ export default function Caja({ activa, onCrearProducto }: Props) {
 
       <aside className="flex w-70 shrink-0 flex-col border-l border-linea bg-superficie p-5">
         <div className="text-tenue">
-          {unidades} {unidades === 1 ? "unidad" : "unidades"}
+          {lineas.length} {lineas.length === 1 ? "producto" : "productos"}
         </div>
         <div className="mt-1 text-xs font-medium uppercase tracking-wide text-tenue">Total</div>
         <div className="text-4xl font-semibold tabular-nums">{pesos(total)}</div>
@@ -255,7 +268,7 @@ export default function Caja({ activa, onCrearProducto }: Props) {
       {/* Solo mientras la Caja está a la vista: oculta, sus atajos (Enter, Esc) no deben actuar. */}
       {cobrando && activa && (
         <Cobro
-          items={lineas.map((l) => ({ productoId: l.producto.id, cantidad: l.cantidad }))}
+          items={lineas.map((l) => ({ productoId: l.producto.id, cantidadMil: l.cantidadMil }))}
           totalEstimado={total}
           onCancelar={() => setCobrando(false)}
           onConfirmada={alConfirmar}

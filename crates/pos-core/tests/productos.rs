@@ -8,15 +8,15 @@ async fn crea_con_stock_inicial_y_movimiento() {
     let pool = db::abrir_en_memoria().await.unwrap();
     let p = comun::crear(&pool, "780123", "Leche entera 1L", 1190, 24).await;
 
-    assert_eq!(p.stock, 24);
+    assert_eq!(p.stock_mil, 24_000);
     assert!(p.activo);
     let (tipo, cantidad): (String, i64) =
-        sqlx::query_as("SELECT tipo, cantidad FROM movimientos_stock WHERE producto_id = ?")
+        sqlx::query_as("SELECT tipo, cantidad_mil FROM movimientos_stock WHERE producto_id = ?")
             .bind(p.id)
             .fetch_one(&pool)
             .await
             .unwrap();
-    assert_eq!((tipo.as_str(), cantidad), ("ajuste", 24));
+    assert_eq!((tipo.as_str(), cantidad), ("ajuste", 24_000));
 }
 
 #[tokio::test]
@@ -40,12 +40,12 @@ async fn editar_precio_deja_historial() {
     let p = comun::crear(&pool, "222", "Arroz 1kg", 1500, 10).await;
 
     let mut d = comun::datos(Some("222"), "Arroz grado 1, 1kg", 1690, 999);
-    d.stock_minimo = 5;
+    d.stock_minimo_mil = 5000;
     let editado = srv::editar(&pool, p.id, &d).await.unwrap();
 
     assert_eq!(editado.nombre, "Arroz grado 1, 1kg");
     assert_eq!(editado.precio_venta, 1690);
-    assert_eq!(editado.stock, 10, "editar no toca el stock");
+    assert_eq!(editado.stock_mil, 10_000, "editar no toca el stock");
     let (antes, despues): (i64, i64) = sqlx::query_as(
         "SELECT precio_anterior, precio_nuevo FROM historial_precios WHERE producto_id = ?",
     )

@@ -1,31 +1,44 @@
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, SqliteConnection, SqlitePool};
 
 use crate::Resultado;
 
+/// Cómo se vende un producto. En los productos por kg, `precio_venta` es el precio por kilo.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
+#[serde(rename_all = "lowercase")]
+#[sqlx(rename_all = "lowercase")]
+pub enum Unidad {
+    #[default]
+    Unidad,
+    Kg,
+}
+
+/// Las cantidades van en milésimas: 1 unidad = 1000, 0,532 kg = 532.
 #[derive(Debug, Clone, Serialize, FromRow, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct Producto {
     pub id: i64,
     pub codigo_barras: Option<String>,
     pub nombre: String,
+    pub unidad: Unidad,
     pub precio_venta: i64,
     pub costo: Option<i64>,
-    pub stock: i64,
-    pub stock_minimo: i64,
+    pub stock_mil: i64,
+    pub stock_minimo_mil: i64,
     pub activo: bool,
 }
 
-const COLUMNAS: &str =
-    "p.id, p.codigo_barras, p.nombre, p.precio_venta, p.costo, p.stock, p.stock_minimo, p.activo";
+const COLUMNAS: &str = "p.id, p.codigo_barras, p.nombre, p.unidad, p.precio_venta, p.costo, \
+                        p.stock_mil, p.stock_minimo_mil, p.activo";
 
 /// Campos que se guardan al crear o editar.
 pub struct Campos<'a> {
     pub codigo_barras: Option<&'a str>,
     pub nombre: &'a str,
+    pub unidad: Unidad,
     pub precio_venta: i64,
     pub costo: Option<i64>,
-    pub stock_minimo: i64,
+    pub stock_minimo_mil: i64,
 }
 
 /// Cantidad de productos activos.
@@ -89,14 +102,15 @@ pub async fn listar(
 
 pub async fn insertar(conn: &mut SqliteConnection, c: &Campos<'_>) -> Resultado<i64> {
     let id = sqlx::query_scalar(
-        "INSERT INTO productos (codigo_barras, nombre, precio_venta, costo, stock_minimo)
-         VALUES (?, ?, ?, ?, ?) RETURNING id",
+        "INSERT INTO productos (codigo_barras, nombre, unidad, precio_venta, costo, stock_minimo_mil)
+         VALUES (?, ?, ?, ?, ?, ?) RETURNING id",
     )
     .bind(c.codigo_barras)
     .bind(c.nombre)
+    .bind(c.unidad)
     .bind(c.precio_venta)
     .bind(c.costo)
-    .bind(c.stock_minimo)
+    .bind(c.stock_minimo_mil)
     .fetch_one(conn)
     .await?;
     Ok(id)
@@ -105,14 +119,16 @@ pub async fn insertar(conn: &mut SqliteConnection, c: &Campos<'_>) -> Resultado<
 pub async fn actualizar(conn: &mut SqliteConnection, id: i64, c: &Campos<'_>) -> Resultado<()> {
     sqlx::query(
         "UPDATE productos
-         SET codigo_barras = ?, nombre = ?, precio_venta = ?, costo = ?, stock_minimo = ?
+         SET codigo_barras = ?, nombre = ?, unidad = ?, precio_venta = ?, costo = ?,
+             stock_minimo_mil = ?
          WHERE id = ?",
     )
     .bind(c.codigo_barras)
     .bind(c.nombre)
+    .bind(c.unidad)
     .bind(c.precio_venta)
     .bind(c.costo)
-    .bind(c.stock_minimo)
+    .bind(c.stock_minimo_mil)
     .bind(id)
     .execute(conn)
     .await?;
@@ -145,33 +161,35 @@ pub async fn registrar_cambio_precio(
     Ok(())
 }
 
-/// Suma `delta` al stock (negativo para descontar) y deja el movimiento en el historial.
-/// Devuelve el stock resultante.
+/// Suma `delta_mil` al stock (negativo para descontar) y deja el movimiento en el historial.
+/// Devuelve el stock resultante, en milésimas.
 pub async fn mover_stock(
     conn: &mut SqliteConnection,
     producto_id: i64,
-    delta: i64,
+    delta_mil: i64,
     tipo: &str,
     venta_id: Option<i64>,
     nota: Option<&str>,
 ) -> Resultado<i64> {
-    let stock: i64 =
-        sqlx::query_scalar("UPDATE productos SET stock = stock + ? WHERE id = ? RETURNING stock")
-            .bind(delta)
-            .bind(producto_id)
-            .fetch_one(&mut *conn)
-            .await?;
+    let stock_mil: i64 = sqlx::query_scalar(
+        "UPDATE productos SET stock_mil = stock_mil + ? WHERE id = ? RETURNING stock_mil",
+    )
+    .bind(delta_mil)
+    .bind(producto_id)
+    .fetch_one(&mut *conn)
+    .await?;
     sqlx::query(
-        "INSERT INTO movimientos_stock (producto_id, tipo, cantidad, stock_resultante, venta_id, nota)
+        "INSERT INTO movimientos_stock
+            (producto_id, tipo, cantidad_mil, stock_resultante_mil, venta_id, nota)
          VALUES (?, ?, ?, ?, ?, ?)",
     )
     .bind(producto_id)
     .bind(tipo)
-    .bind(delta)
-    .bind(stock)
+    .bind(delta_mil)
+    .bind(stock_mil)
     .bind(venta_id)
     .bind(nota)
     .execute(conn)
     .await?;
-    Ok(stock)
+    Ok(stock_mil)
 }

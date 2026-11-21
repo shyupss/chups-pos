@@ -54,18 +54,18 @@ pub async fn insertar_item(
     producto_id: i64,
     nombre: &str,
     precio_unitario: i64,
-    cantidad: i64,
+    cantidad_mil: i64,
     subtotal: i64,
 ) -> Resultado<()> {
     sqlx::query(
-        "INSERT INTO venta_items (venta_id, producto_id, nombre, precio_unitario, cantidad, subtotal)
+        "INSERT INTO venta_items (venta_id, producto_id, nombre, precio_unitario, cantidad_mil, subtotal)
          VALUES (?, ?, ?, ?, ?, ?)",
     )
     .bind(venta_id)
     .bind(producto_id)
     .bind(nombre)
     .bind(precio_unitario)
-    .bind(cantidad)
+    .bind(cantidad_mil)
     .bind(subtotal)
     .execute(conn)
     .await?;
