@@ -27,13 +27,75 @@ Reglas del proyecto:
   `ventas.redondeo` (puede ser negativo), con total = subtotal − descuento + redondeo. Débito, crédito y
   transferencia no se redondean. Se activa o desactiva con la clave `redondeo_efectivo` de la tabla
   `config` (activo por defecto), que se cambia en Configuración > Caja.
-- Ventas y movimientos de stock no se borran: se anulan o se compensan.
+- Ventas, movimientos de stock, turnos, movimientos de caja y devoluciones no se borran: se anulan o
+  se compensan. Desde la migración 0005, unos triggers lo impiden en la misma base, así que los folios
+  nunca se reutilizan.
 - La interfaz nunca carga el catálogo completo; cada comando devuelve solo lo que la pantalla muestra.
+
+## Turnos de caja y cuadratura
+
+Para vender hay que **abrir la caja**: al entrar a la Caja sin turno abierto aparece "Abrir caja", donde se
+cuenta el efectivo con que se empieza (sugiere el monto inicial del turno anterior). Solo puede haber un
+turno abierto, y sigue abierto aunque se cierre la app o pase la medianoche. Las ventas en espera sí se
+guardan y recuperan sin caja. La barra lateral dice "Caja abierta desde 09:12" o "Caja cerrada".
+
+Durante el turno, "Ingreso o retiro de efectivo" registra el sencillo que entra o el dinero que sale (pago
+a un proveedor, depósito), siempre con motivo. Un retiro no puede ser mayor que el efectivo esperado.
+
+**Cerrar caja** tiene dos pasos: contar el efectivo (por billete y moneda, que suma solo, o el monto total)
+y revisar el resumen: ventas por medio de pago, anulaciones y devoluciones, ingresos y retiros, y el
+efectivo esperado contra el contado. La diferencia sale en verde si cuadra, como aviso si sobra y en rojo si
+falta. Al confirmar se imprime el "CIERRE DE CAJA" (si hay impresora) y se puede guardar en PDF
+(`cierre-000012.pdf`, en la misma carpeta de las boletas).
+
+```
+efectivo esperado = monto inicial + ventas en efectivo + abonos en efectivo
+                    + ingresos − retiros − reembolsos en efectivo
+```
+
+Una venta cuenta en el turno en que se cobró, aunque después se anule: ese dinero entró. La anulación o la
+devolución cuentan en el turno en que se hacen. Así, el resumen de un turno cerrado nunca cambia. Las
+ventas anteriores a los turnos (bases de la fase 3) quedan sin turno.
+
+## Anulaciones y devoluciones
+
+En **Ventas** (F5) está el historial: filtros por fecha (Hoy, Ayer, Últimos 7 días, Este mes o un rango),
+folio, medio de pago, estado y turno, con la cantidad y el total del filtro al pie. El buscador acepta el
+folio escrito o escaneado del código de barras de la boleta (Enter abre esa venta). En el detalle se
+reimprime (Ctrl+P; la copia dice "COPIA"), se guarda el PDF, se devuelven productos o se anula.
+
+- **Anular** deja la venta como "anulada" (no se borra; su boleta dice "ANULADA"), repone el stock de todo
+  lo vendido y registra el reembolso con motivo. Solo se anulan ventas sin devoluciones; si ya tiene, se
+  devuelve el resto. Una venta fiada anulada deja de contar como deuda (si tiene abonos, todavía no).
+- **Devolver** es parcial: se elige cuánto de cada línea (por unidad, unidades enteras; por kg, con el
+  diálogo de peso), sin pasar de lo vendido menos lo ya devuelto. Cada línea vale
+  `subtotal × cantidad devuelta / cantidad vendida`, redondeado al peso, calculado sobre lo acumulado para
+  que varias devoluciones sumen exacto el subtotal. "Vuelve al stock" viene marcado; si el producto vuelve
+  dañado o vencido se desmarca y queda una merma, sin reponer stock. Cuando todo lo vendido quedó devuelto,
+  la venta pasa a "devuelta". Se imprime una "NOTA DE DEVOLUCIÓN".
+- **El reembolso**: en efectivo sale de la caja abierta (la exige) y se redondea a la decena como al
+  cobrar; con tarjeta o transferencia solo se registra el medio. En una venta fiada no se devuelve dinero:
+  baja la deuda.
+
+## PIN de administrador
+
+En Configuración > Seguridad se crea un PIN de 4 a 6 dígitos. Se guarda solo su hash (Argon2id), nunca el
+PIN. Protege, según lo que se marque ahí: anular ventas (sí por defecto), devoluciones (sí), retiros de
+efectivo (sí), cerrar la caja (no) y cambiar la configuración (sí; se pide una vez mientras Configuración
+está abierta). Sin PIN creado, nada se protege. Cambiar la lista de acciones protegidas siempre lo pide.
+
+La verificación ocurre en Rust: cada comando protegido recibe el PIN y el servicio lo valida, así que llamar
+al comando directamente sin PIN no sirve. Tras 5 intentos fallidos se bloquea 30 segundos.
+
+**Recuperación.** Al crear el PIN se muestra una sola vez un código de 10 caracteres (`ABCDE-12345`):
+anótalo y guárdalo fuera del computador. Con él, "Olvidé el PIN" pone uno nuevo y entrega un código nuevo
+(el usado deja de servir). También se guarda solo como hash. Si se pierden el PIN y el código, no hay otra
+forma de recuperarlo desde la app.
 
 ## Impresoras
 
 Cada venta genera una boleta: un **comprobante interno**, que no reemplaza la boleta electrónica del SII.
-Sale en la impresora térmica y se puede guardar como PDF en `DocumentosCHUPS POSBoletas`
+Sale en la impresora térmica y se puede guardar como PDF en `Documentos\CHUPS POS\Boletas`
 (la carpeta se cambia en Configuración).
 
 **Elegir la impresora.** Instala la impresora en Windows con el driver del fabricante (o "Generic / Text
