@@ -10,7 +10,7 @@ async fn abre_archivo_migra_y_reporta_estado() {
         .await
         .unwrap();
 
-    assert_eq!(estado.version_esquema, 6);
+    assert_eq!(estado.version_esquema, db::version_app());
     assert_eq!(estado.total_productos, 0);
     assert!(ruta.exists());
 
@@ -23,7 +23,7 @@ async fn abre_archivo_migra_y_reporta_estado() {
     // Abrir de nuevo no vuelve a aplicar migraciones ni falla.
     pool.close().await;
     let pool = db::abrir(&ruta).await.unwrap();
-    assert_eq!(db::version_esquema(&pool).await.unwrap(), 6);
+    assert_eq!(db::version_esquema(&pool).await.unwrap(), db::version_app());
 }
 
 #[tokio::test]
@@ -72,4 +72,9 @@ async fn codigo_de_barras_es_unico() {
         "INSERT INTO productos (codigo_barras, nombre, precio_venta) VALUES ('123', 'A', 100)";
     sqlx::query(insertar).execute(&pool).await.unwrap();
     assert!(sqlx::query(insertar).execute(&pool).await.is_err());
+}
+
+#[test]
+fn la_app_trae_el_esquema_7() {
+    assert_eq!(db::version_app(), 7);
 }

@@ -2,10 +2,14 @@ use std::path::Path;
 use std::str::FromStr;
 use std::time::Duration;
 
+use sqlx::migrate::Migrator;
 use sqlx::sqlite::{SqliteConnectOptions, SqliteJournalMode, SqlitePoolOptions, SqliteSynchronous};
 use sqlx::SqlitePool;
 
 use crate::Resultado;
+
+/// Las migraciones de crates/pos-core/migrations, embebidas en el binario.
+pub static MIGRACIONES: Migrator = sqlx::migrate!("./migrations");
 
 /// Abre (o crea) la base de datos en `ruta` y la deja al día con las migraciones.
 ///
@@ -47,8 +51,13 @@ pub async fn abrir_en_memoria() -> Resultado<SqlitePool> {
 }
 
 async fn migrar(pool: &SqlitePool) -> Resultado<()> {
-    sqlx::migrate!("./migrations").run(pool).await?;
+    MIGRACIONES.run(pool).await?;
     Ok(())
+}
+
+/// Versión de esquema que trae esta versión de la app (la última migración embebida).
+pub fn version_app() -> i64 {
+    MIGRACIONES.iter().map(|m| m.version).max().unwrap_or(0)
 }
 
 /// Número de la última migración aplicada.
