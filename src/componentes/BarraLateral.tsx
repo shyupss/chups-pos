@@ -1,6 +1,6 @@
 import Boton from "./Boton";
 import { PanelLeftClose, PanelLeftOpen, Printer } from "lucide-react";
-import type { EstadoConfigurada, EstadoLicencia, Turno } from "../api";
+import type { EstadoActualizacion, EstadoConfigurada, EstadoLicencia, Turno } from "../api";
 import { fechaHora, horaODia } from "../formato";
 import { SECCIONES, type DatosSeccion, type Seccion } from "../secciones";
 
@@ -22,6 +22,9 @@ interface Props {
   /** En prueba, gracia o consulta se muestra una línea discreta que lleva a Configuración > Licencia. */
   licencia?: EstadoLicencia | null;
   onLicencia?: () => void;
+  /** Una versión nueva encontrada: una línea discreta que lleva a Configuración > Acerca de. */
+  actualizacion?: EstadoActualizacion | null;
+  onActualizacion?: () => void;
 }
 
 interface Insignia {
@@ -40,6 +43,8 @@ export default function BarraLateral({
   turno,
   licencia = null,
   onLicencia,
+  actualizacion = null,
+  onActualizacion,
 }: Props) {
   const item = (s: DatosSeccion) => (
     <li key={s.id}>
@@ -68,9 +73,11 @@ export default function BarraLateral({
         turno={turno}
         impresora={impresora}
         licencia={licencia}
+        actualizacion={actualizacion}
         expandida={expandida}
         onIr={onIr}
         onLicencia={onLicencia}
+        onActualizacion={onActualizacion}
       />
       <div className={`flex shrink-0 items-center gap-2 px-2 pb-2 ${expandida ? "justify-end" : "flex-col"}`}>
         <Boton tamano="icono" onClick={onAlternar} title={accion} aria-label={accion}>
@@ -196,21 +203,26 @@ function Estados({
   turno,
   impresora,
   licencia,
+  actualizacion,
   expandida,
   onIr,
   onLicencia,
+  onActualizacion,
 }: {
   turno: Turno | null | undefined;
   impresora: EstadoConfigurada | null;
   licencia: EstadoLicencia | null;
+  actualizacion: EstadoActualizacion | null;
   expandida: boolean;
   onIr: (seccion: Seccion) => void;
   onLicencia?: () => void;
+  onActualizacion?: () => void;
 }) {
   const caja = turno === undefined ? null : estadoCaja(turno);
   const imp = impresora ? estadoImpresora(impresora) : null;
   const lic = licencia ? estadoLicencia(licencia) : null;
-  if (!caja && !imp && !lic) return null;
+  const nueva = actualizacion?.disponible ?? null;
+  if (!caja && !imp && !lic && !nueva) return null;
 
   if (!expandida) {
     const nivel: Nivel =
@@ -221,7 +233,14 @@ function Estados({
           : imp?.nivel === "ok"
             ? "ok"
             : "neutro";
-    const resumen = [caja?.texto, imp?.texto.toLowerCase(), lic?.texto.toLowerCase()].filter(Boolean).join(", ");
+    const resumen = [
+      caja?.texto,
+      imp?.texto.toLowerCase(),
+      lic?.texto.toLowerCase(),
+      nueva ? `actualización ${nueva.version} disponible` : null,
+    ]
+      .filter(Boolean)
+      .join(", ");
     return (
       <div className="flex shrink-0 justify-center border-t border-linea p-2">
         <Boton variante="terciario" tamano="icono" onClick={() => onIr("caja")} title={resumen} aria-label={resumen} className="relative">
@@ -242,6 +261,19 @@ function Estados({
     <div className="flex shrink-0 flex-col gap-0.5 border-t border-linea p-2">
       {caja && linea(caja, "caja")}
       {imp && linea(imp, "configuracion")}
+      {nueva && (
+        <Boton
+          variante="terciario"
+          tamano="chico"
+          bloque
+          onClick={() => (onActualizacion ? onActualizacion() : onIr("configuracion"))}
+          title={`Hay una versión nueva de CHUPS POS (${nueva.version}). Se instala desde Configuración > Acerca de.`}
+          className="text-xs"
+        >
+          <span aria-hidden className={`size-2 shrink-0 rounded-full ${PUNTO.info}`} />
+          <span className="truncate">Actualización {nueva.version}</span>
+        </Boton>
+      )}
       {lic && (
         <Boton
           variante="terciario"

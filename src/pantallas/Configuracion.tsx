@@ -13,14 +13,15 @@ import {
   Wand2,
   type LucideIcon,
 } from "lucide-react";
-import { useEffect, useState, type ReactNode } from "react";
-import { api, type EstadoLicencia, type EstadoSistema } from "../api";
+import { useState, type ReactNode } from "react";
+import type { EstadoActualizacion, EstadoLicencia } from "../api";
 import { Ajuste, Columnas, Tarjeta } from "../componentes/Ajustes";
 import type { ModoBarra } from "../componentes/BarraLateral";
 import Boton from "../componentes/Boton";
 import Interruptor from "../componentes/Interruptor";
 import Opciones, { type Opcion } from "../componentes/Opciones";
 import { useConPinRecordado } from "../componentes/PedirPin";
+import AcercaDe from "./configuracion/AcercaDe";
 import LicenciaConfig from "./configuracion/Licencia";
 import RespaldosConfig from "./configuracion/Respaldos";
 import EscanerConfig from "./configuracion/Escaner";
@@ -40,6 +41,11 @@ interface Props {
   onCambioLicencia: (e: EstadoLicencia) => void;
   /** Vuelve a abrir el asistente de primer arranque. */
   onAbrirAsistente: () => void;
+  /** Actualizaciones: el estado lo mantiene App (también lo usa la barra lateral). */
+  actualizacion: EstadoActualizacion | null;
+  onActualizacion: (e: EstadoActualizacion) => void;
+  hayTurno: boolean;
+  onInstalando: () => void;
 }
 
 export type IdSeccion = "negocio" | "apariencia" | "caja" | "impresora" | "seguridad" | "datos" | "licencia" | "acerca";
@@ -83,6 +89,10 @@ export default function Configuracion({
   licencia,
   onCambioLicencia,
   onAbrirAsistente,
+  actualizacion,
+  onActualizacion,
+  hayTurno,
+  onInstalando,
 }: Props) {
   const [seccion, setSeccionEstado] = useState<IdSeccion>(ultimaSeccion);
   const [tema, setTema] = useTema();
@@ -109,7 +119,14 @@ export default function Configuracion({
     seguridad: <SeguridadConfig conPin={conPin} onPinCambiado={olvidar} />,
     datos: <RespaldosConfig cfg={cfg} />,
     licencia: <LicenciaConfig estado={licencia} onCambio={onCambioLicencia} />,
-    acerca: <AcercaDe />,
+    acerca: (
+      <AcercaDe
+        actualizacion={actualizacion}
+        onActualizacion={onActualizacion}
+        hayTurno={hayTurno}
+        onInstalando={onInstalando}
+      />
+    ),
   };
 
   return (
@@ -275,47 +292,6 @@ function CajaYFiados({ cfg }: { cfg: ConfigEditable }) {
               onCambiar={(v) => void cambiar({ fiadoDiasAlerta: Number(v) })}
             />
           </Ajuste>
-        </Tarjeta>
-      }
-    />
-  );
-}
-
-function AcercaDe() {
-  const [estado, setEstado] = useState<EstadoSistema | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    api.estadoSistema().then(setEstado).catch((e) => setError(String(e)));
-  }, []);
-
-  const datos: [string, string | number][] = estado
-    ? [
-        ["Versión", estado.version],
-        ["Esquema de base de datos", `v${estado.versionEsquema}`],
-        ["Arranque del backend", `${estado.msInicio} ms`],
-        ["Productos", estado.totalProductos],
-        ["Archivo de datos", estado.rutaBaseDatos],
-      ]
-    : [];
-  return (
-    <Columnas
-      izquierda={
-        <Tarjeta titulo="Acerca de" ayuda="Datos del sistema, para cuando pidas ayuda.">
-          {error ? (
-            <p className="text-peligro">No se pudo leer el estado del sistema: {error}</p>
-          ) : !estado ? (
-            <p className="text-tenue">Cargando…</p>
-          ) : (
-            <dl className="grid grid-cols-[12rem_1fr] gap-x-4 gap-y-2 tabular-nums">
-              {datos.map(([etiqueta, valor]) => (
-                <div key={etiqueta} className="contents">
-                  <dt className="text-tenue">{etiqueta}</dt>
-                  <dd className="min-w-0 break-all select-text">{valor}</dd>
-                </div>
-              ))}
-            </dl>
-          )}
         </Tarjeta>
       }
     />

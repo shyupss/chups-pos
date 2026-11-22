@@ -940,6 +940,35 @@ export interface InfoRespaldo {
   ultimaVenta: string | null;
 }
 
+export interface DatosActualizacion {
+  version: string;
+  /** Las notas de la versión (su apartado del CHANGELOG). */
+  notas: string | null;
+  fecha: string | null;
+}
+
+export interface EstadoActualizacion {
+  versionActual: string;
+  disponible: DatosActualizacion | null;
+  /** Segundos desde 1970 de la última búsqueda que llegó al servidor. */
+  ultimaBusqueda: number | null;
+  instalarAlCerrar: boolean;
+}
+
+/** Rust avisa cuando la búsqueda automática encuentra una versión nueva. */
+export function escucharActualizacion(alEncontrar: () => void): () => void {
+  let dejar: (() => void) | null = null;
+  let cancelado = false;
+  void listen("actualizacion-disponible", () => alEncontrar()).then((f) => {
+    if (cancelado) f();
+    else dejar = f;
+  });
+  return () => {
+    cancelado = true;
+    dejar?.();
+  };
+}
+
 /** Rust avisa si un respaldo automático falló (con el mensaje). */
 export function escucharRespaldoFallido(alFallar: (mensaje: string) => void): () => void {
   let dejar: (() => void) | null = null;
@@ -1155,6 +1184,13 @@ export const api = {
   /** Guarda el PDF del cierre y, si `abrir`, lo abre. Devuelve la ruta. */
   guardarCierrePdf: (turnoId: number, abrir: boolean) => invoke<string>("guardar_cierre_pdf", { turnoId, abrir }),
 
+  estadoActualizacion: () => invoke<EstadoActualizacion>("estado_actualizacion"),
+  /** Busca ahora (sin esperar el día). Falla con un mensaje si no hay internet. */
+  buscarActualizacion: () => invoke<EstadoActualizacion>("buscar_actualizacion"),
+  /** Con un turno abierto: la vista instala sola cuando se cierre. */
+  instalarAlCerrarTurno: (si: boolean) => invoke<EstadoActualizacion>("instalar_al_cerrar_turno", { si }),
+  /** Respalda, descarga la actualización firmada y la instala; la app se cierra. Rust la rechaza con un turno abierto. */
+  instalarActualizacion: () => invoke<void>("instalar_actualizacion"),
   /** La base está vacía y el asistente de primer arranque no se terminó. */
   asistentePendiente: () => invoke<boolean>("asistente_pendiente"),
   terminarAsistente: () => invoke<void>("terminar_asistente"),

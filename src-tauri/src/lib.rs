@@ -36,6 +36,7 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .setup(move |app| {
             let carpeta = app.path().app_data_dir()?;
             std::fs::create_dir_all(&carpeta)?;
@@ -85,7 +86,10 @@ pub fn run() {
                 carpeta_respaldos: carpeta.join("Respaldos"),
                 error_respaldo: std::sync::Mutex::new(restauracion_fallida),
                 licencia,
+                actualizacion: Default::default(),
             });
+            // Busca actualizaciones sola (una vez al día, sin turno abierto, en silencio sin internet).
+            comandos::actualizaciones::iniciar_busqueda_automatica(app.handle());
 
             // Respaldo automático si el último tiene más de 24 horas (en segundo plano).
             let app_respaldo = app.handle().clone();
@@ -200,6 +204,10 @@ pub fn run() {
             comandos::fiados::imprimir_pago,
             comandos::fiados::imprimir_estado_cuenta,
             comandos::fiados::guardar_estado_cuenta_pdf,
+            comandos::actualizaciones::estado_actualizacion,
+            comandos::actualizaciones::buscar_actualizacion,
+            comandos::actualizaciones::instalar_al_cerrar_turno,
+            comandos::actualizaciones::instalar_actualizacion,
             comandos::asistente::asistente_pendiente,
             comandos::asistente::terminar_asistente,
             comandos::licencia::estado_licencia,

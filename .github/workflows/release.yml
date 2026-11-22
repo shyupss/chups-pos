@@ -1,0 +1,121 @@
+name: Publicar versión
+
+# Se publica subiendo una etiqueta: git tag v1.0.0 && git push origin v1.0.0
+# Para probar el flujo sin publicar de verdad: una etiqueta v1.0.0-rc.1 (crea un Release en borrador
+# marcado como pre-lanzamiento). El núcleo X.Y.Z de la etiqueta tiene que ser la versión de
+# package.json, tauri.conf.json y Cargo.toml (se revisa con scripts/version.mjs).
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  publicar:
+    name: Instalador de Windows y Release en borrador
+    runs-on: windows-latest
+    env:
+      # Secrets opcionales de firma de código: sin ellos se construye igual, sin firmar.
+      WINDOWS_CERTIFICATE: ${{ secrets.WINDOWS_CERTIFICATE }}
+      WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
+      # Secrets obligatorios: la clave que firma las actualizaciones (nunca va en el repositorio).
+      TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+      TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: La etiqueta y las versiones coinciden
+        shell: bash
+        run: node scripts/version.mjs --check --tag "$GITHUB_REF_NAME"
+
+      - name: Notas de la versión (de CHANGELOG.md)
+        id: notas
+        shell: bash
+        run: |
+          node scripts/notas-version.mjs "$GITHUB_REF_NAME" > notas-version.md
+          {
+            echo 'cuerpo<<FIN_DE_NOTAS'
+            cat notas-version.md
+            echo
+            echo 'FIN_DE_NOTAS'
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Falta la clave de las actualizaciones
+        if: env.TAURI_SIGNING_PRIVATE_KEY == ''
+        shell: bash
+        run: |
+          echo "::error::Falta el secret TAURI_SIGNING_PRIVATE_KEY (y TAURI_SIGNING_PRIVATE_KEY_PASSWORD): sin ellos las actualizaciones no se pueden firmar. Ver 'Cómo publicar una versión' en el README."
+          exit 1
+
+      - name: Certificado de firma de código
+        id: firma
+        shell: pwsh
+        run: |
+          $config = @{ bundle = @{ createUpdaterArtifacts = $true } }
+          if ($env:WINDOWS_CERTIFICATE) {
+            $pfx = Join-Path $env:RUNNER_TEMP 'certificado.pfx'
+            [IO.File]::WriteAllBytes($pfx, [Convert]::FromBase64String($env:WINDOWS_CERTIFICATE))
+            $clave = ConvertTo-SecureString -String $env:WINDOWS_CERTIFICATE_PASSWORD -AsPlainText -Force
+            $cert = Import-PfxCertificate -FilePath $pfx -CertStoreLocation Cert:\CurrentUser\My -Password $clave
+            Remove-Item $pfx
+            $config.bundle.windows = @{
+              certificateThumbprint = $cert.Thumbprint
+              digestAlgorithm       = 'sha256'
+              timestampUrl          = 'http://timestamp.digicert.com'
+            }
+            "firmado=true" >> $env:GITHUB_OUTPUT
+          } else {
+            "firmado=false" >> $env:GITHUB_OUTPUT
+          }
+          $config | ConvertTo-Json -Depth 5 | Set-Content -Encoding utf8 release-config.json
+
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+
+      - run: npm ci
+
+      - name: Construir, firmar y crear el Release en borrador
+        uses: tauri-apps/tauri-action@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: CHUPS POS ${{ github.ref_name }}
+          releaseBody: ${{ steps.notas.outputs.cuerpo }}
+          releaseDraft: true
+          prerelease: ${{ contains(github.ref_name, '-') }}
+          args: --config release-config.json
+
+      - name: Resumen
+        if: always()
+        shell: pwsh
+        run: |
+          $firmado = '${{ steps.firma.outputs.firmado }}' -eq 'true'
+          "## CHUPS POS ${{ github.ref_name }}" >> $env:GITHUB_STEP_SUMMARY
+          if ($firmado) {
+            "- Firma de código: **sí** (certificado de los secrets WINDOWS_CERTIFICATE)." >> $env:GITHUB_STEP_SUMMARY
+          } else {
+            "- Firma de código: **no** (sin los secrets WINDOWS_CERTIFICATE y WINDOWS_CERTIFICATE_PASSWORD). El instalador se construyó **sin firmar**: Windows SmartScreen mostrará un aviso al instalarlo." >> $env:GITHUB_STEP_SUMMARY
+          }
+          "- Actualizaciones: firmadas con la clave del updater; latest.json se sube al Release." >> $env:GITHUB_STEP_SUMMARY
+          $exe = Get-ChildItem target/release/bundle/nsis/*-setup.exe -ErrorAction SilentlyContinue | Select-Object -First 1
+          if ($exe) {
+            $mb = [math]::Round($exe.Length / 1MB, 2)
+            "- Instalador: ``$($exe.Name)`` ($mb MB)" >> $env:GITHUB_STEP_SUMMARY
+            $firma = Get-AuthenticodeSignature $exe.FullName
+            "- Estado de la firma Authenticode: **$($firma.Status)**" >> $env:GITHUB_STEP_SUMMARY
+            if ($firmado -and $firma.Status -ne 'Valid') {
+              Write-Host "::warning::Había certificado pero la firma del instalador no es válida: $($firma.StatusMessage)"
+            }
+          }
+          "- El Release quedó en **borrador**: revisa las notas y los archivos y publícalo a mano." >> $env:GITHUB_STEP_SUMMARY

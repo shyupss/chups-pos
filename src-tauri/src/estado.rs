@@ -23,4 +23,6 @@ pub struct EstadoApp {
     pub error_respaldo: Mutex<Option<String>>,
     /// Clave pública, huella de este equipo y archivo de la prueba, para la licencia.
     pub licencia: pos_core::servicios::licencia::Contexto,
+    /// La actualización encontrada y si se pidió instalarla al cerrar el turno (solo en memoria).
+    pub actualizacion: Mutex<crate::comandos::actualizaciones::MemoriaActualizacion>,
 }

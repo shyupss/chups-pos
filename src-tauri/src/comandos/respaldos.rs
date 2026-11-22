@@ -44,6 +44,14 @@ async fn respaldar_y_rotar(estado: &EstadoApp) -> ResultadoComando<Respaldo> {
     Ok(r)
 }
 
+/// El respaldo que se hace antes de instalar una actualización: si falla, no se actualiza.
+pub(crate) async fn respaldar_antes_de_actualizar(estado: &EstadoApp) -> Result<(), String> {
+    respaldar_y_rotar(estado)
+        .await
+        .map(|_| ())
+        .map_err(|e| format!("No se instaló la actualización porque falló el respaldo previo: {e}"))
+}
+
 /// Respaldo automático en segundo plano. `siempre`: aunque el último sea reciente (al cerrar un
 /// turno). Si falla, lo guarda para Configuración > Datos y avisa a la vista.
 pub(crate) fn automatico(app: &AppHandle, siempre: bool) {

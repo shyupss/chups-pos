@@ -28,6 +28,15 @@ jobs:
           components: clippy, rustfmt
       - uses: Swatinem/rust-cache@v2
       - run: npm ci
+      - name: Las versiones coinciden (package.json, tauri.conf.json, Cargo.toml)
+        run: npm run version:check
+      - name: Sin claves privadas ni secretos en el repositorio
+        run: |
+          if git grep -n -I -E "BEGIN ((RSA|EC|OPENSSH|ENCRYPTED) )?PRIVATE KEY|rsign encrypted secret key|dW50cnVzdGVkIGNvbW1lbnQ6IHJzaWduIGVuY3J5cHRlZCBzZWNyZXQga2V5" -- . ':!.github/workflows/ci.yml'; then
+            echo "::error::Hay una clave privada en el repositorio"; exit 1
+          fi
+      - name: Las notas de la versión actual existen en CHANGELOG.md
+        run: node scripts/notas-version.mjs "$(node -p "require('./package.json').version")" > /dev/null
       - run: npm run build
       - run: cargo fmt --all --check
       - run: cargo clippy --workspace --all-targets -- -D warnings
@@ -46,6 +55,15 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - run: npm ci
       - run: npx tauri build
+      - name: El instalador y el ejecutable llevan la versión de package.json
+        shell: pwsh
+        run: |
+          $v = (Get-Content package.json -Raw | ConvertFrom-Json).version
+          $instalador = Get-ChildItem "target/release/bundle/nsis/*_${v}_x64-setup.exe"
+          if (-not $instalador) { throw "No hay un instalador con la versión $v en target/release/bundle/nsis" }
+          $exe = (Get-Item target/release/chups-pos.exe).VersionInfo.ProductVersion
+          if (-not $exe.StartsWith($v)) { throw "chups-pos.exe dice $exe y package.json $v" }
+          "Instalador: $($instalador.Name) · ejecutable: $exe" >> $env:GITHUB_STEP_SUMMARY
       - name: Tamaño del ejecutable y del instalador
         shell: pwsh
         run: |

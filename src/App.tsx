@@ -1,6 +1,16 @@
 import Boton from "./componentes/Boton";
-import { useCallback, useEffect, useState } from "react";
-import { api, escucharRespaldoFallido, type EstadoCaja, type EstadoConfigurada, type EstadoLicencia } from "./api";
+import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  api,
+  escucharActualizacion,
+  escucharRespaldoFallido,
+  textoError,
+  type EstadoActualizacion,
+  type EstadoCaja,
+  type EstadoConfigurada,
+  type EstadoLicencia,
+} from "./api";
+import Dialogo from "./componentes/Dialogo";
 import AvisoLicencia from "./componentes/AvisoLicencia";
 import BarraLateral, { type ModoBarra } from "./componentes/BarraLateral";
 import Caja from "./pantallas/Caja";
@@ -67,6 +77,33 @@ export default function App() {
     const intervalo = setInterval(refrescarLicencia, 60_000);
     return () => clearInterval(intervalo);
   }, [refrescarLicencia]);
+  // Actualizaciones: Rust las busca solo (una vez al día, sin turno abierto) y avisa con un evento.
+  const [actualizacion, setActualizacion] = useState<EstadoActualizacion | null>(null);
+  const refrescarActualizacion = useCallback(() => {
+    api
+      .estadoActualizacion()
+      .then(setActualizacion)
+      .catch(() => {});
+  }, []);
+  useEffect(() => {
+    refrescarActualizacion();
+    return escucharActualizacion(refrescarActualizacion);
+  }, [refrescarActualizacion]);
+  const [instalando, setInstalando] = useState(false);
+  const [errorInstalacion, setErrorInstalacion] = useState<string | null>(null);
+  // "Instalar al cerrar el turno": cuando el turno pasa de abierto a cerrado y quedó pedido, se instala.
+  const hayTurno = caja?.turno != null;
+  const habiaTurno = useRef(false);
+  useEffect(() => {
+    if (habiaTurno.current && !hayTurno && actualizacion?.instalarAlCerrar) {
+      setInstalando(true);
+      api.instalarActualizacion().catch((e) => {
+        setInstalando(false);
+        setErrorInstalacion(textoError(e));
+      });
+    }
+    habiaTurno.current = hayTurno;
+  }, [hayTurno, actualizacion?.instalarAlCerrar]);
   // Asistente de primer arranque: null mientras se pregunta a Rust; true con la base vacía (o si se
   // abre a mano desde Configuración); false cuando ya no hace falta.
   const [asistente, setAsistente] = useState<boolean | null>(null);
@@ -76,6 +113,12 @@ export default function App() {
       .asistentePendiente()
       .then(setAsistente)
       .catch(() => setAsistente(false));
+  }, []);
+  // Abrir Configuración en Acerca de (desde el aviso de actualización de la barra lateral).
+  const irAActualizaciones = useCallback(() => {
+    irASeccionConfig("acerca");
+    setClaveConfig((k) => k + 1);
+    setSeccion("configuracion");
   }, []);
   // Abrir Configuración en Licencia (desde el aviso, la barra o Abrir caja). La clave la vuelve a
   // montar si ya estaba abierta en otra sección.
@@ -205,6 +248,8 @@ export default function App() {
           turno={caja === null ? undefined : caja.turno}
           licencia={licencia}
           onLicencia={irALicencia}
+          actualizacion={actualizacion}
+          onActualizacion={irAActualizaciones}
           insignias={{
             ...(enEspera > 0
               ? { caja: { valor: enEspera, descripcion: enEspera === 1 ? "1 venta en espera" : `${enEspera} ventas en espera` } }
@@ -282,11 +327,33 @@ export default function App() {
                 setAsistenteReabierto(true);
                 setAsistente(true);
               }}
+              actualizacion={actualizacion}
+              onActualizacion={setActualizacion}
+              hayTurno={hayTurno}
+              onInstalando={() => setInstalando(true)}
             />
           )}
           {pendiente && <Proximamente seccion={pendiente} />}
           </div>
         </main>
+        {instalando && (
+          <Dialogo titulo="Instalando la actualización" onCerrar={() => {}}>
+            <p role="alert" className="mt-2 text-tenue">
+              Se hizo un respaldo de tus datos. CHUPS POS se cerrará y volverá a abrirse en unos instantes: no apagues el
+              computador.
+            </p>
+          </Dialogo>
+        )}
+        {errorInstalacion && (
+          <div role="alert" className="fixed right-4 bottom-4 z-30 max-w-md tarjeta p-4 shadow-s3">
+            <p className="font-medium text-peligro">{errorInstalacion}</p>
+            <div className="mt-3 flex justify-end">
+              <Boton variante="terciario" tamano="chico" onClick={() => setErrorInstalacion(null)}>
+                Cerrar
+              </Boton>
+            </div>
+          </div>
+        )}
         {respaldoFallido && (
           <div role="alert" className="fixed right-4 bottom-4 z-30 max-w-md tarjeta p-4 shadow-s3">
             <p className="font-medium text-peligro">{respaldoFallido}</p>

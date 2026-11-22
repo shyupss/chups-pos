@@ -3,6 +3,7 @@
 //! Cada comando recibe, valida y delega en un servicio de `pos-core`.
 //! Devuelve solo lo que la pantalla necesita mostrar.
 
+pub mod actualizaciones;
 pub mod asistente;
 pub mod boletas;
 pub mod categorias;
