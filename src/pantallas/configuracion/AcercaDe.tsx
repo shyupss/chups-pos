@@ -114,31 +114,6 @@ export default function AcercaDe({ actualizacion, onActualizacion, hayTurno, onI
   return (
     <Columnas
       izquierda={
-        <>
-          <Tarjeta titulo="Acerca de" ayuda="Datos del sistema, para cuando pidas ayuda.">
-            {error ? (
-              <p className="text-peligro">No se pudo leer el estado del sistema: {error}</p>
-            ) : !estado ? (
-              <p className="text-tenue">Cargando…</p>
-            ) : (
-              <dl className="grid grid-cols-[12rem_1fr] gap-x-4 gap-y-2 tabular-nums">
-                {datos.map(([etiqueta, valor]) => (
-                  <div key={etiqueta} className="contents">
-                    <dt className="text-tenue">{etiqueta}</dt>
-                    <dd className="min-w-0 break-all select-text">{valor}</dd>
-                  </div>
-                ))}
-              </dl>
-            )}
-          </Tarjeta>
-          {notasActuales && estado && (
-            <Tarjeta titulo={`Novedades de la versión ${estado.version}`}>
-              <Notas texto={notasActuales} />
-            </Tarjeta>
-          )}
-        </>
-      }
-      derecha={
         <Tarjeta
           titulo="Actualizaciones"
           ayuda="Se busca una vez al día, solo con internet y nunca con un turno abierto. Antes de instalar se hace un respaldo."
@@ -196,6 +171,31 @@ export default function AcercaDe({ actualizacion, onActualizacion, hayTurno, onI
             </div>
           )}
         </Tarjeta>
+      }
+      derecha={
+        <>
+          <Tarjeta titulo="Acerca de" ayuda="Datos del sistema, para cuando pidas ayuda.">
+            {error ? (
+              <p className="text-peligro">No se pudo leer el estado del sistema: {error}</p>
+            ) : !estado ? (
+              <p className="text-tenue">Cargando…</p>
+            ) : (
+              <dl className="grid grid-cols-[12rem_1fr] gap-x-4 gap-y-2 tabular-nums">
+                {datos.map(([etiqueta, valor]) => (
+                  <div key={etiqueta} className="contents">
+                    <dt className="text-tenue">{etiqueta}</dt>
+                    <dd className="min-w-0 break-all select-text">{valor}</dd>
+                  </div>
+                ))}
+              </dl>
+            )}
+          </Tarjeta>
+          {notasActuales && estado && (
+            <Tarjeta titulo={`Novedades de la versión ${estado.version}`}>
+              <Notas texto={notasActuales} />
+            </Tarjeta>
+          )}
+        </>
       }
     />
   );
