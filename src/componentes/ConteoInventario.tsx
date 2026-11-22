@@ -204,7 +204,7 @@ export default function ConteoInventario({ onTerminado, onCerrar }: Props) {
           placeholder="Escanea o escribe y Enter"
           aria-label="Producto a contar"
           autoComplete="off"
-          className="h-11 w-full rounded-lg border-2 border-acento bg-superficie px-4 outline-none disabled:border-linea"
+          className="h-11 w-full rounded-lg border-2 border-acento bg-superficie px-4 disabled:border-linea"
         />
         {resultados.length > 0 && (
           <ul className="absolute z-10 mt-1 w-full overflow-hidden tarjeta shadow-s2">

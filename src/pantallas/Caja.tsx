@@ -1,6 +1,6 @@
 import Tecla from "../componentes/Tecla";
 import Boton from "../componentes/Boton";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ArrowDownUp, Clock, Lock, Pause, Trash2 } from "lucide-react";
 import {
   api,
@@ -355,101 +355,9 @@ export default function Caja({ activa, onCrearProducto, onEnEspera, onImpresion,
     if (config.imprimirAlCobrar) void imprimir(venta.id);
   };
 
-  if (cerrada && caja) {
-    return (
-      <AbrirCaja
-        sugerido={caja.ultimoMontoInicial}
-        enEspera={enEspera?.length ?? 0}
-        onAbierta={() => {
-          onCambioCaja();
-          setAviso({ tipo: "info", texto: "Caja abierta. ¡Buen turno!", alerta: false });
-        }}
-      />
-    );
-  }
-
-  return (
-    <div className="flex h-full">
-      <section className="flex min-w-0 flex-1 flex-col p-6">
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            void procesarEntrada();
-          }}
-          className="relative"
-        >
-          <input
-            ref={campo}
-            value={entrada}
-            onChange={(e) => setEntrada(e.target.value)}
-            placeholder="Escanea o escribe un producto"
-            aria-label="Escanear o escribir un producto"
-            className="h-13 w-full rounded-[10px] border-2 border-acento bg-superficie pr-56 pl-4 text-lg shadow-s1 focus-visible:outline-none"
-            autoComplete="off"
-            spellCheck={false}
-          />
-          <span className="pointer-events-none absolute inset-y-0 right-4 flex items-center gap-1.5 text-xs text-tenue">
-            <Tecla>3*</Tecla> cantidad
-            <span className="w-1" />
-            <Tecla>0,5*</Tecla> kilos
-          </span>
-          {resultados.length > 0 && (
-            <ul className="absolute z-10 mt-1 w-full overflow-hidden tarjeta shadow-s2">
-              {resultados.map((p) => (
-                <li key={p.id}>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      elegir(p, multiploPendiente);
-                      enfocar();
-                    }}
-                    className="flex h-10 w-full items-center justify-between px-4 text-left hover:bg-suave"
-                  >
-                    <span>{p.nombre}</span>
-                    <span className="text-tenue tabular-nums">
-                      {pesos(p.precioVenta)}
-                      {p.unidad === "kg" && "/kg"}
-                    </span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </form>
-
-        {aviso?.tipo === "venta" ? (
-          <AvisoVenta
-            venta={aviso.venta}
-            salida={salida?.ventaId === aviso.venta.id ? salida : null}
-            reimprimir={() => {
-              if (salida?.ventaId !== aviso.venta.id) iniciar(aviso.venta.id, aviso.venta.folio);
-              void imprimir(aviso.venta.id, 1, true);
-            }}
-            reintentar={reintentar}
-            guardarPdf={() => {
-              if (salida?.ventaId !== aviso.venta.id) iniciar(aviso.venta.id, aviso.venta.folio);
-              void guardarPdf(aviso.venta.id, false);
-            }}
-            abrirPdf={() => void guardarPdf(aviso.venta.id, true)}
-            cerrar={cerrar}
-          />
-        ) : (
-          <>
-            {aviso && <AvisoCaja aviso={aviso} onCrearProducto={onCrearProducto} />}
-            {salida && (
-              <AvisoVenta
-                venta={null}
-                salida={salida}
-                reimprimir={() => salida && void imprimir(salida.ventaId, 1, true)}
-                reintentar={reintentar}
-                guardarPdf={() => salida && void guardarPdf(salida.ventaId, false)}
-                abrirPdf={() => salida && void guardarPdf(salida.ventaId, true)}
-                cerrar={cerrar}
-              />
-            )}
-          </>
-        )}
-
+  // La tabla y el panel solo se vuelven a dibujar cuando cambia la venta, no con cada tecla del escáner.
+  const tabla = useMemo(
+    () => (
         <div className="mt-4 min-h-0 flex-1 overflow-auto tarjeta">
           {lineas.length === 0 ? (
             <p className="p-8 text-center text-tenue">Escanea productos para empezar una venta</p>
@@ -475,7 +383,7 @@ export default function Caja({ activa, onCrearProducto, onEnEspera, onImpresion,
                       </td>
                       <td className="px-4 text-right">
                         {pesos(l.producto.precioVenta)}
-                        {l.producto.unidad === "kg" && <span className="text-tenue">/kg</span>}
+                        {l.producto.unidad === "kg" && <span className={reciente ? "text-texto" : "text-tenue"}>/kg</span>}
                       </td>
                       <td className="px-4">
                         {l.producto.unidad === "kg" ? (
@@ -525,8 +433,12 @@ export default function Caja({ activa, onCrearProducto, onEnEspera, onImpresion,
             </table>
           )}
         </div>
-      </section>
-
+    ),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- los manejadores solo usan setters estables
+    [lineas, ultima, enfocar],
+  );
+  const panel = useMemo(
+    () => (
       <aside className="flex w-82 shrink-0 flex-col gap-5 overflow-y-auto border-l border-linea bg-superficie p-5">
         <div className="rounded-panel bg-visor-bg pt-4 pr-[18px] pb-[18px] pl-[18px] text-visor-texto shadow-s2">
           {ultima ? (
@@ -623,6 +535,110 @@ export default function Caja({ activa, onCrearProducto, onEnEspera, onImpresion,
           </li>
         </ul>
       </aside>
+    ),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- los manejadores solo usan setters estables
+    [lineas, ultima, total, enEspera, turno, abrirListaEspera, enfocar],
+  );
+
+  if (cerrada && caja) {
+    return (
+      <AbrirCaja
+        sugerido={caja.ultimoMontoInicial}
+        enEspera={enEspera?.length ?? 0}
+        onAbierta={() => {
+          onCambioCaja();
+          setAviso({ tipo: "info", texto: "Caja abierta. ¡Buen turno!", alerta: false });
+        }}
+      />
+    );
+  }
+
+  return (
+    <div className="flex h-full">
+      <section className="flex min-w-0 flex-1 flex-col p-6">
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            void procesarEntrada();
+          }}
+          className="relative"
+        >
+          <input
+            ref={campo}
+            value={entrada}
+            onChange={(e) => setEntrada(e.target.value)}
+            placeholder="Escanea o escribe un producto"
+            aria-label="Escanear o escribir un producto"
+            className="h-13 w-full rounded-[10px] border-2 border-acento bg-superficie pr-56 pl-4 text-lg shadow-s1 focus-visible:outline-none"
+            autoComplete="off"
+            spellCheck={false}
+          />
+          <span className="pointer-events-none absolute inset-y-0 right-4 flex items-center gap-1.5 text-xs text-tenue">
+            <Tecla>3*</Tecla> cantidad
+            <span className="w-1" />
+            <Tecla>0,5*</Tecla> kilos
+          </span>
+          {resultados.length > 0 && (
+            <ul className="absolute z-10 mt-1 w-full overflow-hidden tarjeta shadow-s2">
+              {resultados.map((p) => (
+                <li key={p.id}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      elegir(p, multiploPendiente);
+                      enfocar();
+                    }}
+                    className="flex h-10 w-full items-center justify-between px-4 text-left hover:bg-suave"
+                  >
+                    <span>{p.nombre}</span>
+                    <span className="text-tenue tabular-nums">
+                      {pesos(p.precioVenta)}
+                      {p.unidad === "kg" && "/kg"}
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </form>
+
+        {aviso?.tipo === "venta" ? (
+          <AvisoVenta
+            venta={aviso.venta}
+            salida={salida?.ventaId === aviso.venta.id ? salida : null}
+            reimprimir={() => {
+              if (salida?.ventaId !== aviso.venta.id) iniciar(aviso.venta.id, aviso.venta.folio);
+              void imprimir(aviso.venta.id, 1, true);
+            }}
+            reintentar={reintentar}
+            guardarPdf={() => {
+              if (salida?.ventaId !== aviso.venta.id) iniciar(aviso.venta.id, aviso.venta.folio);
+              void guardarPdf(aviso.venta.id, false);
+            }}
+            abrirPdf={() => void guardarPdf(aviso.venta.id, true)}
+            cerrar={cerrar}
+          />
+        ) : (
+          <>
+            {aviso && <AvisoCaja aviso={aviso} onCrearProducto={onCrearProducto} />}
+            {salida && (
+              <AvisoVenta
+                venta={null}
+                salida={salida}
+                reimprimir={() => salida && void imprimir(salida.ventaId, 1, true)}
+                reintentar={reintentar}
+                guardarPdf={() => salida && void guardarPdf(salida.ventaId, false)}
+                abrirPdf={() => salida && void guardarPdf(salida.ventaId, true)}
+                cerrar={cerrar}
+              />
+            )}
+          </>
+        )}
+
+        {tabla}
+      </section>
+
+      {panel}
 
       {/* Solo mientras la Caja está a la vista: oculta, sus atajos (Enter, Esc) no deben actuar. */}
       {cobrando && activa && (

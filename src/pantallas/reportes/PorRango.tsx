@@ -233,7 +233,7 @@ export function ReporteGanancia({ activa, rango }: { activa: boolean; rango: Ran
             </p>
           )}
           {r.ventasSinCosto > 0 && (
-            <p className="rounded-lg bg-fondo px-3 py-2 text-tenue">
+            <p className="rounded-lg bg-suave px-3 py-2 text-tenue">
               {pesos(r.ventasSinCosto)} vendidos de {r.sinCosto.length === 1 ? "1 producto" : `${r.sinCosto.length} productos`} sin costo no
               cuentan en la ganancia: sin costo no se puede saber cuánto se ganó.
             </p>

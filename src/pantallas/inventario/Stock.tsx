@@ -207,8 +207,15 @@ export default function Stock({ activa, onVerMovimientos, estadoInicial }: Props
                       elegido?.id === p.id ? "bg-seleccion" : "hover:bg-suave"
                     }`}
                   >
-                    <span className="truncate" title={p.nombre}>
-                      {p.nombre}
+                    <span className="flex min-w-0 items-center gap-2">
+                      <span className="truncate" title={p.nombre}>
+                        {p.nombre}
+                      </span>
+                      {p.bajoMinimo && p.stockMil >= 0 && (
+                        <span className="shrink-0 rounded-full bg-aviso-fondo px-2 text-xs leading-5 font-medium text-aviso">
+                          Bajo el mínimo
+                        </span>
+                      )}
                     </span>
                     <span
                       className={`text-right ${p.stockMil < 0 || p.bajoMinimo ? "font-semibold text-peligro" : ""} ${

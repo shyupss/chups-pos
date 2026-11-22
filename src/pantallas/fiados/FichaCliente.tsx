@@ -341,7 +341,7 @@ function FilaPendiente({
 }) {
   const dias = diasDesde(v.fechaHora);
   return (
-    <tr className={`border-b border-linea ${marcada ? "bg-fondo" : ""}`}>
+    <tr className={`border-b border-linea ${marcada ? "bg-seleccion" : ""}`}>
       <td className="py-2">
         <input type="checkbox" checked={marcada} onChange={onMarcar} aria-label={`Marcar ${folio(v.folio)}`} />
       </td>

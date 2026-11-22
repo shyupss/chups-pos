@@ -282,6 +282,64 @@ barras igual al de la etiqueta, con o sin ceros a la izquierda (`00123` o `123`)
 por kg. Si la etiqueta trae precio, el peso se calcula con el precio por kilo del producto. Un dígito
 verificador incorrecto se rechaza: vuelve a escanear la etiqueta. Hay un campo para probar una etiqueta.
 
+## Interfaz: color, botones y Configuración
+
+Los componentes usan solo clases de token (`bg-fondo`, `text-tenue`, `border-linea`…): nunca colores fijos de
+Tailwind ni valores de color en los `.tsx`. Los tokens viven en `src/index.css`, con el tema claro y el oscuro
+(`data-theme` en `<html>`), y Tailwind no trae la paleta ni las sombras por defecto.
+
+### Sistema de color por rol
+
+Cada color tiene un solo trabajo. Si un componente necesita otro, se usa el rol que corresponde, no el color
+que "se ve bien".
+
+| Rol | Tokens | Para qué se usa (y nada más) |
+| --- | --- | --- |
+| Acción | `--acento`, `--acento-hover`, `--sobre-acento` | Botón primario, enlaces, borde del campo de escaneo y anillo de foco. |
+| Selección | `--seleccion` con texto `--acento` | Lo activo o elegido: ítem de la barra lateral, filtro de rango, pestaña, tema elegido, segmento elegido, fila abierta. |
+| Resaltado | `--resalte` con barra de 3 px en `--aviso` | Lo que acaba de pasar: el último producto escaneado. |
+| Éxito | `--exito`, `--exito-fondo` | Lo que salió bien: venta registrada, respaldo reciente, PIN activo. |
+| Aviso | `--aviso`, `--aviso-fondo` | Algo que conviene mirar: bajo el mínimo, "Con devolución", respaldo viejo. |
+| Peligro | `--peligro`, `--peligro-fondo` | Errores y lo que descarta o anula: Cancelar venta, Anular, Restaurar. |
+| Información | `--info`, `--info-fondo` | Ayudas y avisos neutros, por ejemplo "no reemplaza la boleta del SII". |
+| Neutros | `--fondo` (la aplicación), `--superficie` (tarjetas), `--suave` (encabezados de tabla y chips), `--linea` (separadores), `--borde-control` (borde de inputs y botones secundarios), `--texto`, `--tenue` | La estructura. `--borde-control` es más fuerte que `--linea` para que un campo se vea como campo. |
+| Visor | `--visor-bg`, `--visor-texto`, `--visor-tenue` | El bloque oscuro del total en la Caja, igual en ambos temas. |
+| Papel | `--papel`, `--tinta` | La vista previa de la boleta: blanca con tinta oscura también en el tema oscuro. |
+
+Contraste: los pares texto/fondo de la tabla (incluidos Selección y Resaltado) llegan a 4,5:1 en ambos temas.
+`--tenue` sobre `--resalte` en el tema oscuro queda en 4,2:1, así que dentro de la fila resaltada el texto
+secundario usa `--texto`.
+
+**Elevación** (solo tarjetas y botones, nunca filas, y sin blur grande: es barato de dibujar): `shadow-s1` para
+tarjetas y botones, `shadow-s2` para el visor y los menús, `shadow-s3` para diálogos y avisos flotantes y
+`shadow-pri` para el botón primario. No se usa ningún otro `shadow-*`. Los radios son 8 px en controles
+(`rounded-lg`) y 12 px en tarjetas y paneles (`rounded-panel`); la clase `tarjeta` junta fondo, borde, radio y
+`--s1`.
+
+### Botones
+
+Todo botón pasa por `src/componentes/Boton.tsx`, con `Tecla` para los atajos:
+
+- **Una sola acción primaria por pantalla o diálogo** (la que el usuario viene a hacer: Cobrar, Guardar,
+  Respaldar ahora). Todo lo demás es **secundario**.
+- Lo opcional ("Cancelar" de un diálogo, "Quitar logo", "Cerrar") es **terciario**.
+- Lo que descarta o anula (Cancelar venta, Anular, Restaurar) es **peligro**.
+- Tamaños: normal 40 px, chico 32 px, grande 56 px (solo Cobrar) e ícono (un ícono solo, cuadrado de 32 px).
+- Sin animaciones: solo una transición de color de 100 ms.
+
+Las filas clicables (listas virtuales, resultados de búsqueda), las pestañas y los ítems de la barra lateral son
+`<button>` propios porque no son acciones sueltas: su estado "elegido" usa Selección. Los ajustes de sí/no
+usan `Interruptor` (un `<input type="checkbox" role="switch">` real) y los de varias opciones `Opciones`
+(radios nativos con aspecto de segmentos).
+
+### Configuración
+
+Configuración es una lista de secciones a la izquierda (`<nav>` con `aria-current`) y, a la derecha, solo la
+elegida, en una cuadrícula de dos columnas de tarjetas que pasa a una columna con menos de 1100 px de ancho de
+contenido. Para agregar una sección: una entrada en `SECCIONES` de `src/pantallas/Configuracion.tsx` y un
+componente que devuelva `<Columnas izquierda={…} derecha={…} />` con `Tarjeta` (título, ayuda y cuerpo) y
+`Ajuste` (nombre y ayuda a la izquierda, control a la derecha).
+
 ## Desarrollo
 
 Requisitos: Node 22, Rust estable y, en Windows, las
