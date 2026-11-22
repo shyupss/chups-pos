@@ -48,7 +48,7 @@ export default function Inventario({ activa, pestana, onPestana, producto, onPro
 
   return (
     <div className="flex h-full flex-col p-6">
-      <div role="tablist" aria-label="Inventario" className="mb-4 flex gap-1 border-b border-linea">
+      <div role="tablist" aria-label="Inventario" className="mb-4 flex gap-1">
         {PESTANAS.map((p) => (
           <button
             key={p.id}
@@ -56,8 +56,8 @@ export default function Inventario({ activa, pestana, onPestana, producto, onPro
             role="tab"
             aria-selected={pestana === p.id}
             onClick={() => onPestana(p.id)}
-            className={`-mb-px h-10 border-b-2 px-4 font-medium ${
-              pestana === p.id ? "border-acento text-acento" : "border-transparent text-tenue hover:text-texto"
+            className={`h-9 rounded-lg px-4 ${
+              pestana === p.id ? "bg-seleccion font-semibold text-acento" : "font-medium text-tenue hover:bg-suave hover:text-texto"
             }`}
           >
             {p.nombre}

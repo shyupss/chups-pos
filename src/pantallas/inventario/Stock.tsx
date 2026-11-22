@@ -1,3 +1,4 @@
+import Boton from "../../componentes/Boton";
 import BotonExportar from "../../componentes/BotonExportar";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { ClipboardList, History, PackageMinus, Scale } from "lucide-react";
@@ -150,13 +151,13 @@ export default function Stock({ activa, onVerMovimientos, estadoInicial }: Props
             onChange={(e) => setTexto(e.target.value)}
             placeholder="Buscar por nombre o código"
             aria-label="Buscar producto"
-            className="h-10 min-w-48 flex-1 rounded-lg border border-linea bg-superficie px-4 outline-none focus:border-texto"
+            className="h-10 min-w-48 flex-1 rounded-lg border border-borde-control bg-superficie px-4 focus:border-acento"
           />
           <select
             value={categoria}
             onChange={(e) => setCategoria(e.target.value)}
             aria-label="Categoría"
-            className="h-10 max-w-48 rounded-lg border border-linea bg-superficie px-3 outline-none focus:border-texto"
+            className="h-10 max-w-48 rounded-lg border border-borde-control bg-superficie px-3 focus:border-acento"
           >
             <option value="todas">Todas las categorías</option>
             {categorias.map((c) => (
@@ -167,33 +168,29 @@ export default function Stock({ activa, onVerMovimientos, estadoInicial }: Props
             <option value="sin">Sin categoría</option>
           </select>
           <Opciones nombre="estado-stock" etiqueta="Estado del stock" opciones={ESTADOS} valor={estado} onCambiar={setEstado} />
-          <button
-            type="button"
-            onClick={() => setDialogo("conteo")}
-            className="flex h-10 items-center gap-2 rounded-lg bg-acento px-4 font-semibold text-sobre-acento"
-          >
-            <ClipboardList size={16} aria-hidden /> Contar inventario
-          </button>
+          <Boton icono={ClipboardList} onClick={() => setDialogo("conteo")}>
+            Contar inventario
+          </Boton>
           <BotonExportar que="stock" etiqueta="Excel" />
         </div>
 
         {aviso && (
           <p
             role="status"
-            className={`mt-3 rounded-lg px-3 py-2 ${aviso.error ? "bg-peligro/10 text-peligro" : "bg-exito-fondo text-exito"}`}
+            className={`mt-3 rounded-lg px-3 py-2 ${aviso.error ? "bg-peligro-fondo text-peligro" : "bg-exito-fondo text-exito"}`}
           >
             {aviso.texto}
           </p>
         )}
 
-        <div className={`mt-4 grid ${COLUMNAS} gap-2 px-4 text-xs font-medium uppercase text-tenue`}>
+        <div className={`mt-4 grid ${COLUMNAS} gap-2 px-4 text-xs font-medium text-tenue`}>
           <span>Producto</span>
           <span className="text-right">Stock</span>
           <span className={`${COL_ANCHA} text-right`}>Mínimo</span>
           <span className={`${COL_ANCHA} text-right`}>Costo</span>
           <span className="text-right">Valor</span>
         </div>
-        <div ref={contenedor} className="mt-1 min-h-0 flex-1 overflow-auto rounded-lg border border-linea bg-superficie tabular-nums">
+        <div ref={contenedor} className="mt-1 min-h-0 flex-1 overflow-auto tarjeta tabular-nums">
           {filas.length === 0 ? (
             <p className="p-8 text-center text-tenue">No hay productos con estos filtros.</p>
           ) : (
@@ -207,11 +204,18 @@ export default function Stock({ activa, onVerMovimientos, estadoInicial }: Props
                     aria-current={elegido?.id === p.id ? "true" : undefined}
                     style={{ position: "absolute", top: 0, left: 0, width: "100%", height: ALTO_FILA, transform: `translateY(${v.start}px)` }}
                     className={`grid ${COLUMNAS} items-center gap-2 border-b border-linea px-4 text-left ${
-                      elegido?.id === p.id ? "bg-linea/70" : "hover:bg-fondo"
+                      elegido?.id === p.id ? "bg-seleccion" : "hover:bg-suave"
                     }`}
                   >
-                    <span className="truncate" title={p.nombre}>
-                      {p.nombre}
+                    <span className="flex min-w-0 items-center gap-2">
+                      <span className="truncate" title={p.nombre}>
+                        {p.nombre}
+                      </span>
+                      {p.bajoMinimo && p.stockMil >= 0 && (
+                        <span className="shrink-0 rounded-full bg-aviso-fondo px-2 text-xs leading-5 font-medium text-aviso">
+                          Bajo el mínimo
+                        </span>
+                      )}
                     </span>
                     <span
                       className={`text-right ${p.stockMil < 0 || p.bajoMinimo ? "font-semibold text-peligro" : ""} ${
@@ -236,17 +240,12 @@ export default function Stock({ activa, onVerMovimientos, estadoInicial }: Props
       </section>
 
       {elegido && (
-        <aside className="ml-4 w-80 shrink-0 rounded-lg border border-linea bg-superficie p-5">
+        <aside className="ml-4 w-80 shrink-0 tarjeta p-5">
           <div className="flex items-start justify-between gap-2">
             <h2 className="font-semibold">{elegido.nombre}</h2>
-            <button
-              type="button"
-              onClick={() => setElegido(null)}
-              aria-label="Cerrar"
-              className="h-7 rounded-lg px-2 text-tenue hover:bg-fondo hover:text-texto"
-            >
+            <Boton tamano="icono" onClick={() => setElegido(null)} aria-label="Cerrar">
               ×
-            </button>
+            </Boton>
           </div>
           {elegido.codigoBarras && <div className="text-xs text-tenue">{elegido.codigoBarras}</div>}
           <dl className="mt-4 space-y-1 tabular-nums">
@@ -299,8 +298,8 @@ export default function Stock({ activa, onVerMovimientos, estadoInicial }: Props
 
 function Total({ titulo, valor, alerta, children }: { titulo: string; valor: string; alerta?: boolean; children?: ReactNode }) {
   return (
-    <div className="rounded-lg border border-linea bg-superficie px-4 py-3">
-      <div className="text-xs font-medium uppercase tracking-wide text-tenue">{titulo}</div>
+    <div className="tarjeta px-4 py-3">
+      <div className="text-xs font-medium text-tenue">{titulo}</div>
       <div className={`text-2xl font-semibold tabular-nums ${alerta ? "text-peligro" : ""}`}>{valor}</div>
       {children && <div className="text-xs">{children}</div>}
     </div>
@@ -318,9 +317,9 @@ function Par({ etiqueta, valor, fuerte }: { etiqueta: string; valor: string; fue
 
 function Accion({ onClick, icono, children }: { onClick: () => void; icono: ReactNode; children: ReactNode }) {
   return (
-    <button type="button" onClick={onClick} className="flex h-10 w-full items-center gap-2 rounded-lg border border-linea px-3 hover:bg-fondo">
+    <Boton bloque onClick={onClick}>
       <span className="text-tenue">{icono}</span>
       {children}
-    </button>
+    </Boton>
   );
 }

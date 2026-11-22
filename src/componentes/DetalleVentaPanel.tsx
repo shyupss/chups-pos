@@ -1,3 +1,4 @@
+import Boton from "./Boton";
 import { Ban, FileDown, Printer, Undo2, X } from "lucide-react";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { api, textoError, type Config, type DetalleVenta, type LineaDetalle, type MedioPago } from "../api";
@@ -136,18 +137,12 @@ export default function DetalleVentaPanel({ ventaId, activa, onImpresion, onCamb
       <div className="flex h-14 shrink-0 items-center gap-3 border-b border-linea px-5">
         <h2 className="font-semibold tabular-nums">Venta {venta ? folio(venta.folio) : "…"}</h2>
         {venta && <InsigniaEstado estado={venta.estado} />}
-        <button
-          type="button"
-          onClick={onCerrar}
-          aria-label="Cerrar detalle"
-          title="Cerrar (Esc)"
-          className="ml-auto flex size-8 items-center justify-center rounded-lg text-tenue hover:bg-fondo hover:text-texto"
-        >
-          <X size={18} aria-hidden />
-        </button>
+        <Boton tamano="icono" onClick={onCerrar} aria-label="Cerrar detalle" title="Cerrar (Esc)" className="ml-auto">
+          <X size={16} aria-hidden />
+        </Boton>
       </div>
 
-      {error && <p className="m-5 rounded-lg bg-peligro/10 px-3 py-2 text-peligro">{error}</p>}
+      {error && <p className="m-5 rounded-lg bg-peligro-fondo px-3 py-2 text-peligro">{error}</p>}
       {!venta ? (
         !error && <p className="p-5 text-tenue">Cargando…</p>
       ) : (
@@ -206,7 +201,7 @@ export default function DetalleVentaPanel({ ventaId, activa, onImpresion, onCamb
 
             {venta.anulacion && (
               <Bloque titulo="Anulación">
-                <div className="rounded-lg bg-peligro/10 p-3 text-peligro">
+                <div className="rounded-lg bg-peligro-fondo p-3 text-peligro">
                   <div className="font-medium">Anulada el {fechaHora(venta.anulacion.fecha)}</div>
                   <div className="mt-1">Motivo: {venta.anulacion.motivo}</div>
                   <div className="mt-1">
@@ -258,7 +253,7 @@ export default function DetalleVentaPanel({ ventaId, activa, onImpresion, onCamb
               <div
                 role={comprobante.estado === "error" ? "alert" : "status"}
                 className={`flex flex-wrap items-center gap-3 rounded-lg px-3 py-2 ${
-                  comprobante.estado === "error" ? "bg-peligro/10 text-peligro" : "bg-fondo text-tenue"
+                  comprobante.estado === "error" ? "bg-peligro-fondo text-peligro" : "bg-suave text-tenue"
                 }`}
               >
                 <span className="min-w-0 flex-1">
@@ -269,13 +264,9 @@ export default function DetalleVentaPanel({ ventaId, activa, onImpresion, onCamb
                       : comprobante.texto}
                 </span>
                 {comprobante.estado === "error" && (
-                  <button
-                    type="button"
-                    onClick={() => void comprobante.imprimir()}
-                    className="h-8 rounded-lg bg-peligro px-3 font-medium text-superficie"
-                  >
+                  <Boton tamano="chico" onClick={() => void comprobante.imprimir()}>
                     Reintentar
-                  </button>
+                  </Boton>
                 )}
               </div>
             )}
@@ -294,32 +285,32 @@ export default function DetalleVentaPanel({ ventaId, activa, onImpresion, onCamb
               />
             )}
             <div className="flex flex-wrap gap-2">
-              <Boton onClick={reimprimir} titulo="Reimprimir (Ctrl+P)" icono={<Printer size={16} aria-hidden />}>
-                Reimprimir <span className="text-xs text-tenue">Ctrl+P</span>
+              <Boton onClick={reimprimir} title="Reimprimir (Ctrl+P)" icono={Printer} atajo="Ctrl P">
+                Reimprimir
               </Boton>
               <Boton
                 onClick={() => {
                   preparar();
                   void guardarPdf(venta.id, false);
                 }}
-                icono={<FileDown size={16} aria-hidden />}
+                icono={FileDown}
               >
                 Guardar PDF
               </Boton>
               <Boton
                 onClick={() => setDialogo("devolver")}
                 disabled={motivoSinDevolver(venta) !== null}
-                titulo={motivoSinDevolver(venta) ?? "Devolver parte de lo vendido"}
-                icono={<Undo2 size={16} aria-hidden />}
+                title={motivoSinDevolver(venta) ?? "Devolver parte de lo vendido"}
+                icono={Undo2}
               >
                 Devolver productos
               </Boton>
               <Boton
                 onClick={() => setDialogo("anular")}
                 disabled={motivoSinAnular(venta) !== null}
-                titulo={motivoSinAnular(venta) ?? "Repone el stock y devuelve el dinero"}
-                icono={<Ban size={16} aria-hidden />}
-                peligro
+                title={motivoSinAnular(venta) ?? "Repone el stock y devuelve el dinero"}
+                icono={Ban}
+                variante="peligro"
               >
                 Anular venta
               </Boton>
@@ -350,7 +341,7 @@ export default function DetalleVentaPanel({ ventaId, activa, onImpresion, onCamb
 function Bloque({ titulo, children }: { titulo: string; children: ReactNode }) {
   return (
     <section>
-      <h3 className="mb-1 text-xs font-medium uppercase tracking-wide text-tenue">{titulo}</h3>
+      <h3 className="mb-1 text-xs font-medium text-tenue">{titulo}</h3>
       {children}
     </section>
   );
@@ -365,35 +356,4 @@ function Par({ etiqueta, valor, fuerte }: { etiqueta: string; valor: string; fue
   );
 }
 
-export function Boton({
-  onClick,
-  children,
-  icono,
-  titulo,
-  peligro,
-  disabled,
-}: {
-  onClick: () => void;
-  children: ReactNode;
-  icono?: ReactNode;
-  titulo?: string;
-  peligro?: boolean;
-  disabled?: boolean;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      title={titulo}
-      disabled={disabled}
-      className={`flex h-10 items-center gap-2 rounded-lg border px-3 disabled:opacity-50 ${
-        peligro
-          ? "border-peligro/40 text-peligro enabled:hover:bg-peligro/10"
-          : "border-linea enabled:hover:bg-fondo"
-      }`}
-    >
-      {icono}
-      {children}
-    </button>
-  );
-}
+

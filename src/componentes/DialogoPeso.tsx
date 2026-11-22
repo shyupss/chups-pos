@@ -1,3 +1,4 @@
+import Boton from "./Boton";
 import { useState } from "react";
 import type { Producto } from "../api";
 import { cantidad, cantidadEditable, MAX_KG_MIL, parseKg, pesos, subtotalLinea } from "../formato";
@@ -55,7 +56,7 @@ export default function DialogoPeso({
           placeholder="0,532 o 532 g"
           aria-label="Peso en kg o en gramos"
           aria-invalid={error !== null}
-          className="mt-4 h-13 w-full rounded-lg border border-linea bg-fondo px-4 text-2xl tabular-nums outline-none focus:border-texto"
+          className="mt-4 h-13 w-full rounded-lg border border-borde-control bg-superficie px-4 text-2xl tabular-nums focus:border-acento"
           autoComplete="off"
           spellCheck={false}
         />
@@ -71,22 +72,14 @@ export default function DialogoPeso({
             </dd>
           </div>
         </dl>
-        {error && <p className="mt-3 rounded-lg bg-peligro/10 px-3 py-2 text-peligro">{error}</p>}
+        {error && <p className="mt-3 rounded-lg bg-peligro-fondo px-3 py-2 text-peligro">{error}</p>}
         <div className="mt-5 flex gap-2">
-          <button
-            type="button"
-            onClick={onCancelar}
-            className="h-11 flex-1 rounded-lg text-tenue hover:bg-fondo hover:text-texto"
-          >
-            Cancelar <span className="text-xs opacity-60">Esc</span>
-          </button>
-          <button
-            type="submit"
-            disabled={!valido}
-            className="h-11 flex-[2] rounded-lg bg-acento font-semibold text-sobre-acento disabled:bg-linea disabled:text-tenue"
-          >
-            {accion ?? (inicialMil ? "Cambiar peso" : "Agregar")} <span className="text-xs font-normal opacity-70">Enter</span>
-          </button>
+          <Boton variante="terciario" atajo="Esc" onClick={onCancelar} className="flex-1">
+            Cancelar
+          </Boton>
+          <Boton type="submit" variante="primario" atajo="Enter" disabled={!valido} className="flex-[2]">
+            {accion ?? (inicialMil ? "Cambiar peso" : "Agregar")}
+          </Boton>
         </div>
       </form>
     </Dialogo>

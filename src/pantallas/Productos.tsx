@@ -1,3 +1,4 @@
+import Boton from "../componentes/Boton";
 import BotonExportar from "../componentes/BotonExportar";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -138,14 +139,14 @@ export default function Productos({ codigoNuevo, onCodigoUsado, onVerMovimientos
             value={texto}
             onChange={(e) => setTexto(e.target.value)}
             placeholder="Buscar por nombre o código"
-            className="h-10 min-w-48 flex-1 rounded-lg border border-linea bg-superficie px-4 outline-none focus:border-texto"
+            className="h-10 min-w-48 flex-1 rounded-lg border border-borde-control bg-superficie px-4 focus:border-acento"
             autoFocus
           />
           <select
             value={String(filtro)}
             onChange={(e) => setFiltro(aFiltro(e.target.value))}
             aria-label="Filtrar por categoría"
-            className="h-10 max-w-48 rounded-lg border border-linea bg-superficie px-3 outline-none focus:border-texto"
+            className="h-10 max-w-48 rounded-lg border border-borde-control bg-superficie px-3 focus:border-acento"
           >
             <option value="todas">Todas las categorías</option>
             {categorias.map((c) => (
@@ -155,35 +156,27 @@ export default function Productos({ codigoNuevo, onCodigoUsado, onVerMovimientos
             ))}
             <option value="sin">Sin categoría</option>
           </select>
-          <button
-            onClick={() => setPanel({ tipo: "categorias" })}
-            className="h-10 rounded-lg border border-linea px-4 hover:bg-superficie"
-          >
-            Categorías
-          </button>
+          <Boton onClick={() => setPanel({ tipo: "categorias" })}>Categorías</Boton>
           <label className="flex items-center gap-2 text-tenue">
             <input type="checkbox" checked={inactivos} onChange={(e) => setInactivos(e.target.checked)} />
             Ver desactivados
           </label>
-          <button
-            onClick={() => setPanel({ tipo: "nuevo" })}
-            className="h-10 rounded-lg bg-acento px-4 font-semibold text-sobre-acento"
-          >
+          <Boton variante="primario" onClick={() => setPanel({ tipo: "nuevo" })}>
             Nuevo producto
-          </button>
+          </Boton>
           <BotonExportar que="productos" etiqueta="Excel" />
         </div>
 
-        {error && <p className="mt-3 rounded-lg bg-peligro/10 px-3 py-2 text-peligro">{error}</p>}
+        {error && <p className="mt-3 rounded-lg bg-peligro-fondo px-3 py-2 text-peligro">{error}</p>}
 
-        <div className={`mt-4 grid ${COLUMNAS} gap-2 px-4 text-xs font-medium uppercase text-tenue`}>
+        <div className={`mt-4 grid ${COLUMNAS} gap-2 px-4 text-xs font-medium text-tenue`}>
           <span>Nombre</span>
           <span className={COL_CATEGORIA}>Categoría</span>
           <span className={COL_CODIGO}>Código</span>
           <span className="text-right">Precio</span>
           <span className="text-right">Stock</span>
         </div>
-        <div ref={contenedor} className="mt-1 min-h-0 flex-1 overflow-auto rounded-lg border border-linea bg-superficie tabular-nums">
+        <div ref={contenedor} className="mt-1 min-h-0 flex-1 overflow-auto tarjeta tabular-nums">
           {filas.length === 0 ? (
             <p className="p-8 text-center text-tenue">
               {busqueda || filtro !== "todas"
@@ -202,7 +195,7 @@ export default function Productos({ codigoNuevo, onCodigoUsado, onVerMovimientos
                     onClick={() => setPanel({ tipo: "editar", producto: p })}
                     style={{ position: "absolute", top: 0, left: 0, width: "100%", height: ALTO_FILA, transform: `translateY(${v.start}px)` }}
                     className={`grid ${COLUMNAS} items-center gap-2 border-b border-linea px-4 text-left ${
-                      seleccionado ? "bg-linea/70" : "hover:bg-fondo"
+                      seleccionado ? "bg-seleccion" : "hover:bg-suave"
                     } ${p.activo ? "" : "text-tenue line-through"}`}
                   >
                     <span className="truncate" title={p.nombre}>

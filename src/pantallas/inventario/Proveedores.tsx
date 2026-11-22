@@ -1,3 +1,4 @@
+import Boton from "../../componentes/Boton";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { api, textoError, type DatosProveedor, type Proveedor } from "../../api";
@@ -6,7 +7,7 @@ import { fechaHora } from "../../formato";
 const POR_PAGINA = 100;
 const ALTO_FILA = 44;
 const VACIO: DatosProveedor = { nombre: "", rut: "", telefono: "", contacto: "", nota: "" };
-const claseCampo = "h-10 w-full rounded-lg border border-linea bg-fondo px-3 outline-none focus:border-texto";
+const claseCampo = "h-10 w-full rounded-lg border border-borde-control bg-superficie px-3 focus:border-acento";
 
 type Panel = { tipo: "nuevo" } | { tipo: "editar"; proveedor: Proveedor } | null;
 
@@ -76,22 +77,18 @@ export default function Proveedores({ activa }: { activa: boolean }) {
             onChange={(e) => setTexto(e.target.value)}
             placeholder="Buscar por nombre, contacto o RUT"
             aria-label="Buscar proveedor"
-            className="h-10 min-w-48 flex-1 rounded-lg border border-linea bg-superficie px-4 outline-none focus:border-texto"
+            className="h-10 min-w-48 flex-1 rounded-lg border border-borde-control bg-superficie px-4 focus:border-acento"
           />
           <label className="flex items-center gap-2 text-tenue">
             <input type="checkbox" checked={inactivos} onChange={(e) => setInactivos(e.target.checked)} />
             Ver desactivados
           </label>
-          <button
-            type="button"
-            onClick={() => setPanel({ tipo: "nuevo" })}
-            className="h-10 rounded-lg bg-acento px-4 font-semibold text-sobre-acento"
-          >
+          <Boton variante="primario" onClick={() => setPanel({ tipo: "nuevo" })}>
             Nuevo proveedor
-          </button>
+          </Boton>
         </div>
-        {error && <p className="mt-3 rounded-lg bg-peligro/10 px-3 py-2 text-peligro">{error}</p>}
-        <div ref={contenedor} className="mt-4 min-h-0 flex-1 overflow-auto rounded-lg border border-linea bg-superficie">
+        {error && <p className="mt-3 rounded-lg bg-peligro-fondo px-3 py-2 text-peligro">{error}</p>}
+        <div ref={contenedor} className="mt-4 min-h-0 flex-1 overflow-auto tarjeta">
           {filas.length === 0 ? (
             <p className="p-8 text-center text-tenue">
               {busqueda ? "Sin resultados" : 'Todavía no hay proveedores. Crea el primero con "Nuevo proveedor".'}
@@ -107,7 +104,7 @@ export default function Proveedores({ activa }: { activa: boolean }) {
                     onClick={() => setPanel({ tipo: "editar", proveedor: p })}
                     style={{ position: "absolute", top: 0, left: 0, width: "100%", height: ALTO_FILA, transform: `translateY(${v.start}px)` }}
                     className={`flex items-center gap-3 border-b border-linea px-4 text-left ${
-                      elegido ? "bg-linea/70" : "hover:bg-fondo"
+                      elegido ? "bg-seleccion" : "hover:bg-suave"
                     } ${p.activo ? "" : "text-tenue line-through"}`}
                   >
                     <span className="min-w-0 flex-1 truncate">
@@ -125,7 +122,7 @@ export default function Proveedores({ activa }: { activa: boolean }) {
         </div>
       </section>
       {panel && (
-        <aside className="ml-4 w-96 shrink-0 rounded-lg border border-linea bg-superficie">
+        <aside className="ml-4 w-96 shrink-0 tarjeta">
           <FormularioProveedor
             key={panel.tipo === "editar" ? panel.proveedor.id : "nuevo"}
             proveedor={panel.tipo === "editar" ? panel.proveedor : null}
@@ -200,26 +197,22 @@ function FormularioProveedor({
       <Campo etiqueta="Nota (opcional)">
         <input value={datos.nota ?? ""} onChange={cambiar("nota")} maxLength={300} className={claseCampo} />
       </Campo>
-      {error && <p className="rounded-lg bg-peligro/10 px-3 py-2 text-peligro">{error}</p>}
+      {error && <p className="rounded-lg bg-peligro-fondo px-3 py-2 text-peligro">{error}</p>}
       <div className="mt-auto flex flex-wrap gap-2">
-        <button
-          type="submit"
-          disabled={guardando}
-          className="h-11 flex-1 rounded-lg bg-acento font-semibold text-sobre-acento disabled:bg-linea disabled:text-tenue"
-        >
+        <Boton type="submit" variante="primario" disabled={guardando} className="flex-1">
           Guardar
-        </button>
-        <button type="button" onClick={onCerrar} className="h-11 rounded-lg px-4 text-tenue hover:bg-fondo">
+        </Boton>
+        <Boton variante="terciario" onClick={onCerrar}>
           Cerrar
-        </button>
+        </Boton>
         {proveedor && (
-          <button
-            type="button"
+          <Boton
+            variante="terciario"
+            bloque
             onClick={() => void ejecutar(() => api.cambiarEstadoProveedor(proveedor.id, !proveedor.activo))}
-            className="h-10 w-full rounded-lg text-tenue hover:bg-fondo hover:text-texto"
           >
             {proveedor.activo ? "Desactivar (se conservan sus compras)" : "Volver a activar"}
-          </button>
+          </Boton>
         )}
       </div>
     </form>

@@ -35,7 +35,7 @@ export default function TablaVirtual<T>({
   const grid = { gridTemplateColumns: columnas.map((c) => c.ancho).join(" ") };
   return (
     <div className="overflow-hidden rounded-lg border border-linea">
-      <div style={grid} className="grid gap-3 border-b border-linea bg-fondo px-3 py-2 text-xs font-medium uppercase text-tenue">
+      <div style={grid} className="grid gap-3 border-b border-linea bg-suave px-3 py-2 text-xs font-medium text-tenue">
         {columnas.map((c) => (
           <span key={c.titulo} className={c.derecha ? "text-right" : ""}>
             {c.titulo}

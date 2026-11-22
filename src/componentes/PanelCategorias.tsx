@@ -1,3 +1,4 @@
+import Boton from "./Boton";
 import { useState } from "react";
 import { api, textoError, type Categoria } from "../api";
 
@@ -8,8 +9,7 @@ interface Props {
   onCerrar: () => void;
 }
 
-const claseCampo = "h-10 min-w-0 flex-1 rounded-lg border border-linea bg-fondo px-3 outline-none focus:border-texto";
-const claseBoton = "h-8 rounded-lg px-2 text-tenue hover:bg-fondo hover:text-texto";
+const claseCampo = "h-10 min-w-0 flex-1 rounded-lg border border-borde-control bg-superficie px-3 focus:border-acento";
 
 /** Crear, renombrar y eliminar categorías. Vive en el panel derecho de Productos. */
 export default function PanelCategorias({ categorias, onCambio, onCerrar }: Props) {
@@ -58,9 +58,9 @@ export default function PanelCategorias({ categorias, onCambio, onCerrar }: Prop
     >
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold">Categorías</h2>
-        <button type="button" onClick={onCerrar} className={claseBoton}>
+        <Boton variante="terciario" tamano="chico" onClick={onCerrar}>
           Cerrar
-        </button>
+        </Boton>
       </div>
 
       <form
@@ -79,16 +79,12 @@ export default function PanelCategorias({ categorias, onCambio, onCerrar }: Prop
           maxLength={60}
           className={claseCampo}
         />
-        <button
-          type="submit"
-          disabled={!nueva.trim()}
-          className="h-10 rounded-lg bg-acento px-4 font-semibold text-sobre-acento disabled:bg-linea disabled:text-tenue"
-        >
+        <Boton type="submit" variante="primario" disabled={!nueva.trim()}>
           Agregar
-        </button>
+        </Boton>
       </form>
 
-      {error && <p className="mt-3 rounded-lg bg-peligro/10 px-3 py-2 text-peligro">{error}</p>}
+      {error && <p className="mt-3 rounded-lg bg-peligro-fondo px-3 py-2 text-peligro">{error}</p>}
 
       <ul className="mt-4 min-h-0 flex-1 overflow-y-auto">
         {categorias.length === 0 && <li className="py-6 text-center text-tenue">Todavía no hay categorías.</li>}
@@ -110,24 +106,19 @@ export default function PanelCategorias({ categorias, onCambio, onCerrar }: Prop
                   maxLength={60}
                   className={claseCampo}
                 />
-                <button type="submit" className={claseBoton}>
+                <Boton type="submit" tamano="chico">
                   Guardar
-                </button>
+                </Boton>
               </form>
             ) : eliminando === c.id ? (
               <>
                 <span className="min-w-0 flex-1 truncate">¿Eliminar «{c.nombre}»?</span>
-                <button
-                  type="button"
-                  autoFocus
-                  onClick={() => void eliminar(c.id)}
-                  className="h-8 rounded-lg bg-peligro/10 px-2 font-medium text-peligro"
-                >
+                <Boton variante="peligro" tamano="chico" autoFocus onClick={() => void eliminar(c.id)}>
                   Eliminar
-                </button>
-                <button type="button" onClick={() => setEliminando(null)} className={claseBoton}>
+                </Boton>
+                <Boton variante="terciario" tamano="chico" onClick={() => setEliminando(null)}>
                   No
-                </button>
+                </Boton>
               </>
             ) : (
               <>
@@ -137,26 +128,26 @@ export default function PanelCategorias({ categorias, onCambio, onCerrar }: Prop
                 <span className="shrink-0 text-xs text-tenue tabular-nums">
                   {c.productos} {c.productos === 1 ? "producto" : "productos"}
                 </span>
-                <button
-                  type="button"
+                <Boton
+                  variante="terciario"
+                  tamano="chico"
                   onClick={() => {
                     setEliminando(null);
                     setEditando({ id: c.id, nombre: c.nombre });
                   }}
-                  className={claseBoton}
                 >
                   Renombrar
-                </button>
-                <button
-                  type="button"
+                </Boton>
+                <Boton
+                  variante="terciario"
+                  tamano="chico"
                   onClick={() => {
                     setEditando(null);
                     setEliminando(c.id);
                   }}
-                  className="h-8 rounded-lg px-2 text-tenue hover:bg-peligro/10 hover:text-peligro"
                 >
                   Eliminar
-                </button>
+                </Boton>
               </>
             )}
           </li>

@@ -1,3 +1,4 @@
+import Boton from "./Boton";
 import {
   createContext,
   useCallback,
@@ -215,7 +216,7 @@ export default function PedirPin({ accion, inicial, onConfirmar, onCancelar }: P
           aria-invalid={error !== null && error.pin !== "bloqueado"}
           aria-describedby="mensaje-pin"
           placeholder="4 a 6 dígitos"
-          className="mt-4 h-13 w-full rounded-lg border border-linea bg-fondo px-4 text-center text-2xl tracking-[0.5em] tabular-nums outline-none [-webkit-text-security:disc] placeholder:tracking-normal placeholder:[-webkit-text-security:none] focus:border-texto disabled:opacity-60"
+          className="mt-4 h-13 w-full rounded-lg border border-borde-control bg-superficie px-4 text-center text-2xl tracking-[0.5em] tabular-nums [-webkit-text-security:disc] placeholder:tracking-normal placeholder:[-webkit-text-security:none] focus:border-acento disabled:opacity-60"
         />
         <p
           id="mensaje-pin"
@@ -227,22 +228,18 @@ export default function PedirPin({ accion, inicial, onConfirmar, onCancelar }: P
                 ? "bg-aviso-fondo text-aviso"
                 : error?.pin === "bloqueado"
                   ? "bg-exito-fondo text-exito"
-                  : "bg-peligro/10 text-peligro"
+                  : "bg-peligro-fondo text-peligro"
           }`}
         >
           {mensaje ?? "¿Lo olvidaste? Ponle uno nuevo con el código de recuperación en Configuración > Seguridad."}
         </p>
         <div className="mt-4 flex gap-2">
-          <button type="button" onClick={onCancelar} className="h-11 flex-1 rounded-lg text-tenue hover:bg-fondo hover:text-texto">
-            Cancelar <span className="text-xs opacity-60">Esc</span>
-          </button>
-          <button
-            type="submit"
-            disabled={enviando || bloqueado || pin.length < 4}
-            className="h-11 flex-[2] rounded-lg bg-acento font-semibold text-sobre-acento disabled:bg-linea disabled:text-tenue"
-          >
-            {enviando ? "Verificando…" : "Confirmar"} <span className="text-xs font-normal opacity-70">Enter</span>
-          </button>
+          <Boton variante="terciario" atajo="Esc" onClick={onCancelar} className="flex-1">
+            Cancelar
+          </Boton>
+          <Boton type="submit" variante="primario" atajo="Enter" disabled={enviando || bloqueado || pin.length < 4} className="flex-[2]">
+            {enviando ? "Verificando…" : "Confirmar"}
+          </Boton>
         </div>
       </form>
     </Dialogo>

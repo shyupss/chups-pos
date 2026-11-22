@@ -1,3 +1,4 @@
+import Boton from "./Boton";
 import { useState } from "react";
 import { api, textoError, type Cliente, type MedioPago, type PagoRegistrado, type VentaFiada } from "../api";
 import { aEntero, folio, pesos, redondeoEfectivo } from "../formato";
@@ -16,7 +17,7 @@ interface Props {
 }
 
 const claseCampo =
-  "h-12 w-full rounded-lg border border-linea bg-fondo px-4 text-2xl tabular-nums outline-none focus:border-texto";
+  "h-12 w-full rounded-lg border border-borde-control bg-superficie px-4 text-2xl tabular-nums focus:border-acento";
 
 /** Registrar lo que entrega el cliente: parcial, lo marcado o "Paga todo". Nunca más que la deuda. */
 export default function RegistrarPago({ cliente, marcadas, redondeoActivo, onRegistrado, onCerrar }: Props) {
@@ -87,21 +88,13 @@ export default function RegistrarPago({ cliente, marcadas, redondeoActivo, onReg
           />
         </label>
         <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={() => setMonto(String(cliente.deuda))}
-            className="h-8 rounded-lg border border-linea px-3 hover:bg-fondo"
-          >
+          <Boton tamano="chico" onClick={() => setMonto(String(cliente.deuda))}>
             Paga todo ({pesos(cliente.deuda)})
-          </button>
+          </Boton>
           {marcadas.length > 0 && (
-            <button
-              type="button"
-              onClick={() => setMonto(String(deMarcadas))}
-              className="h-8 rounded-lg border border-linea px-3 hover:bg-fondo"
-            >
+            <Boton tamano="chico" onClick={() => setMonto(String(deMarcadas))}>
               Lo marcado ({pesos(deMarcadas)})
-            </button>
+            </Boton>
           )}
         </div>
         <p className="text-xs text-tenue">
@@ -135,7 +128,7 @@ export default function RegistrarPago({ cliente, marcadas, redondeoActivo, onReg
                 onChange={(e) => setRecibido(e.target.value)}
                 inputMode="numeric"
                 placeholder={pesos(entra)}
-                className="h-10 w-40 rounded-lg border border-linea bg-fondo px-3 text-right outline-none focus:border-texto"
+                className="h-10 w-40 rounded-lg border border-borde-control bg-superficie px-3 text-right focus:border-acento"
               />
             </label>
             <div className="flex items-baseline justify-between">
@@ -153,7 +146,7 @@ export default function RegistrarPago({ cliente, marcadas, redondeoActivo, onReg
             value={nota}
             onChange={(e) => setNota(e.target.value)}
             maxLength={200}
-            className="mt-1 h-10 w-full rounded-lg border border-linea bg-fondo px-3 outline-none focus:border-texto"
+            className="mt-1 h-10 w-full rounded-lg border border-borde-control bg-superficie px-3 focus:border-acento"
           />
         </label>
 
@@ -163,19 +156,15 @@ export default function RegistrarPago({ cliente, marcadas, redondeoActivo, onReg
             {pasado ? `El pago supera la deuda en ${pesos(valor - cliente.deuda)}` : pesos(cliente.deuda - valor)}
           </span>
         </div>
-        {error && <p className="rounded-lg bg-peligro/10 px-3 py-2 text-peligro">{error}</p>}
+        {error && <p className="rounded-lg bg-peligro-fondo px-3 py-2 text-peligro">{error}</p>}
 
         <div className="flex gap-2">
-          <button type="button" onClick={onCerrar} className="h-11 flex-1 rounded-lg text-tenue hover:bg-fondo hover:text-texto">
-            Cancelar <span className="text-xs opacity-60">Esc</span>
-          </button>
-          <button
-            type="submit"
-            disabled={bloqueado}
-            className="h-11 flex-[2] rounded-lg bg-acento font-semibold text-sobre-acento disabled:bg-linea disabled:text-tenue"
-          >
-            Registrar pago <span className="text-xs font-normal opacity-70">Enter</span>
-          </button>
+          <Boton variante="terciario" atajo="Esc" onClick={onCerrar} className="flex-1">
+            Cancelar
+          </Boton>
+          <Boton type="submit" variante="primario" atajo="Enter" disabled={bloqueado} className="flex-[2]">
+            Registrar pago
+          </Boton>
         </div>
       </form>
     </Dialogo>

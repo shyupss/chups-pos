@@ -1,13 +1,15 @@
 import { Download, Upload } from "lucide-react";
-import { useState, type ReactNode } from "react";
+import { useState } from "react";
 import { api, textoError, type TipoImportacion } from "../../api";
+import { Tarjeta } from "../../componentes/Ajustes";
+import Boton from "../../componentes/Boton";
 import BotonExportar from "../../componentes/BotonExportar";
 import DialogoImportar from "../../componentes/DialogoImportar";
 import { avisarCambioStock } from "../../eventos";
 import { rangoDe, SelectorRango, type Rango } from "../reportes/Rango";
 
-/** Configuración > Datos: exportar a Excel e importar productos y clientes. */
-export default function DatosConfig({ respaldos }: { respaldos?: ReactNode }) {
+/** Configuración > Datos y respaldos > Excel: exportar e importar productos y clientes. */
+export default function ExcelTarjeta() {
   const [rango, setRango] = useState<Rango>(() => rangoDe("mes"));
   const [importar, setImportar] = useState<TipoImportacion | null>(null);
   const [aviso, setAviso] = useState<{ texto: string; error?: boolean; ruta?: string } | null>(null);
@@ -22,16 +24,16 @@ export default function DatosConfig({ respaldos }: { respaldos?: ReactNode }) {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="space-y-3">
-        <h3 className="font-medium">Exportar a Excel</h3>
+    <Tarjeta titulo="Excel" ayuda="Exporta tus datos o impórtalos desde una planilla .xlsx, .xls, .ods o .csv.">
+      <div className="flex flex-col gap-2">
+        <h3 className="text-[12.5px] font-semibold text-tenue">Exportar</h3>
         <div className="flex flex-wrap gap-2">
           <BotonExportar que="productos" etiqueta="Productos" />
           <BotonExportar que="stock" etiqueta="Stock y valorización" />
           <BotonExportar que="clientes" etiqueta="Clientes y deudas" />
         </div>
-        <div className="space-y-2 rounded-lg border border-linea p-3">
-          <p className="text-sm text-tenue">Ventas, movimientos y compras del rango:</p>
+        <div className="flex flex-col gap-2 rounded-lg border border-linea bg-suave p-3">
+          <p className="text-[13px] text-tenue">Ventas, movimientos y compras del rango:</p>
           <SelectorRango rango={rango} onCambiar={setRango} />
           <div className="flex flex-wrap gap-2">
             <BotonExportar que="ventas" desde={rango.desde} hasta={rango.hasta} etiqueta="Ventas con su detalle" />
@@ -41,42 +43,32 @@ export default function DatosConfig({ respaldos }: { respaldos?: ReactNode }) {
         </div>
       </div>
 
-      <div className="space-y-3 border-t border-linea pt-5">
-        <h3 className="font-medium">Importar desde Excel</h3>
-        <p className="text-sm text-tenue">
-          Planillas .xlsx, .xls, .ods o .csv. Antes de guardar se ve qué filas son nuevas, cuáles actualizan y cuáles tienen errores.
+      <div className="flex flex-col gap-2 border-t border-linea pt-4">
+        <h3 className="text-[12.5px] font-semibold text-tenue">Importar</h3>
+        <p className="text-[13px] text-tenue">
+          Antes de guardar se ve qué filas son nuevas, cuáles actualizan y cuáles tienen errores.
         </p>
         {(["productos", "clientes"] as const).map((t) => (
           <div key={t} className="flex flex-wrap items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setImportar(t)}
-              className="flex h-9 items-center gap-2 rounded-lg bg-acento px-4 font-semibold text-sobre-acento"
-            >
-              <Upload size={16} aria-hidden /> Importar {t}
-            </button>
-            <button
-              type="button"
-              onClick={() => void ejemplo(t)}
-              className="flex h-9 items-center gap-2 rounded-lg border border-linea px-3 hover:bg-fondo"
-            >
-              <Download size={16} aria-hidden /> Descargar planilla de ejemplo
-            </button>
+            <Boton icono={Upload} onClick={() => setImportar(t)}>
+              Importar {t}
+            </Boton>
+            <Boton variante="terciario" icono={Download} onClick={() => void ejemplo(t)}>
+              Planilla de ejemplo
+            </Boton>
           </div>
         ))}
         {aviso && (
           <p className={`flex items-center gap-2 text-sm ${aviso.error ? "text-peligro" : "text-exito"}`}>
             {aviso.texto}
             {aviso.ruta && (
-              <button type="button" onClick={() => void api.abrirArchivo(aviso.ruta!).catch(() => {})} className="font-medium underline">
+              <Boton variante="terciario" tamano="chico" onClick={() => void api.abrirArchivo(aviso.ruta!).catch(() => {})}>
                 Abrir
-              </button>
+              </Boton>
             )}
           </p>
         )}
       </div>
-
-      {respaldos}
 
       {importar && (
         <DialogoImportar
@@ -87,6 +79,6 @@ export default function DatosConfig({ respaldos }: { respaldos?: ReactNode }) {
           }}
         />
       )}
-    </div>
+    </Tarjeta>
   );
 }

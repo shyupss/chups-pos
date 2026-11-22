@@ -22,7 +22,7 @@ function Globo({ x, y, children }: { x: number; y: number; children: ReactNode }
   return (
     <div
       role="tooltip"
-      className="pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-full rounded-md border border-linea bg-superficie px-2 py-1 text-xs whitespace-nowrap shadow-sm tabular-nums"
+      className="pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-full rounded-md border border-linea bg-superficie px-2 py-1 text-xs whitespace-nowrap shadow-s2 tabular-nums"
       style={{ left: x, top: y - 6 }}
     >
       {children}

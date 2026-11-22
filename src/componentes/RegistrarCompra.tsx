@@ -1,3 +1,4 @@
+import Boton from "./Boton";
 import { useEffect, useRef, useState } from "react";
 import { api, textoError, type Categoria, type DetalleCompra, type Producto, type Proveedor } from "../api";
 import { aEntero, parseCantidad, pesos, subtotalLinea } from "../formato";
@@ -18,7 +19,7 @@ interface Props {
 }
 
 const PARECE_CODIGO = /^[A-Za-z0-9-]+$/;
-const claseCampo = "h-10 w-full rounded-lg border border-linea bg-fondo px-3 outline-none focus:border-texto";
+const claseCampo = "h-10 w-full rounded-lg border border-borde-control bg-superficie px-3 focus:border-acento";
 
 /**
  * Registrar una compra: proveedor y documento, y las líneas escaneando o buscando, cada una con
@@ -150,13 +151,13 @@ export default function RegistrarCompra({ onRegistrada, onCerrar }: Props) {
           placeholder="Escanea o busca un producto y Enter"
           aria-label="Agregar producto a la compra"
           autoComplete="off"
-          className="h-11 w-full rounded-lg border-2 border-acento bg-superficie px-4 outline-none"
+          className="h-11 w-full rounded-lg border-2 border-acento bg-superficie px-4"
         />
         {resultados.length > 0 && (
-          <ul className="absolute z-10 mt-1 w-full overflow-hidden rounded-lg border border-linea bg-superficie">
+          <ul className="absolute z-10 mt-1 w-full overflow-hidden tarjeta shadow-s2">
             {resultados.map((p) => (
               <li key={p.id}>
-                <button type="button" onClick={() => agregar(p)} className="h-10 w-full px-4 text-left hover:bg-fondo">
+                <button type="button" onClick={() => agregar(p)} className="h-10 w-full px-4 text-left hover:bg-suave">
                   {p.nombre}
                 </button>
               </li>
@@ -169,16 +170,15 @@ export default function RegistrarCompra({ onRegistrada, onCerrar }: Props) {
           <span>
             El código <b>{noExiste}</b> no está registrado.
           </span>
-          <button
-            type="button"
+          <Boton
+            tamano="chico"
             onClick={() => {
               setCreando(noExiste);
               setNoExiste(null);
             }}
-            className="h-8 rounded-lg bg-aviso px-3 font-medium text-aviso-fondo"
           >
             Crear producto
-          </button>
+          </Boton>
         </div>
       )}
 
@@ -187,7 +187,7 @@ export default function RegistrarCompra({ onRegistrada, onCerrar }: Props) {
           <p className="p-8 text-center text-tenue">Escanea los productos que llegaron.</p>
         ) : (
           <table className="w-full">
-            <thead className="sticky top-0 bg-superficie text-left text-xs uppercase text-tenue">
+            <thead className="sticky top-0 bg-suave text-left text-xs text-tenue">
               <tr className="h-9">
                 <th className="px-3 font-medium">Producto</th>
                 <th className="w-32 px-3 font-medium">Cantidad</th>
@@ -220,7 +220,7 @@ export default function RegistrarCompra({ onRegistrada, onCerrar }: Props) {
                         placeholder={kg ? "kg" : "unidades"}
                         aria-label={`Cantidad de ${l.producto.nombre}`}
                         aria-invalid={l.cantidad !== "" && (mil === null || mil <= 0)}
-                        className="h-9 w-full rounded-lg border border-linea bg-fondo px-2 text-right tabular-nums outline-none focus:border-texto aria-invalid:border-peligro"
+                        className="h-9 w-full rounded-lg border border-borde-control bg-superficie px-2 text-right tabular-nums focus:border-acento aria-invalid:border-peligro"
                       />
                     </td>
                     <td className="px-3">
@@ -237,7 +237,7 @@ export default function RegistrarCompra({ onRegistrada, onCerrar }: Props) {
                           inputMode="numeric"
                           placeholder="$0"
                           aria-label={`Costo de ${l.producto.nombre}`}
-                          className="h-9 w-full rounded-lg border border-linea bg-fondo px-2 text-right tabular-nums outline-none focus:border-texto"
+                          className="h-9 w-full rounded-lg border border-borde-control bg-superficie px-2 text-right tabular-nums focus:border-acento"
                         />
                         <span className="w-6 text-xs text-tenue">{kg ? "/kg" : "c/u"}</span>
                       </div>
@@ -246,14 +246,13 @@ export default function RegistrarCompra({ onRegistrada, onCerrar }: Props) {
                       {mil && costo !== null ? pesos(subtotalLinea(costo, mil)) : "—"}
                     </td>
                     <td className="pr-2 text-center">
-                      <button
-                        type="button"
+                      <Boton
+                        tamano="icono"
                         onClick={() => setLineas((ls) => ls.filter((x) => x.producto.id !== l.producto.id))}
                         aria-label={`Quitar ${l.producto.nombre}`}
-                        className="h-7 rounded-lg px-2 text-tenue hover:bg-peligro/10 hover:text-peligro"
                       >
                         ×
-                      </button>
+                      </Boton>
                     </td>
                   </tr>
                 );
@@ -280,23 +279,18 @@ export default function RegistrarCompra({ onRegistrada, onCerrar }: Props) {
           />
         </div>
         <div className="text-right tabular-nums">
-          <div className="text-xs font-medium uppercase text-tenue">Total</div>
+          <div className="text-xs font-medium text-tenue">Total</div>
           <div className="text-3xl font-semibold">{pesos(total)}</div>
         </div>
       </div>
-      {error && <p className="mt-3 rounded-lg bg-peligro/10 px-3 py-2 text-peligro">{error}</p>}
+      {error && <p className="mt-3 rounded-lg bg-peligro-fondo px-3 py-2 text-peligro">{error}</p>}
       <div className="mt-5 flex gap-2">
-        <button type="button" onClick={onCerrar} className="h-11 flex-1 rounded-lg text-tenue hover:bg-fondo hover:text-texto">
-          Cancelar <span className="text-xs opacity-60">Esc</span>
-        </button>
-        <button
-          type="button"
-          onClick={() => void registrar()}
-          disabled={enviando || lineas.length === 0 || !completas}
-          className="h-11 flex-[2] rounded-lg bg-acento font-semibold text-sobre-acento disabled:bg-linea disabled:text-tenue"
-        >
+        <Boton variante="terciario" atajo="Esc" onClick={onCerrar} className="flex-1">
+          Cancelar
+        </Boton>
+        <Boton variante="primario" onClick={() => void registrar()} disabled={enviando || lineas.length === 0 || !completas} className="flex-[2]">
           Registrar compra {lineas.length > 0 && `· ${lineas.length} ${lineas.length === 1 ? "producto" : "productos"}`}
-        </button>
+        </Boton>
       </div>
 
       {creando !== null && (
@@ -304,7 +298,7 @@ export default function RegistrarCompra({ onRegistrada, onCerrar }: Props) {
           className="fixed inset-0 z-30 flex items-center justify-center bg-velo p-4"
           onKeyDown={(e) => e.key === "Escape" && e.stopPropagation()}
         >
-          <div role="dialog" aria-modal="true" className="h-[42rem] max-h-full w-[28rem] rounded-lg border border-linea bg-superficie">
+          <div role="dialog" aria-modal="true" className="h-[42rem] max-h-full w-[28rem] tarjeta">
             <FormularioProducto
               producto={null}
               codigoInicial={creando}

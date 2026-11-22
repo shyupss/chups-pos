@@ -16,7 +16,7 @@ const dia = (texto: string) => new Date(`${texto}T12:00:00`);
 const boletas = (n: number) => (n === 1 ? "1 boleta" : `${n} boletas`);
 
 function Estado({ error }: { error: string | null }) {
-  return error ? <p className="rounded-lg bg-peligro/10 px-3 py-2 text-peligro">{error}</p> : <p className="text-tenue">Cargando…</p>;
+  return error ? <p className="rounded-lg bg-peligro-fondo px-3 py-2 text-peligro">{error}</p> : <p className="text-tenue">Cargando…</p>;
 }
 
 // --- Ventas ---------------------------------------------------------------------------------
@@ -123,7 +123,7 @@ export function ReporteProductos({
             aria-label="Categoría"
             value={categoria === null ? "todas" : String(categoria)}
             onChange={(e) => setCategoria(e.target.value === "todas" ? null : Number(e.target.value))}
-            className="h-9 rounded-lg border border-linea bg-superficie px-3"
+            className="h-9 tarjeta px-3"
           >
             <option value="todas">Todas las categorías</option>
             {categorias.map((c) => (
@@ -233,7 +233,7 @@ export function ReporteGanancia({ activa, rango }: { activa: boolean; rango: Ran
             </p>
           )}
           {r.ventasSinCosto > 0 && (
-            <p className="rounded-lg bg-fondo px-3 py-2 text-tenue">
+            <p className="rounded-lg bg-suave px-3 py-2 text-tenue">
               {pesos(r.ventasSinCosto)} vendidos de {r.sinCosto.length === 1 ? "1 producto" : `${r.sinCosto.length} productos`} sin costo no
               cuentan en la ganancia: sin costo no se puede saber cuánto se ganó.
             </p>

@@ -1,3 +1,4 @@
+import Boton from "./Boton";
 import { PanelLeftClose, PanelLeftOpen, Printer } from "lucide-react";
 import type { EstadoConfigurada, Turno } from "../api";
 import { fechaHora, horaODia } from "../formato";
@@ -47,7 +48,7 @@ export default function BarraLateral({
       className={`flex shrink-0 flex-col border-r border-linea bg-superficie ${expandida ? "w-52" : "w-16"}`}
     >
       <div
-        className={`flex h-14 shrink-0 items-center font-semibold tracking-wide ${expandida ? "px-5" : "justify-center"}`}
+        className={`flex h-14 shrink-0 items-center font-semibold ${expandida ? "px-5" : "justify-center"}`}
         title="CHUPS POS"
       >
         {expandida ? "CHUPS POS" : "CP"}
@@ -58,20 +59,11 @@ export default function BarraLateral({
         <ul className="mt-auto space-y-1 border-t border-linea pt-2">{SECCIONES.filter((s) => s.abajo).map(item)}</ul>
       </nav>
 
-      <div className="flex shrink-0 flex-col gap-1 border-t border-linea p-2">
-        {turno !== undefined && <IndicadorCaja turno={turno} expandida={expandida} onIr={onIr} />}
-        {impresora && <IndicadorImpresora impresora={impresora} expandida={expandida} onIr={onIr} />}
-      </div>
+      <Estados turno={turno} impresora={impresora} expandida={expandida} onIr={onIr} />
       <div className={`flex shrink-0 items-center gap-2 px-2 pb-2 ${expandida ? "justify-end" : "flex-col"}`}>
-        <button
-          type="button"
-          onClick={onAlternar}
-          title={accion}
-          aria-label={accion}
-          className="flex size-8 shrink-0 items-center justify-center rounded-lg text-tenue hover:bg-fondo hover:text-texto"
-        >
+        <Boton tamano="icono" onClick={onAlternar} title={accion} aria-label={accion}>
           {expandida ? <PanelLeftClose size={18} aria-hidden /> : <PanelLeftOpen size={18} aria-hidden />}
-        </button>
+        </Boton>
       </div>
     </aside>
   );
@@ -98,7 +90,7 @@ function Item({
       aria-keyshortcuts={tecla}
       title={expandida ? undefined : `${nombre} (${tecla})${insignia ? ` · ${insignia.descripcion}` : ""}`}
       className={`relative flex h-10 w-full items-center gap-3 rounded-lg ${expandida ? "px-3" : "justify-center"} ${
-        activa ? "bg-acento/12 font-medium text-acento" : "text-texto hover:bg-fondo"
+        activa ? "bg-seleccion font-semibold text-acento" : "text-texto hover:bg-suave"
       }`}
     >
       <Icono size={20} className="shrink-0" aria-hidden />
@@ -121,64 +113,78 @@ function Item({
   );
 }
 
-/** "Caja abierta desde 09:12" o "Caja cerrada", con el turno real. Lleva a la Caja. */
-function IndicadorCaja({
-  turno,
-  expandida,
-  onIr,
-}: {
-  turno: Turno | null;
-  expandida: boolean;
-  onIr: (seccion: Seccion) => void;
-}) {
-  const texto = turno ? `Caja abierta desde ${horaODia(turno.abiertoEn)}` : "Caja cerrada";
-  const detalle = turno ? `Caja abierta desde el ${fechaHora(turno.abiertoEn)} (turno N° ${turno.id})` : "Caja cerrada: ábrela en la Caja";
-  return (
-    <button
-      type="button"
-      onClick={() => onIr("caja")}
-      title={detalle}
-      className={`relative flex h-8 items-center gap-2 rounded-lg text-xs font-medium ${
-        turno ? "bg-exito-fondo text-exito" : "bg-fondo text-tenue"
-      } ${expandida ? "px-3" : "justify-center"}`}
-    >
-      <span className={`size-2 shrink-0 rounded-full ${turno ? "bg-exito" : "bg-tenue"}`} aria-hidden />
-      <span className={expandida ? "truncate" : "sr-only"}>{texto}</span>
-    </button>
-  );
+type Nivel = "ok" | "error" | "neutro";
+
+const PUNTO: Record<Nivel, string> = { ok: "bg-exito", error: "bg-peligro", neutro: "bg-tenue" };
+
+/** Lo que dice la barra de la caja y de la impresora: el texto, su nivel y el detalle para el tooltip. */
+function estadoCaja(turno: Turno | null) {
+  return {
+    texto: turno ? `Caja abierta desde ${horaODia(turno.abiertoEn)}` : "Caja cerrada",
+    nivel: (turno ? "ok" : "neutro") as Nivel,
+    detalle: turno ? `Caja abierta desde el ${fechaHora(turno.abiertoEn)} (turno N° ${turno.id})` : "Caja cerrada: ábrela en la Caja",
+  };
 }
 
-/** Estado real de la impresora (lo informa el driver). Lleva a Configuración. */
-function IndicadorImpresora({
+function estadoImpresora(impresora: EstadoConfigurada) {
+  const e = impresora.estado;
+  const [texto, nivel]: [string, Nivel] =
+    impresora.impresora === null
+      ? ["Sin impresora", "neutro"]
+      : e?.tipo === "lista"
+        ? ["Impresora lista", "ok"]
+        : e?.tipo === "desconectada"
+          ? ["Impresora desconectada", "error"]
+          : e?.tipo === "conError"
+            ? [`Impresora: ${e.detalle}`, "error"]
+            : ["Impresora sin estado", "neutro"];
+  const detalle = impresora.impresora ? `${texto} (${impresora.impresora})` : `${texto}: elígela en Configuración`;
+  return { texto, nivel, detalle };
+}
+
+/**
+ * Caja e impresora al pie de la barra. Expandida: un punto y su texto por línea (cada una lleva a donde se
+ * arregla). Colapsada: un solo ícono de impresora con un punto (verde si todo anda, rojo si hay un error)
+ * y el detalle completo en el tooltip y en el aria-label.
+ */
+function Estados({
+  turno,
   impresora,
   expandida,
   onIr,
 }: {
-  impresora: EstadoConfigurada;
+  turno: Turno | null | undefined;
+  impresora: EstadoConfigurada | null;
   expandida: boolean;
   onIr: (seccion: Seccion) => void;
 }) {
-  const e = impresora.estado;
-  const [texto, clase] =
-    impresora.impresora === null
-      ? ["Sin impresora", "bg-fondo text-tenue"]
-      : e?.tipo === "lista"
-        ? ["Impresora lista", "bg-exito-fondo text-exito"]
-        : e?.tipo === "desconectada"
-          ? ["Impresora desconectada", "bg-peligro/10 text-peligro"]
-          : e?.tipo === "conError"
-            ? [`Impresora: ${e.detalle}`, "bg-aviso-fondo text-aviso"]
-            : ["Impresora sin estado", "bg-fondo text-tenue"];
-  const detalle = impresora.impresora ? `${texto} (${impresora.impresora})` : `${texto}: elígela en Configuración`;
+  const caja = turno === undefined ? null : estadoCaja(turno);
+  const imp = impresora ? estadoImpresora(impresora) : null;
+  if (!caja && !imp) return null;
+
+  if (!expandida) {
+    const nivel: Nivel = imp?.nivel === "error" ? "error" : imp?.nivel === "ok" ? "ok" : "neutro";
+    const resumen = [caja?.texto, imp?.texto.toLowerCase()].filter(Boolean).join(", ");
+    return (
+      <div className="flex shrink-0 justify-center border-t border-linea p-2">
+        <Boton variante="terciario" tamano="icono" onClick={() => onIr("caja")} title={resumen} aria-label={resumen} className="relative">
+          <Printer size={18} aria-hidden />
+          <span aria-hidden className={`absolute top-1 right-1 size-2 rounded-full ring-2 ring-superficie ${PUNTO[nivel]}`} />
+        </Boton>
+      </div>
+    );
+  }
+
+  const linea = (e: { texto: string; nivel: Nivel; detalle: string }, destino: Seccion) => (
+    <Boton key={e.texto} variante="terciario" tamano="chico" bloque onClick={() => onIr(destino)} title={e.detalle} className="text-xs">
+      <span aria-hidden className={`size-2 shrink-0 rounded-full ${PUNTO[e.nivel]}`} />
+      <span className="truncate">{e.texto}</span>
+    </Boton>
+  );
   return (
-    <button
-      type="button"
-      onClick={() => onIr("configuracion")}
-      title={detalle}
-      className={`relative flex h-8 items-center gap-2 rounded-lg text-xs font-medium ${clase} ${expandida ? "px-3" : "justify-center"}`}
-    >
-      <Printer size={14} className="shrink-0" aria-hidden />
-      <span className={expandida ? "truncate" : "sr-only"}>{texto}</span>
-    </button>
+    <div className="flex shrink-0 flex-col gap-0.5 border-t border-linea p-2">
+      {caja && linea(caja, "caja")}
+      {imp && linea(imp, "configuracion")}
+    </div>
   );
 }

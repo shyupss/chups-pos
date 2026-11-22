@@ -2,10 +2,10 @@ import type { EstadoVenta } from "../api";
 
 const ESTILO: Record<EstadoVenta, [string, string]> = {
   pagada: ["Pagada", "bg-exito-fondo text-exito"],
-  fiada: ["Fiada", "bg-acento/12 text-acento"],
-  anulada: ["Anulada", "bg-peligro/10 text-peligro"],
+  fiada: ["Fiada", "bg-info-fondo text-info"],
+  anulada: ["Anulada", "border border-peligro/50 bg-peligro-fondo text-peligro"],
   conDevolucion: ["Con devolución", "bg-aviso-fondo text-aviso"],
-  devuelta: ["Devuelta", "bg-linea text-tenue"],
+  devuelta: ["Devuelta", "bg-suave text-tenue"],
 };
 
 /** Estado de una venta en la lista y en el detalle. */
