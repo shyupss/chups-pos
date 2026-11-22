@@ -1,0 +1,46 @@
+﻿CONTRATO DE LICENCIA DE USO DE CHUPS POS
+
+TEXTO BASE: este documento es una plantilla que el dueño del producto debe revisar (idealmente con un abogado) antes de entregarlo a clientes. Reemplaza [VENDEDOR], [RUT DEL VENDEDOR], [CORREO DE CONTACTO] y [CIUDAD] por los datos reales.
+
+Lea con atención este contrato antes de instalar o usar CHUPS POS (el "Software"). Al instalarlo o usarlo, usted (el "Cliente") acepta estas condiciones. Si no está de acuerdo, no instale ni use el Software.
+
+1. QUIÉN LO OFRECE
+El Software es ofrecido por [VENDEDOR], RUT [RUT DEL VENDEDOR] (el "Vendedor"). Contacto: [CORREO DE CONTACTO].
+
+2. LICENCIA
+2.1 El Vendedor le otorga una licencia no exclusiva e intransferible para usar el Software en el negocio indicado en su licencia, en la cantidad de equipos que ésta señale (un equipo, salvo que se indique otra cosa).
+2.2 La licencia es permanente: no tiene fecha de vencimiento ni plan, y no depende de la versión del Software ni de las actualizaciones que usted instale. Una vez activada en un equipo, sigue valiendo en ese equipo.
+2.3 La licencia queda asociada a un equipo. Para usar el Software en otro computador (por ejemplo, si cambia el suyo), solicite al Vendedor una licencia para ese equipo con su código de solicitud.
+
+3. PERÍODO DE PRUEBA
+Sin licencia, el Software funciona completo durante 15 días desde el primer arranque. Después hay 7 días de gracia con aviso. Terminada la gracia, el Software pasa a modo consulta: usted puede ver y exportar todos sus datos, hacer y restaurar respaldos, cobrar fiados y cerrar el turno abierto, pero no abrir turnos nuevos ni registrar ventas. En ningún caso se borran ni se pierden sus datos por falta de licencia.
+
+4. LO QUE NO SE PUEDE HACER
+Usted no puede: (a) copiar o distribuir el Software ni su licencia a terceros; (b) modificar, descompilar o intentar eludir el sistema de licencias; (c) vender, arrendar o sublicenciar el Software; (d) quitar los avisos de propiedad del Software.
+
+5. SUS DATOS
+5.1 Los datos de su negocio (productos, ventas, clientes, respaldos) son suyos y se guardan solo en su computador. El Software funciona sin internet y no envía sus datos a ningún servidor.
+5.2 Usted es responsable de hacer respaldos periódicos y de guardar una copia fuera del computador (por ejemplo, en un pendrive). El Software hace respaldos automáticos en el mismo equipo, lo que no reemplaza una copia externa.
+5.3 Desinstalar el Software no borra sus datos, salvo que usted marque expresamente la casilla correspondiente del desinstalador. Esa acción es irreversible.
+
+6. ACTUALIZACIONES
+El Software puede buscar actualizaciones por internet, como máximo una vez al día, y nunca las instala con un turno de caja abierto. Antes de instalar una actualización se hace un respaldo de su base de datos.
+
+7. BOLETAS Y OBLIGACIONES TRIBUTARIAS
+Las boletas que emite el Software son comprobantes internos y NO reemplazan la boleta electrónica ni ningún otro documento tributario exigido por el Servicio de Impuestos Internos (SII). El cumplimiento de las obligaciones tributarias, contables y legales de su negocio es de su exclusiva responsabilidad.
+
+8. GARANTÍA Y RESPONSABILIDAD
+8.1 El Software se entrega "tal cual". El Vendedor se esfuerza por que funcione correctamente, pero no garantiza que esté libre de errores ni que se ajuste a un fin particular.
+8.2 En la medida que la ley lo permita, el Vendedor no responde por daños indirectos, pérdida de ventas, pérdida de datos por falta de respaldos, ni por fallas de equipos, impresoras, cortes de energía u otros elementos externos al Software.
+8.3 Nada de lo anterior limita los derechos que la ley chilena otorga a los consumidores y que no puedan renunciarse.
+
+9. SOPORTE
+El soporte se presta por el canal de contacto indicado en el punto 1, en los términos que acuerde con el Vendedor.
+
+10. TÉRMINO
+El Vendedor puede poner término a la licencia si usted incumple gravemente este contrato. Usted puede dejar de usar el Software en cualquier momento desinstalándolo. Al terminar, sus datos siguen siendo suyos.
+
+11. LEY APLICABLE
+Este contrato se rige por las leyes de la República de Chile. Cualquier controversia se someterá a los tribunales ordinarios de justicia de [CIUDAD].
+
+Al continuar con la instalación, usted declara haber leído y aceptado este contrato.

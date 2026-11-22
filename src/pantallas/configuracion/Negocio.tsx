@@ -18,7 +18,7 @@ const EJEMPLO: [string, number][] = [
 ];
 
 /** Configuración > Negocio: los datos que encabezan cada boleta, el logo y una vista previa. */
-export default function NegocioConfig({ conPin }: { conPin: ConPin }) {
+export default function NegocioConfig({ conPin, onGuardado }: { conPin: ConPin; onGuardado?: (n: Negocio) => void }) {
   const [datos, setDatos] = useState<DatosNegocio>(VACIO);
   const [logo, setLogo] = useState<string | null>(null);
   const [cargado, setCargado] = useState(false);
@@ -53,6 +53,7 @@ export default function NegocioConfig({ conPin }: { conPin: ConPin }) {
       if (n) {
         mostrar(n);
         setMensaje({ error: false, texto: exito });
+        onGuardado?.(n);
       }
     } catch (e) {
       if (!esCancelado(e)) setMensaje({ error: true, texto: textoError(e) });

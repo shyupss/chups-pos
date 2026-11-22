@@ -282,6 +282,11 @@ table {
     border-color: color-mix(in srgb, var(--sobre-acento) 38%, transparent);
     color: var(--sobre-acento);
   }
+  .boton-primario:disabled .tecla {
+    background: var(--superficie);
+    border-color: var(--linea);
+    color: var(--tenue);
+  }
 
   /* Miniaturas de tema en Apariencia: colores propios, sin depender del tema activo. */
   .muestra-claro {

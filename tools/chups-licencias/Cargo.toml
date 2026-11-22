@@ -1,0 +1,10 @@
+[package]
+name = "chups-licencias"
+description = "Herramienta del vendedor: genera las claves y emite, verifica y lista licencias de CHUPS POS. No va en el instalador."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+pos-licencia.workspace = true

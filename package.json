@@ -1,12 +1,14 @@
 {
   "name": "chups-pos",
   "private": true,
-  "version": "0.1.0",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "typecheck": "tsc --noEmit",
+    "version:sync": "node scripts/version.mjs",
+    "version:check": "node scripts/version.mjs --check",
     "tauri": "tauri"
   },
   "dependencies": {

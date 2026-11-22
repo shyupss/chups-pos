@@ -21,4 +21,14 @@ pub struct EstadoApp {
     pub carpeta_respaldos: PathBuf,
     /// El último respaldo automático que falló (o una restauración que no se pudo hacer).
     pub error_respaldo: Mutex<Option<String>>,
+    /// Clave pública, huella de este equipo y archivo de la prueba, para la licencia.
+    pub licencia: pos_core::servicios::licencia::Contexto,
+    /// La actualización encontrada y si se pidió instalarla al cerrar el turno (solo en memoria).
+    pub actualizacion: Mutex<crate::comandos::actualizaciones::MemoriaActualizacion>,
+    /// La carpeta de datos de la app (la base, los respaldos, los registros…).
+    pub carpeta_datos: PathBuf,
+    /// Lo que encontró la revisión de la base al arrancar tras un cierre brusco.
+    pub integridad: Mutex<crate::comandos::integridad::EstadoIntegridad>,
+    /// Mantiene vivo el hilo que escribe el registro (al soltarla se vacía lo pendiente).
+    pub _registro: Option<tracing_appender::non_blocking::WorkerGuard>,
 }

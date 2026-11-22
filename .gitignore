@@ -6,3 +6,12 @@ target/
 *.db-wal
 .DS_Store
 src-tauri/gen/schemas/
+
+# Claves y registros de licencias del vendedor: nunca en el repositorio.
+*.key
+*.pem
+clave-privada*
+emitidas.csv
+*.chups-licencia
+# Clave del updater (fase 7): va como secret de GitHub.
+*.tauri-key

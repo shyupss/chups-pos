@@ -1,6 +1,6 @@
 import Boton from "./Boton";
 import { PanelLeftClose, PanelLeftOpen, Printer } from "lucide-react";
-import type { EstadoConfigurada, Turno } from "../api";
+import type { EstadoActualizacion, EstadoConfigurada, EstadoLicencia, Turno } from "../api";
 import { fechaHora, horaODia } from "../formato";
 import { SECCIONES, type DatosSeccion, type Seccion } from "../secciones";
 
@@ -19,6 +19,12 @@ interface Props {
   impresora?: EstadoConfigurada | null;
   /** Turno abierto; null si la caja está cerrada y undefined mientras se lee. */
   turno?: Turno | null;
+  /** En prueba, gracia o consulta se muestra una línea discreta que lleva a Configuración > Licencia. */
+  licencia?: EstadoLicencia | null;
+  onLicencia?: () => void;
+  /** Una versión nueva encontrada: una línea discreta que lleva a Configuración > Acerca de. */
+  actualizacion?: EstadoActualizacion | null;
+  onActualizacion?: () => void;
 }
 
 interface Insignia {
@@ -35,6 +41,10 @@ export default function BarraLateral({
   insignias = {},
   impresora = null,
   turno,
+  licencia = null,
+  onLicencia,
+  actualizacion = null,
+  onActualizacion,
 }: Props) {
   const item = (s: DatosSeccion) => (
     <li key={s.id}>
@@ -59,7 +69,16 @@ export default function BarraLateral({
         <ul className="mt-auto space-y-1 border-t border-linea pt-2">{SECCIONES.filter((s) => s.abajo).map(item)}</ul>
       </nav>
 
-      <Estados turno={turno} impresora={impresora} expandida={expandida} onIr={onIr} />
+      <Estados
+        turno={turno}
+        impresora={impresora}
+        licencia={licencia}
+        actualizacion={actualizacion}
+        expandida={expandida}
+        onIr={onIr}
+        onLicencia={onLicencia}
+        onActualizacion={onActualizacion}
+      />
       <div className={`flex shrink-0 items-center gap-2 px-2 pb-2 ${expandida ? "justify-end" : "flex-col"}`}>
         <Boton tamano="icono" onClick={onAlternar} title={accion} aria-label={accion}>
           {expandida ? <PanelLeftClose size={18} aria-hidden /> : <PanelLeftOpen size={18} aria-hidden />}
@@ -113,9 +132,42 @@ function Item({
   );
 }
 
-type Nivel = "ok" | "error" | "neutro";
+type Nivel = "ok" | "error" | "aviso" | "info" | "neutro";
 
-const PUNTO: Record<Nivel, string> = { ok: "bg-exito", error: "bg-peligro", neutro: "bg-tenue" };
+const PUNTO: Record<Nivel, string> = {
+  ok: "bg-exito",
+  error: "bg-peligro",
+  aviso: "bg-aviso",
+  info: "bg-info",
+  neutro: "bg-tenue",
+};
+
+/** La línea de la licencia: nada si está activa. */
+function estadoLicencia(l: EstadoLicencia) {
+  const dias = l.diasRestantes === 1 ? "1 día" : `${l.diasRestantes ?? 0} días`;
+  switch (l.modo) {
+    case "activa":
+      return null;
+    case "prueba":
+      return {
+        texto: `Prueba: quedan ${dias}`,
+        nivel: "info" as Nivel,
+        detalle: `Prueba de CHUPS POS: quedan ${dias}. Activa la licencia en Configuración > Licencia.`,
+      };
+    case "gracia":
+      return {
+        texto: `Gracia: quedan ${dias}`,
+        nivel: "aviso" as Nivel,
+        detalle: `La prueba terminó: quedan ${dias} para activar la licencia.`,
+      };
+    case "consulta":
+      return {
+        texto: "Modo consulta",
+        nivel: "error" as Nivel,
+        detalle: "La prueba terminó: activa la licencia para volver a vender.",
+      };
+  }
+}
 
 /** Lo que dice la barra de la caja y de la impresora: el texto, su nivel y el detalle para el tooltip. */
 function estadoCaja(turno: Turno | null) {
@@ -150,21 +202,45 @@ function estadoImpresora(impresora: EstadoConfigurada) {
 function Estados({
   turno,
   impresora,
+  licencia,
+  actualizacion,
   expandida,
   onIr,
+  onLicencia,
+  onActualizacion,
 }: {
   turno: Turno | null | undefined;
   impresora: EstadoConfigurada | null;
+  licencia: EstadoLicencia | null;
+  actualizacion: EstadoActualizacion | null;
   expandida: boolean;
   onIr: (seccion: Seccion) => void;
+  onLicencia?: () => void;
+  onActualizacion?: () => void;
 }) {
   const caja = turno === undefined ? null : estadoCaja(turno);
   const imp = impresora ? estadoImpresora(impresora) : null;
-  if (!caja && !imp) return null;
+  const lic = licencia ? estadoLicencia(licencia) : null;
+  const nueva = actualizacion?.disponible ?? null;
+  if (!caja && !imp && !lic && !nueva) return null;
 
   if (!expandida) {
-    const nivel: Nivel = imp?.nivel === "error" ? "error" : imp?.nivel === "ok" ? "ok" : "neutro";
-    const resumen = [caja?.texto, imp?.texto.toLowerCase()].filter(Boolean).join(", ");
+    const nivel: Nivel =
+      imp?.nivel === "error" || lic?.nivel === "error"
+        ? "error"
+        : lic?.nivel === "aviso"
+          ? "aviso"
+          : imp?.nivel === "ok"
+            ? "ok"
+            : "neutro";
+    const resumen = [
+      caja?.texto,
+      imp?.texto.toLowerCase(),
+      lic?.texto.toLowerCase(),
+      nueva ? `actualización ${nueva.version} disponible` : null,
+    ]
+      .filter(Boolean)
+      .join(", ");
     return (
       <div className="flex shrink-0 justify-center border-t border-linea p-2">
         <Boton variante="terciario" tamano="icono" onClick={() => onIr("caja")} title={resumen} aria-label={resumen} className="relative">
@@ -185,6 +261,32 @@ function Estados({
     <div className="flex shrink-0 flex-col gap-0.5 border-t border-linea p-2">
       {caja && linea(caja, "caja")}
       {imp && linea(imp, "configuracion")}
+      {nueva && (
+        <Boton
+          variante="terciario"
+          tamano="chico"
+          bloque
+          onClick={() => (onActualizacion ? onActualizacion() : onIr("configuracion"))}
+          title={`Hay una versión nueva de CHUPS POS (${nueva.version}). Se instala desde Configuración > Acerca de.`}
+          className="text-xs"
+        >
+          <span aria-hidden className={`size-2 shrink-0 rounded-full ${PUNTO.info}`} />
+          <span className="truncate">Actualización {nueva.version}</span>
+        </Boton>
+      )}
+      {lic && (
+        <Boton
+          variante="terciario"
+          tamano="chico"
+          bloque
+          onClick={() => (onLicencia ? onLicencia() : onIr("configuracion"))}
+          title={lic.detalle}
+          className="text-xs"
+        >
+          <span aria-hidden className={`size-2 shrink-0 rounded-full ${PUNTO[lic.nivel]}`} />
+          <span className="truncate">{lic.texto}</span>
+        </Boton>
+      )}
     </div>
   );
 }

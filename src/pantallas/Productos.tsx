@@ -65,8 +65,9 @@ export default function Productos({ codigoNuevo, onCodigoUsado, onVerMovimientos
   }, [cargarCategorias]);
 
   useEffect(() => {
-    if (codigoNuevo) {
-      setPanel({ tipo: "nuevo", codigo: codigoNuevo });
+    // Un texto vacío abre el formulario sin código (desde el asistente de primer arranque).
+    if (codigoNuevo !== null) {
+      setPanel({ tipo: "nuevo", codigo: codigoNuevo || undefined });
       onCodigoUsado();
     }
   }, [codigoNuevo, onCodigoUsado]);

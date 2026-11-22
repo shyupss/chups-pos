@@ -41,6 +41,9 @@ interface Props {
   caja: EstadoCaja | null;
   /** Se abrió o cerró la caja: App vuelve a leer el turno. */
   onCambioCaja: () => void;
+  /** false en modo consulta: "Abrir caja" lo avisa (Rust lo rechaza igual). */
+  puedeVender: boolean;
+  onIrALicencia: () => void;
 }
 
 /** Igual que el servicio: más ventas en espera no se aceptan. */
@@ -96,7 +99,16 @@ function resolverCantidad(
     : { tipo: "error", texto: `El peso de ${p.nombre} debe estar entre 1 g y 100 kg` };
 }
 
-export default function Caja({ activa, onCrearProducto, onEnEspera, onImpresion, caja, onCambioCaja }: Props) {
+export default function Caja({
+  activa,
+  onCrearProducto,
+  onEnEspera,
+  onImpresion,
+  caja,
+  onCambioCaja,
+  puedeVender,
+  onIrALicencia,
+}: Props) {
   const [lineas, setLineas] = useState<Linea[]>([]);
   const [entrada, setEntrada] = useState("");
   const [resultados, setResultados] = useState<Producto[]>([]);
@@ -545,6 +557,8 @@ export default function Caja({ activa, onCrearProducto, onEnEspera, onImpresion,
       <AbrirCaja
         sugerido={caja.ultimoMontoInicial}
         enEspera={enEspera?.length ?? 0}
+        bloqueada={!puedeVender}
+        onIrALicencia={onIrALicencia}
         onAbierta={() => {
           onCambioCaja();
           setAviso({ tipo: "info", texto: "Caja abierta. ¡Buen turno!", alerta: false });

@@ -57,11 +57,14 @@ export default function ImpresoraConfig({
   cfg,
   onCambioImpresora,
   escaner,
+  soloImpresora,
 }: {
   cfg: ConfigEditable;
   onCambioImpresora: () => void;
   /** Lo que sigue en la tarjeta "Boleta y escáner": la prueba del lector y las etiquetas de balanza. */
-  escaner: ReactNode;
+  escaner?: ReactNode;
+  /** El asistente de primer arranque solo muestra la tarjeta de la impresora (con su página de prueba). */
+  soloImpresora?: boolean;
 }) {
   const { config, cambiar } = cfg;
   const [impresoras, setImpresoras] = useState<Impresora[] | null>(null);
@@ -107,9 +110,7 @@ export default function ImpresoraConfig({
   if (!config) return <p className="text-tenue">Cargando…</p>;
   const noEncontrada = config.impresora !== null && impresoras !== null && !impresoras.some((i) => i.nombre === config.impresora);
 
-  return (
-    <Columnas
-      izquierda={
+  const izquierda = (
         <Tarjeta titulo="Impresora" ayuda="La térmica instalada en Windows y cómo imprime.">
           <div className="flex gap-2">
             <select
@@ -218,8 +219,9 @@ export default function ImpresoraConfig({
             </div>
           </Seccion>
         </Tarjeta>
-      }
-      derecha={
+  );
+  if (soloImpresora) return izquierda;
+  const derecha = (
         <Tarjeta titulo="Boleta y escáner" ayuda="Qué lleva la boleta, dónde se guarda el PDF y cómo lee el lector.">
           <Seccion titulo="Boleta">
             <Ajuste etiqueta="Leyenda al pie" ayuda="«Comprobante interno sin validez tributaria».">
@@ -272,9 +274,8 @@ export default function ImpresoraConfig({
           </Seccion>
           {escaner}
         </Tarjeta>
-      }
-    />
   );
+  return <Columnas izquierda={izquierda} derecha={derecha} />;
 }
 
 export function Seccion({ titulo, children }: { titulo: string; children: ReactNode }) {

@@ -340,6 +340,118 @@ contenido. Para agregar una sección: una entrada en `SECCIONES` de `src/pantall
 componente que devuelva `<Columnas izquierda={…} derecha={…} />` con `Tarjeta` (título, ayuda y cuerpo) y
 `Ajuste` (nombre y ayuda a la izquierda, control a la derecha).
 
+## Licencia
+
+Cada negocio tiene una **licencia permanente**: no vence, no tiene plan y no depende de la versión ni de
+las actualizaciones. Funciona sin internet: es un texto firmado con Ed25519 (`CHUPS-XXXXX-XXXXX-…`, o un
+archivo `.chups-licencia` con ese mismo texto). La app solo trae la clave **pública**
+(`crates/pos-licencia/clave-publica.txt`, incrustada al compilar; también se puede fijar con la variable
+`CHUPS_CLAVE_PUBLICA`). La privada nunca entra al repositorio.
+
+**Estados** (los decide Rust, en `abrir_turno` y `confirmar_venta`; la vista solo los muestra):
+
+| Estado | Cuándo | Qué se puede |
+| --- | --- | --- |
+| Prueba | 15 días desde el primer arranque (clave `dias_prueba`) | Todo. Una línea discreta en la barra lateral dice los días que quedan. |
+| Activa | Hay una licencia válida para este equipo | Todo, para siempre: ningún reloj, fecha ni actualización la desactiva. |
+| Gracia | 7 días después de la prueba, sin licencia | Todo, con un aviso visible. |
+| Consulta | Después de la gracia, sin licencia | Ver y exportar todo, respaldar y restaurar, cobrar fiados y cerrar el turno abierto. **No** abrir un turno nuevo ni registrar ventas. |
+
+El inicio de la prueba se guarda en la base y en `prueba.dat` (carpeta de datos), así que borrar la base o
+reinstalar no la reinicia. Se guarda también el mayor instante visto: si el reloj retrocede, los días de
+prueba no se recuperan y a partir de 48 horas se avisa. Una venta en curso nunca se corta: el turno que
+estaba abierto al terminar la gracia puede seguir vendiendo hasta 24 horas después.
+
+### Cómo emitir una licencia (paso a paso para el vendedor)
+
+La herramienta `tools/chups-licencias` va en el workspace pero **no** en el instalador. Se usa con
+`cargo run -p chups-licencias -- <comando>` o compilándola una vez (`cargo build --release -p chups-licencias`,
+queda en `target/release/chups-licencias.exe`).
+
+1. **Una sola vez**, crea el par de claves: `chups-licencias generar-claves`. Guarda la privada en
+   `%USERPROFILE%\.chups-licencias\clave-privada.key` (se niega a guardarla dentro de un repositorio git) y
+   muestra la pública, que va en `crates/pos-licencia/clave-publica.txt` antes de compilar la app.
+   **Respalda la privada fuera del computador**: sin ella no puedes emitir licencias, y si cambias de clave
+   las licencias ya emitidas dejan de servir en las versiones nuevas. También se puede dar por la variable
+   `CHUPS_CLAVE_PRIVADA` (64 dígitos hex) o `CHUPS_CLAVE_PRIVADA_ARCHIVO`.
+2. El cliente abre **Configuración > Licencia** y te manda su **código de solicitud** (botón "Copiar"; se
+   puede dictar por teléfono: tiene una suma de control que detecta errores de tipeo).
+3. Emite la licencia:
+   `chups-licencias emitir --negocio "Almacén Don Pepe" --rut 12.345.678-5 --solicitud ABCDE-… --archivo don-pepe`
+   Con `--solicitud` queda atada a ese equipo; sin él, se ata al primer equipo donde se active. `--equipos N`
+   cambia la cantidad (1 por defecto; para controlar cada equipo conviene emitir una licencia atada por
+   cada uno). Queda anotada en `%USERPROFILE%\.chups-licencias\emitidas.csv` (otra ruta con
+   `CHUPS_REGISTRO_LICENCIAS`; nunca dentro de un repo).
+4. Entrégale el texto (`CHUPS-…`) o el archivo `.chups-licencia`. El cliente lo **pega o lo carga** en
+   Configuración > Licencia (o en el paso 5 del asistente de primer arranque) y queda **activa**.
+5. `chups-licencias verificar <texto o archivo>` revisa la firma y muestra los datos; `chups-licencias listar`
+   muestra lo emitido.
+
+Una licencia alterada, firmada con otra clave o de otro equipo se rechaza con un mensaje claro y no se guarda.
+El contacto que ve el cliente se fija al compilar con `CHUPS_CONTACTO_VENDEDOR`.
+
+## Primer arranque
+
+Con la base vacía (sin productos, ventas ni turnos), en vez de la Caja aparece un asistente de 5 pasos:
+negocio (el nombre es obligatorio), impresora (con página de prueba), escáner, PIN con su código de
+recuperación y licencia (activar o seguir en prueba). Todos se pueden omitir menos el primero. Al final ofrece
+importar los productos desde Excel o crear el primero. Una base con datos, como la de la fase 6, nunca lo
+pide; se vuelve a abrir desde Configuración > "Asistente de configuración".
+
+## Actualizaciones
+
+Las actualizaciones van firmadas (`tauri-plugin-updater`; la clave pública está en `tauri.conf.json`). La app
+busca una como máximo una vez al día, en segundo plano, solo si hay internet (sin internet falla en silencio)
+y **nunca con un turno abierto**. Configuración > Acerca de muestra la versión, las notas y "Buscar
+actualizaciones". Con un turno abierto se ofrece **"Instalar al cerrar el turno"**; instalar siempre hace antes
+un respaldo de la base, y si el respaldo falla no se actualiza.
+
+## Cómo publicar una versión
+
+1. Escribe las novedades en un apartado `## [X.Y.Z] - AAAA-MM-DD` de `CHANGELOG.md`: sale como notas del
+   Release y como "Novedades" en Acerca de.
+2. Sube la versión en un solo lugar: `node scripts/version.mjs --set X.Y.Z` (la deja en `package.json`,
+   `tauri.conf.json`, `Cargo.toml` y `package-lock.json`). La CI falla si no coinciden
+   (`npm run version:check`). Haz `cargo build` y commitea también `Cargo.lock`.
+3. Una sola vez, en GitHub > Settings > Secrets and variables > Actions, crea:
+   - `TAURI_SIGNING_PRIVATE_KEY` y `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`: la clave que firma las
+     actualizaciones (se crea con `npx tauri signer generate -w <archivo fuera del repo>`; su parte pública va
+     en `tauri.conf.json`). **Obligatorios**: sin ellos el workflow se detiene. Si pierdes la clave o su
+     contraseña, las instalaciones existentes no podrán actualizarse solas: habría que entregar un instalador
+     nuevo a mano.
+   - Opcionales, para firmar el `.exe` y el instalador con tu certificado de firma de código:
+     `WINDOWS_CERTIFICATE` (el .pfx en base64: `[Convert]::ToBase64String([IO.File]::ReadAllBytes("cert.pfx"))`)
+     y `WINDOWS_CERTIFICATE_PASSWORD`. Sin ellos se construye igual **sin firmar** (Windows SmartScreen avisará
+     al instalar) y el resumen del job lo dice.
+4. Sube la etiqueta: `git tag v1.0.0 && git push origin v1.0.0`. El workflow `Publicar versión` construye en
+   Windows, firma si hay certificado, genera `latest.json` y deja un **Release en borrador** con el instalador
+   y las notas. Para probar el flujo usa `v1.0.0-rc.1` (queda como pre-lanzamiento en borrador).
+5. Revisa el borrador y publícalo. Las instalaciones existentes ven la versión nueva a través de
+   `releases/latest/download/latest.json`.
+
+El instalador (NSIS, perMachine, en español) muestra el contrato de uso (`docs/licencia-de-uso.txt`, un texto
+base que debe revisar el dueño) y crea un acceso directo en el escritorio y en el menú Inicio. El
+desinstalador **no borra tus datos**, salvo que marques la casilla "Borrar también mis datos".
+
+## Dónde están los datos del cliente y cómo cambiar de computador
+
+Todo vive en `%APPDATA%\cl.chups.pos\` (por ejemplo `C:\Users\<usuario>\AppData\Roaming\cl.chups.pos`):
+
+| Qué | Dónde |
+| --- | --- |
+| La base de datos | `chups-pos.db` (con `-wal` y `-shm` mientras la app está abierta) |
+| Respaldos automáticos y manuales | `Respaldos\` (o la carpeta elegida en Configuración > Datos y respaldos) |
+| Inicio de la prueba | `prueba.dat` |
+| Registro de errores | `Registros\` |
+| Boletas y reportes en PDF o Excel | `Documentos\CHUPS POS\` |
+
+**Cambiar a otro PC** (o reinstalar Windows): 1) en el computador viejo, Configuración > Datos y respaldos >
+"Respaldar ahora" (o "Respaldar en…" a un pendrive); 2) instala CHUPS POS en el nuevo; 3) pídele al vendedor
+una **licencia nueva** para ese equipo con su código de solicitud (la licencia está atada al computador: la
+base copiada no activa la licencia del otro); 4) en el nuevo, Configuración > Datos y respaldos >
+"Restaurar un respaldo…" y elige el archivo (pide el PIN si hay uno). El asistente de primer arranque no
+aparece en un equipo que ya tiene datos restaurados.
+
 ## Desarrollo
 
 Requisitos: Node 22, Rust estable y, en Windows, las
@@ -349,6 +461,7 @@ Requisitos: Node 22, Rust estable y, en Windows, las
 npm install
 npm run tauri dev        # app en modo desarrollo
 cargo test --workspace   # tests del modelo
+npm run version:check    # package.json, tauri.conf.json y Cargo.toml en la misma versión
 npm run tauri build      # instalador (.exe NSIS) en target/release/bundle/nsis/
 ```
 

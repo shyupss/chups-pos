@@ -1,5 +1,6 @@
 //! Reglas de negocio. Combinan repositorios y no conocen la interfaz.
 
+pub mod actualizaciones;
 pub mod anulacion;
 pub mod balanza;
 pub mod cantidades;
@@ -15,13 +16,17 @@ pub mod fiados;
 pub mod historial;
 pub mod importacion;
 pub mod impresion;
+pub mod integridad;
 pub mod inventario;
+pub mod licencia;
 pub mod negocio;
+pub mod primer_arranque;
 pub mod productos;
 pub mod proveedores;
 pub mod reportes;
 pub mod respaldos;
 pub mod seguridad;
 pub mod sistema;
+pub mod soporte;
 pub mod turnos;
 pub mod ventas;

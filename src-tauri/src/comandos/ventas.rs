@@ -1,7 +1,7 @@
 use pos_core::servicios::devoluciones::{self, DevolucionRegistrada, ItemDevuelto};
 use pos_core::servicios::historial::{self, DetalleVenta, FiltrosVentas, PaginaVentas};
 use pos_core::servicios::ventas::{self as srv, MedioPago, NuevaVenta, VentaConfirmada};
-use pos_core::servicios::{anulacion, impresion};
+use pos_core::servicios::{anulacion, impresion, licencia};
 use tauri::{AppHandle, State};
 
 use super::{a_texto, ResultadoComando, ResultadoProtegido};
@@ -17,6 +17,9 @@ pub async fn confirmar_venta(
     sobre_limite: Option<bool>,
     pin: Option<String>,
 ) -> ResultadoProtegido<VentaConfirmada> {
+    // En modo consulta no se registran ventas (salvo en el turno que quedó abierto, ver exigir_venta).
+    let ahora = licencia::ahora();
+    licencia::exigir_venta(&estado.pool, &estado.licencia, ahora).await?;
     let r = srv::confirmar_autorizada(
         &estado.pool,
         &estado.pin,
@@ -25,6 +28,8 @@ pub async fn confirmar_venta(
         pin.as_deref(),
     )
     .await?;
+    // El mayor instante visto: atrasar el reloj no devuelve días de prueba.
+    let _ = licencia::registrar_instante(&estado.pool, ahora).await;
     super::avisar_cambios(&app);
     Ok(r)
 }

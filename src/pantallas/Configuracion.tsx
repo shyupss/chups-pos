@@ -10,16 +10,19 @@ import {
   Store,
   Sun,
   Wallet,
+  Wand2,
   type LucideIcon,
 } from "lucide-react";
-import { useEffect, useState, type ReactNode } from "react";
-import { api, type EstadoSistema } from "../api";
+import { useState, type ReactNode } from "react";
+import type { EstadoActualizacion, EstadoLicencia } from "../api";
 import { Ajuste, Columnas, Tarjeta } from "../componentes/Ajustes";
 import type { ModoBarra } from "../componentes/BarraLateral";
 import Boton from "../componentes/Boton";
 import Interruptor from "../componentes/Interruptor";
 import Opciones, { type Opcion } from "../componentes/Opciones";
 import { useConPinRecordado } from "../componentes/PedirPin";
+import AcercaDe from "./configuracion/AcercaDe";
+import LicenciaConfig from "./configuracion/Licencia";
 import RespaldosConfig from "./configuracion/Respaldos";
 import EscanerConfig from "./configuracion/Escaner";
 import ImpresoraConfig from "./configuracion/Impresora";
@@ -33,9 +36,19 @@ interface Props {
   onModoBarra: (modo: ModoBarra) => void;
   /** Cambió la impresora o se probó: la barra lateral vuelve a leer su estado. */
   onCambioImpresora: () => void;
+  /** Estado de la licencia (lo lee App) y el aviso de que cambió al activarla. */
+  licencia: EstadoLicencia | null;
+  onCambioLicencia: (e: EstadoLicencia) => void;
+  /** Vuelve a abrir el asistente de primer arranque. */
+  onAbrirAsistente: () => void;
+  /** Actualizaciones: el estado lo mantiene App (también lo usa la barra lateral). */
+  actualizacion: EstadoActualizacion | null;
+  onActualizacion: (e: EstadoActualizacion) => void;
+  hayTurno: boolean;
+  onInstalando: () => void;
 }
 
-type IdSeccion = "negocio" | "apariencia" | "caja" | "impresora" | "seguridad" | "datos" | "licencia" | "acerca";
+export type IdSeccion = "negocio" | "apariencia" | "caja" | "impresora" | "seguridad" | "datos" | "licencia" | "acerca";
 
 /** El orden de la lista lateral. Una sección futura es una entrada más y su componente. */
 const SECCIONES: { id: IdSeccion; nombre: string; Icono: LucideIcon }[] = [
@@ -52,6 +65,11 @@ const SECCIONES: { id: IdSeccion; nombre: string; Icono: LucideIcon }[] = [
 /** La última sección abierta se recuerda mientras la app está abierta (no se guarda en disco). */
 let ultimaSeccion: IdSeccion = "negocio";
 
+/** Para abrir Configuración en una sección (el aviso de la licencia lleva a Licencia). */
+export function irASeccionConfig(id: IdSeccion) {
+  ultimaSeccion = id;
+}
+
 const TEMAS: { id: Tema; nombre: string; Icono: LucideIcon }[] = [
   { id: "claro", nombre: "Claro", Icono: Sun },
   { id: "oscuro", nombre: "Oscuro", Icono: Moon },
@@ -64,7 +82,18 @@ const MODOS_BARRA: Opcion<ModoBarra>[] = [
   { id: "colapsada", nombre: "Colapsada" },
 ];
 
-export default function Configuracion({ modoBarra, onModoBarra, onCambioImpresora }: Props) {
+export default function Configuracion({
+  modoBarra,
+  onModoBarra,
+  onCambioImpresora,
+  licencia,
+  onCambioLicencia,
+  onAbrirAsistente,
+  actualizacion,
+  onActualizacion,
+  hayTurno,
+  onInstalando,
+}: Props) {
   const [seccion, setSeccionEstado] = useState<IdSeccion>(ultimaSeccion);
   const [tema, setTema] = useTema();
   // El PIN se pide en el primer cambio y se recuerda mientras esta pantalla está abierta.
@@ -89,23 +118,27 @@ export default function Configuracion({ modoBarra, onModoBarra, onCambioImpresor
     ),
     seguridad: <SeguridadConfig conPin={conPin} onPinCambiado={olvidar} />,
     datos: <RespaldosConfig cfg={cfg} />,
-    licencia: (
-      <Columnas
-        izquierda={
-          <Tarjeta titulo="Licencia" ayuda="Activación de la licencia.">
-            <p className="text-tenue">Llega en la fase 8.</p>
-          </Tarjeta>
-        }
+    licencia: <LicenciaConfig estado={licencia} onCambio={onCambioLicencia} />,
+    acerca: (
+      <AcercaDe
+        actualizacion={actualizacion}
+        onActualizacion={onActualizacion}
+        hayTurno={hayTurno}
+        onInstalando={onInstalando}
       />
     ),
-    acerca: <AcercaDe />,
   };
 
   return (
     <div className="flex h-full flex-col px-6 pt-6">
-      <header>
-        <h1 className="text-[22px] font-[650]">Configuración</h1>
-        <p className="mt-0.5 text-tenue">Ajustes del negocio, la caja y el equipo.</p>
+      <header className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-[22px] font-[650]">Configuración</h1>
+          <p className="mt-0.5 text-tenue">Ajustes del negocio, la caja y el equipo.</p>
+        </div>
+        <Boton icono={Wand2} onClick={onAbrirAsistente}>
+          Asistente de configuración
+        </Boton>
       </header>
       {cfg.error && (
         <p role="alert" className="mt-4 rounded-lg bg-peligro-fondo px-4 py-3 text-peligro">
@@ -259,47 +292,6 @@ function CajaYFiados({ cfg }: { cfg: ConfigEditable }) {
               onCambiar={(v) => void cambiar({ fiadoDiasAlerta: Number(v) })}
             />
           </Ajuste>
-        </Tarjeta>
-      }
-    />
-  );
-}
-
-function AcercaDe() {
-  const [estado, setEstado] = useState<EstadoSistema | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    api.estadoSistema().then(setEstado).catch((e) => setError(String(e)));
-  }, []);
-
-  const datos: [string, string | number][] = estado
-    ? [
-        ["Versión", estado.version],
-        ["Esquema de base de datos", `v${estado.versionEsquema}`],
-        ["Arranque del backend", `${estado.msInicio} ms`],
-        ["Productos", estado.totalProductos],
-        ["Archivo de datos", estado.rutaBaseDatos],
-      ]
-    : [];
-  return (
-    <Columnas
-      izquierda={
-        <Tarjeta titulo="Acerca de" ayuda="Datos del sistema, para cuando pidas ayuda.">
-          {error ? (
-            <p className="text-peligro">No se pudo leer el estado del sistema: {error}</p>
-          ) : !estado ? (
-            <p className="text-tenue">Cargando…</p>
-          ) : (
-            <dl className="grid grid-cols-[12rem_1fr] gap-x-4 gap-y-2 tabular-nums">
-              {datos.map(([etiqueta, valor]) => (
-                <div key={etiqueta} className="contents">
-                  <dt className="text-tenue">{etiqueta}</dt>
-                  <dd className="min-w-0 break-all select-text">{valor}</dd>
-                </div>
-              ))}
-            </dl>
-          )}
         </Tarjeta>
       }
     />

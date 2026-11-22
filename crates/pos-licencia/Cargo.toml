@@ -1,0 +1,22 @@
+[package]
+name = "pos-licencia"
+description = "Licencias de CHUPS POS: formato, firma Ed25519, huella del equipo y código de solicitud. Sin Tauri ni red."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+serde.workspace = true
+thiserror.workspace = true
+# Firma de las licencias. La app solo trae la clave pública.
+ed25519-dalek = "2"
+# Huella del equipo y suma de control del código de solicitud (la misma versión que usa ed25519-dalek).
+sha2 = "0.10"
+# Fecha de emisión: se guarda como días desde 1970.
+chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
+# Semilla de la clave privada (solo la herramienta del vendedor la genera).
+getrandom = "0.4"
+
+[target.'cfg(windows)'.dependencies]
+# MachineGuid de Windows, para la huella del equipo.
+winreg = "0.56"

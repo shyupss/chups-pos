@@ -12,10 +12,13 @@ interface Props {
   /** Ventas en espera guardadas: se recuperan al abrir. */
   enEspera: number;
   onAbierta: (turno: Turno) => void;
+  /** Sin licencia después de la prueba no se abre la caja (lo decide Rust; aquí solo se avisa). */
+  bloqueada?: boolean;
+  onIrALicencia?: () => void;
 }
 
 /** Lo que muestra la Caja mientras no hay turno: el monto con que se empieza. Enter abre. */
-export default function AbrirCaja({ sugerido, enEspera, onAbierta }: Props) {
+export default function AbrirCaja({ sugerido, enEspera, onAbierta, bloqueada, onIrALicencia }: Props) {
   const [texto, setTexto] = useState(sugerido !== null ? String(sugerido) : "");
   const [error, setError] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
@@ -93,8 +96,26 @@ export default function AbrirCaja({ sugerido, enEspera, onAbierta }: Props) {
         </p>
 
         {error && <p className="mt-4 rounded-lg bg-peligro-fondo px-3 py-2 text-peligro">{error}</p>}
+        {bloqueada && (
+          <div className="mt-4 flex flex-wrap items-center gap-3 rounded-lg bg-peligro-fondo px-3 py-2 text-peligro">
+            <span className="min-w-0 flex-1">
+              La prueba terminó: para abrir la caja activa la licencia. Tus datos siguen disponibles.
+            </span>
+            {onIrALicencia && (
+              <Boton tamano="chico" onClick={onIrALicencia}>
+                Activar licencia
+              </Boton>
+            )}
+          </div>
+        )}
 
-        <Boton type="submit" variante="primario" atajo="Enter" disabled={enviando} className="mt-6 h-12 w-full text-base">
+        <Boton
+          type="submit"
+          variante="primario"
+          atajo="Enter"
+          disabled={enviando || bloqueada}
+          className="mt-6 h-12 w-full text-base"
+        >
           Abrir caja con {pesos(monto)}
         </Boton>
       </form>

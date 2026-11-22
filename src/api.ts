@@ -193,6 +193,42 @@ export interface EstadoSeguridad {
 }
 
 /**
+ * prueba: los primeros días, con todo. activa: licencia permanente. gracia: 7 días después de la
+ * prueba, con todo y un aviso. consulta: sin licencia después de la gracia; se ve, exporta y
+ * respalda, pero no se abre la caja ni se vende (lo decide Rust).
+ */
+export type ModoLicencia = "prueba" | "activa" | "gracia" | "consulta";
+
+export interface DatosLicencia {
+  id: string;
+  negocio: string;
+  rut: string | null;
+  emitidaEn: string;
+  equipos: number;
+  /** ISO 8601 (UTC). */
+  activadaEn: string | null;
+}
+
+export interface EstadoLicencia {
+  modo: ModoLicencia;
+  /** En prueba, los días que quedan; en gracia, los días de gracia que quedan. */
+  diasRestantes: number | null;
+  diasPrueba: number;
+  inicioPrueba: string;
+  finPrueba: string;
+  finGracia: string;
+  /** El reloj del equipo está más de 48 horas atrás: se avisa y no da días de prueba. */
+  relojAtrasado: boolean;
+  licencia: DatosLicencia | null;
+  /** Hay una licencia guardada que no sirve en este equipo. */
+  errorLicencia: string | null;
+  codigoSolicitud: string;
+  /** Cómo contactar al vendedor (se fija al compilar). */
+  contacto: string;
+  puedeVender: boolean;
+}
+
+/**
  * Error de un comando protegido: falta el PIN, es incorrecto o está bloqueado.
  * Los demás errores llegan como texto. Si el PIN es correcto lo decide siempre Rust.
  */
@@ -904,6 +940,44 @@ export interface InfoRespaldo {
   ultimaVenta: string | null;
 }
 
+export interface EstadoIntegridad {
+  /** La vez anterior no se cerró bien. */
+  cierreBrusco: boolean;
+  /** Lo que dijo la revisión de la base; vacío si está sana (o no hacía falta revisarla). */
+  problemas: string[];
+  /** El respaldo más nuevo que pasa la verificación. */
+  ultimoSano: { nombre: string; ruta: string; bytes: number; fecha: string } | null;
+}
+
+export interface DatosActualizacion {
+  version: string;
+  /** Las notas de la versión (su apartado del CHANGELOG). */
+  notas: string | null;
+  fecha: string | null;
+}
+
+export interface EstadoActualizacion {
+  versionActual: string;
+  disponible: DatosActualizacion | null;
+  /** Segundos desde 1970 de la última búsqueda que llegó al servidor. */
+  ultimaBusqueda: number | null;
+  instalarAlCerrar: boolean;
+}
+
+/** Rust avisa cuando la búsqueda automática encuentra una versión nueva. */
+export function escucharActualizacion(alEncontrar: () => void): () => void {
+  let dejar: (() => void) | null = null;
+  let cancelado = false;
+  void listen("actualizacion-disponible", () => alEncontrar()).then((f) => {
+    if (cancelado) f();
+    else dejar = f;
+  });
+  return () => {
+    cancelado = true;
+    dejar?.();
+  };
+}
+
 /** Rust avisa si un respaldo automático falló (con el mensaje). */
 export function escucharRespaldoFallido(alFallar: (mensaje: string) => void): () => void {
   let dejar: (() => void) | null = null;
@@ -1118,6 +1192,28 @@ export const api = {
   imprimirCierre: (turnoId: number) => invoke<void>("imprimir_cierre", { turnoId }),
   /** Guarda el PDF del cierre y, si `abrir`, lo abre. Devuelve la ruta. */
   guardarCierrePdf: (turnoId: number, abrir: boolean) => invoke<string>("guardar_cierre_pdf", { turnoId, abrir }),
+
+  estadoIntegridad: () => invoke<EstadoIntegridad>("estado_integridad"),
+  /** Restaura el último respaldo sano (guarda antes la base dañada) y reinicia la app. */
+  restaurarUltimoSano: (pin: string | null) => invoke<void>("restaurar_ultimo_sano", { pin }),
+  abrirCarpetaRegistros: () => invoke<void>("abrir_carpeta_registros"),
+  /** Texto para pedir soporte: versión, Windows, licencia (sin la clave), esquema e impresora. */
+  informacionSoporte: () => invoke<string>("informacion_soporte"),
+  estadoActualizacion: () => invoke<EstadoActualizacion>("estado_actualizacion"),
+  /** Busca ahora (sin esperar el día). Falla con un mensaje si no hay internet. */
+  buscarActualizacion: () => invoke<EstadoActualizacion>("buscar_actualizacion"),
+  /** Con un turno abierto: la vista instala sola cuando se cierre. */
+  instalarAlCerrarTurno: (si: boolean) => invoke<EstadoActualizacion>("instalar_al_cerrar_turno", { si }),
+  /** Respalda, descarga la actualización firmada y la instala; la app se cierra. Rust la rechaza con un turno abierto. */
+  instalarActualizacion: () => invoke<void>("instalar_actualizacion"),
+  /** La base está vacía y el asistente de primer arranque no se terminó. */
+  asistentePendiente: () => invoke<boolean>("asistente_pendiente"),
+  terminarAsistente: () => invoke<void>("terminar_asistente"),
+  estadoLicencia: () => invoke<EstadoLicencia>("estado_licencia"),
+  /** El texto pegado o dictado (CHUPS-XXXXX-…). Rust revisa la firma y el equipo. */
+  activarLicencia: (texto: string) => invoke<EstadoLicencia>("activar_licencia", { texto }),
+  /** Elige el archivo .chups-licencia y lo activa; null si se canceló. */
+  cargarArchivoLicencia: () => invoke<EstadoLicencia | null>("cargar_archivo_licencia"),
 
   estadoSeguridad: () => invoke<EstadoSeguridad>("estado_seguridad"),
   /** Devuelve el código de recuperación, que se muestra una sola vez. */

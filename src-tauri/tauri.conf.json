@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "CHUPS POS",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "identifier": "cl.chups.pos",
   "build": {
     "beforeDevCommand": "npm run dev",
@@ -18,7 +18,8 @@
         "height": 800,
         "minWidth": 1024,
         "minHeight": 640,
-        "center": true
+        "center": true,
+        "maximized": true
       }
     ],
     "security": {
@@ -27,7 +28,14 @@
   },
   "bundle": {
     "active": true,
-    "targets": ["nsis"],
+    "targets": [
+      "nsis"
+    ],
+    "publisher": "CHUPS",
+    "copyright": "© 2026 CHUPS. Todos los derechos reservados.",
+    "category": "Business",
+    "shortDescription": "Punto de venta para tu negocio: caja, inventario, fiados y boletas, sin internet.",
+    "longDescription": "CHUPS POS es un punto de venta de escritorio para Windows: caja con lector de códigos, inventario, fiados, boletas en impresora térmica o PDF, reportes y respaldos. Funciona sin internet.",
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
@@ -36,8 +44,33 @@
       "icons/icon.ico"
     ],
     "windows": {
-      "webviewInstallMode": { "type": "embedBootstrapper" },
-      "nsis": { "installMode": "perMachine", "languages": ["Spanish"] }
+      "webviewInstallMode": {
+        "type": "embedBootstrapper"
+      },
+      "nsis": {
+        "installMode": "perMachine",
+        "languages": [
+          "Spanish"
+        ],
+        "displayLanguageSelector": false,
+        "startMenuFolder": "CHUPS POS",
+        "customLanguageFiles": {
+          "Spanish": "nsis/Spanish.nsh"
+        },
+        "installerHooks": "nsis/hooks.nsh"
+      }
+    },
+    "licenseFile": "../docs/licencia-de-uso.txt"
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEQ0Qzg1MzE5MjNGMjY5Q0YKUldUUGFmSWpHVlBJMU8vOHhVd05oZTEwWUhza0R4VlgxaHVEaDZOSVhISWJQU3FYM0ZOKzVPamoK",
+      "endpoints": [
+        "https://github.com/shyupss/chups-pos/releases/latest/download/latest.json"
+      ],
+      "windows": {
+        "installMode": "passive"
+      }
     }
   }
 }

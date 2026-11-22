@@ -3,6 +3,8 @@
 //! Cada comando recibe, valida y delega en un servicio de `pos-core`.
 //! Devuelve solo lo que la pantalla necesita mostrar.
 
+pub mod actualizaciones;
+pub mod asistente;
 pub mod boletas;
 pub mod categorias;
 pub mod clientes;
@@ -12,13 +14,16 @@ pub mod datos;
 pub mod espera;
 pub mod fiados;
 pub mod impresion;
+pub mod integridad;
 pub mod inventario;
+pub mod licencia;
 pub mod negocio;
 pub mod productos;
 pub mod reportes;
 pub mod respaldos;
 pub mod seguridad;
 pub mod sistema;
+pub mod soporte;
 pub mod turnos;
 pub mod ventas;
 
@@ -29,6 +34,7 @@ use serde::Serialize;
 pub type ResultadoComando<T> = Result<T, String>;
 
 pub fn a_texto(e: pos_core::Error) -> String {
+    crate::registro::error_de_comando(&e);
     e.to_string()
 }
 
@@ -62,6 +68,7 @@ pub(crate) fn avisar_cambios(app: &tauri::AppHandle) {
 
 impl From<pos_core::Error> for ErrorComando {
     fn from(e: pos_core::Error) -> Self {
+        crate::registro::error_de_comando(&e);
         match e {
             pos_core::Error::Pin(fallo) => {
                 let (pin, segundos) = match fallo {
