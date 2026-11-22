@@ -30,3 +30,14 @@ tauri-plugin-opener = "2.7"
 tokio = { version = "1", features = ["time"] }
 tauri-plugin-updater = "2"
 serde_json = "1"
+tracing = "0.1"
+tracing-appender = "0.2"
+tracing-subscriber = { version = "0.3", default-features = false, features = ["fmt", "std"] }
+tauri-plugin-single-instance = "2"
+tauri-plugin-window-state = "2"
+
+[dev-dependencies]
+tempfile = "3"
+
+[target."cfg(windows)".dependencies]
+winreg = "0.56"

@@ -72,6 +72,7 @@ pub(crate) fn automatico(app: &AppHandle, siempre: bool) {
         match resultado {
             Ok(()) => *error = None,
             Err(e) => {
+                tracing::error!("el respaldo automático falló: {e}");
                 let mensaje = format!("No se pudo hacer el respaldo automático: {e}");
                 *error = Some(mensaje.clone());
                 let _ = app.emit(EVENTO_FALLO, mensaje);
@@ -230,7 +231,16 @@ pub async fn restaurar_respaldo(
     )
     .await?;
 
-    // Desde aquí la app se reinicia pase lo que pase: sin pool no puede seguir.
+    reemplazar_y_reiniciar(&app, &estado, nueva).await
+}
+
+/// Cierra la base, pone `nueva` en su lugar y reinicia la app. Desde aquí la app se reinicia pase
+/// lo que pase: sin pool no puede seguir. Lo usan restaurar un respaldo y restaurar el último sano.
+pub(crate) async fn reemplazar_y_reiniciar(
+    app: &AppHandle,
+    estado: &EstadoApp,
+    nueva: PathBuf,
+) -> ! {
     estado.lectura.close().await;
     estado.pool.close().await;
     let destino = estado.ruta_db.clone();

@@ -940,6 +940,15 @@ export interface InfoRespaldo {
   ultimaVenta: string | null;
 }
 
+export interface EstadoIntegridad {
+  /** La vez anterior no se cerró bien. */
+  cierreBrusco: boolean;
+  /** Lo que dijo la revisión de la base; vacío si está sana (o no hacía falta revisarla). */
+  problemas: string[];
+  /** El respaldo más nuevo que pasa la verificación. */
+  ultimoSano: { nombre: string; ruta: string; bytes: number; fecha: string } | null;
+}
+
 export interface DatosActualizacion {
   version: string;
   /** Las notas de la versión (su apartado del CHANGELOG). */
@@ -1184,6 +1193,12 @@ export const api = {
   /** Guarda el PDF del cierre y, si `abrir`, lo abre. Devuelve la ruta. */
   guardarCierrePdf: (turnoId: number, abrir: boolean) => invoke<string>("guardar_cierre_pdf", { turnoId, abrir }),
 
+  estadoIntegridad: () => invoke<EstadoIntegridad>("estado_integridad"),
+  /** Restaura el último respaldo sano (guarda antes la base dañada) y reinicia la app. */
+  restaurarUltimoSano: (pin: string | null) => invoke<void>("restaurar_ultimo_sano", { pin }),
+  abrirCarpetaRegistros: () => invoke<void>("abrir_carpeta_registros"),
+  /** Texto para pedir soporte: versión, Windows, licencia (sin la clave), esquema e impresora. */
+  informacionSoporte: () => invoke<string>("informacion_soporte"),
   estadoActualizacion: () => invoke<EstadoActualizacion>("estado_actualizacion"),
   /** Busca ahora (sin esperar el día). Falla con un mensaje si no hay internet. */
   buscarActualizacion: () => invoke<EstadoActualizacion>("buscar_actualizacion"),

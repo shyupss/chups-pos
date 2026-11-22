@@ -11,6 +11,7 @@ import {
   type EstadoLicencia,
 } from "./api";
 import Dialogo from "./componentes/Dialogo";
+import AvisoIntegridad from "./componentes/AvisoIntegridad";
 import AvisoLicencia from "./componentes/AvisoLicencia";
 import BarraLateral, { type ModoBarra } from "./componentes/BarraLateral";
 import Caja from "./pantallas/Caja";
@@ -238,6 +239,7 @@ export default function App() {
 
   return (
     <ProveedorPin>
+      <AvisoIntegridad />
       <div className="flex h-full">
         <BarraLateral
           actual={seccion}

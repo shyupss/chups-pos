@@ -1,4 +1,4 @@
-import { Download, RefreshCw } from "lucide-react";
+import { Copy, Download, FolderOpen, RefreshCw } from "lucide-react";
 import { useEffect, useState } from "react";
 import { api, textoError, type EstadoActualizacion, type EstadoSistema } from "../../api";
 import { Columnas, Tarjeta } from "../../componentes/Ajustes";
@@ -60,6 +60,7 @@ export default function AcercaDe({ actualizacion, onActualizacion, hayTurno, onI
   const [error, setError] = useState<string | null>(null);
   const [buscando, setBuscando] = useState(false);
   const [mensaje, setMensaje] = useState<{ error: boolean; texto: string } | null>(null);
+  const [soporte, setSoporte] = useState<{ error: boolean; texto: string } | null>(null);
 
   useEffect(() => {
     api.estadoSistema().then(setEstado).catch((e) => setError(String(e)));
@@ -96,6 +97,25 @@ export default function AcercaDe({ actualizacion, onActualizacion, hayTurno, onI
       await api.instalarActualizacion();
     } catch (e) {
       setMensaje({ error: true, texto: textoError(e) });
+    }
+  };
+
+  const copiarSoporte = async () => {
+    setSoporte(null);
+    try {
+      await navigator.clipboard.writeText(await api.informacionSoporte());
+      setSoporte({ error: false, texto: "Información copiada: pégala en el mensaje a soporte." });
+    } catch (e) {
+      setSoporte({ error: true, texto: textoError(e) });
+    }
+  };
+
+  const abrirRegistros = async () => {
+    setSoporte(null);
+    try {
+      await api.abrirCarpetaRegistros();
+    } catch (e) {
+      setSoporte({ error: true, texto: textoError(e) });
     }
   };
 
@@ -188,6 +208,24 @@ export default function AcercaDe({ actualizacion, onActualizacion, hayTurno, onI
                   </div>
                 ))}
               </dl>
+            )}
+          </Tarjeta>
+          <Tarjeta
+            titulo="Soporte"
+            ayuda="Si algo falla, copia esta información y mándala junto con el problema. No lleva datos de tus clientes, ni tu PIN ni la clave de la licencia."
+          >
+            <div className="flex flex-wrap gap-2">
+              <Boton icono={Copy} onClick={() => void copiarSoporte()}>
+                Copiar información para soporte
+              </Boton>
+              <Boton icono={FolderOpen} onClick={() => void abrirRegistros()}>
+                Abrir carpeta de registros
+              </Boton>
+            </div>
+            {soporte && (
+              <p role={soporte.error ? "alert" : "status"} className={soporte.error ? "text-peligro" : "text-exito"}>
+                {soporte.texto}
+              </p>
             )}
           </Tarjeta>
           {notasActuales && estado && (
