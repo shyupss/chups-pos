@@ -16,6 +16,7 @@ pub mod historial;
 pub mod importacion;
 pub mod impresion;
 pub mod inventario;
+pub mod licencia;
 pub mod negocio;
 pub mod productos;
 pub mod proveedores;

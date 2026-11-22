@@ -13,13 +13,14 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
-import { api, type EstadoSistema } from "../api";
+import { api, type EstadoLicencia, type EstadoSistema } from "../api";
 import { Ajuste, Columnas, Tarjeta } from "../componentes/Ajustes";
 import type { ModoBarra } from "../componentes/BarraLateral";
 import Boton from "../componentes/Boton";
 import Interruptor from "../componentes/Interruptor";
 import Opciones, { type Opcion } from "../componentes/Opciones";
 import { useConPinRecordado } from "../componentes/PedirPin";
+import LicenciaConfig from "./configuracion/Licencia";
 import RespaldosConfig from "./configuracion/Respaldos";
 import EscanerConfig from "./configuracion/Escaner";
 import ImpresoraConfig from "./configuracion/Impresora";
@@ -33,9 +34,12 @@ interface Props {
   onModoBarra: (modo: ModoBarra) => void;
   /** Cambió la impresora o se probó: la barra lateral vuelve a leer su estado. */
   onCambioImpresora: () => void;
+  /** Estado de la licencia (lo lee App) y el aviso de que cambió al activarla. */
+  licencia: EstadoLicencia | null;
+  onCambioLicencia: (e: EstadoLicencia) => void;
 }
 
-type IdSeccion = "negocio" | "apariencia" | "caja" | "impresora" | "seguridad" | "datos" | "licencia" | "acerca";
+export type IdSeccion = "negocio" | "apariencia" | "caja" | "impresora" | "seguridad" | "datos" | "licencia" | "acerca";
 
 /** El orden de la lista lateral. Una sección futura es una entrada más y su componente. */
 const SECCIONES: { id: IdSeccion; nombre: string; Icono: LucideIcon }[] = [
@@ -52,6 +56,11 @@ const SECCIONES: { id: IdSeccion; nombre: string; Icono: LucideIcon }[] = [
 /** La última sección abierta se recuerda mientras la app está abierta (no se guarda en disco). */
 let ultimaSeccion: IdSeccion = "negocio";
 
+/** Para abrir Configuración en una sección (el aviso de la licencia lleva a Licencia). */
+export function irASeccionConfig(id: IdSeccion) {
+  ultimaSeccion = id;
+}
+
 const TEMAS: { id: Tema; nombre: string; Icono: LucideIcon }[] = [
   { id: "claro", nombre: "Claro", Icono: Sun },
   { id: "oscuro", nombre: "Oscuro", Icono: Moon },
@@ -64,7 +73,7 @@ const MODOS_BARRA: Opcion<ModoBarra>[] = [
   { id: "colapsada", nombre: "Colapsada" },
 ];
 
-export default function Configuracion({ modoBarra, onModoBarra, onCambioImpresora }: Props) {
+export default function Configuracion({ modoBarra, onModoBarra, onCambioImpresora, licencia, onCambioLicencia }: Props) {
   const [seccion, setSeccionEstado] = useState<IdSeccion>(ultimaSeccion);
   const [tema, setTema] = useTema();
   // El PIN se pide en el primer cambio y se recuerda mientras esta pantalla está abierta.
@@ -89,15 +98,7 @@ export default function Configuracion({ modoBarra, onModoBarra, onCambioImpresor
     ),
     seguridad: <SeguridadConfig conPin={conPin} onPinCambiado={olvidar} />,
     datos: <RespaldosConfig cfg={cfg} />,
-    licencia: (
-      <Columnas
-        izquierda={
-          <Tarjeta titulo="Licencia" ayuda="Activación de la licencia.">
-            <p className="text-tenue">Llega en la fase 8.</p>
-          </Tarjeta>
-        }
-      />
-    ),
+    licencia: <LicenciaConfig estado={licencia} onCambio={onCambioLicencia} />,
     acerca: <AcercaDe />,
   };
 

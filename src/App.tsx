@@ -1,11 +1,12 @@
 import Boton from "./componentes/Boton";
 import { useCallback, useEffect, useState } from "react";
-import { api, escucharRespaldoFallido, type EstadoCaja, type EstadoConfigurada } from "./api";
+import { api, escucharRespaldoFallido, type EstadoCaja, type EstadoConfigurada, type EstadoLicencia } from "./api";
+import AvisoLicencia from "./componentes/AvisoLicencia";
 import BarraLateral, { type ModoBarra } from "./componentes/BarraLateral";
 import Caja from "./pantallas/Caja";
 import { ProveedorPin } from "./componentes/PedirPin";
 import { escucharCambioStock } from "./eventos";
-import Configuracion from "./pantallas/Configuracion";
+import Configuracion, { irASeccionConfig } from "./pantallas/Configuracion";
 import Inventario, { type PestanaInventario } from "./pantallas/Inventario";
 import Productos from "./pantallas/Productos";
 import Fiados from "./pantallas/Fiados";
@@ -51,6 +52,28 @@ export default function App() {
     const intervalo = setInterval(refrescarCaja, 60_000);
     return () => clearInterval(intervalo);
   }, [refrescarCaja]);
+  // Licencia: el estado lo decide Rust; aquí solo se muestra (barra lateral, aviso y Abrir caja).
+  // Se relee cada minuto, porque los días de prueba cambian solos.
+  const [licencia, setLicencia] = useState<EstadoLicencia | null>(null);
+  const refrescarLicencia = useCallback(() => {
+    api
+      .estadoLicencia()
+      .then(setLicencia)
+      .catch(() => {});
+  }, []);
+  useEffect(() => {
+    refrescarLicencia();
+    const intervalo = setInterval(refrescarLicencia, 60_000);
+    return () => clearInterval(intervalo);
+  }, [refrescarLicencia]);
+  // Abrir Configuración en Licencia (desde el aviso, la barra o Abrir caja). La clave la vuelve a
+  // montar si ya estaba abierta en otra sección.
+  const [claveConfig, setClaveConfig] = useState(0);
+  const irALicencia = useCallback(() => {
+    irASeccionConfig("licencia");
+    setClaveConfig((k) => k + 1);
+    setSeccion("configuracion");
+  }, []);
   // Inventario: pestaña, producto filtrado en Movimientos y la insignia de productos bajo el mínimo,
   // que se vuelve a contar cuando alguien avisa que cambió el stock (sin sondeo).
   const [pestanaInventario, setPestanaInventario] = useState<PestanaInventario>("stock");
@@ -142,6 +165,8 @@ export default function App() {
           onAlternar={() => cambiarModoBarra(expandida ? "colapsada" : "expandida")}
           impresora={impresora}
           turno={caja === null ? undefined : caja.turno}
+          licencia={licencia}
+          onLicencia={irALicencia}
           insignias={{
             ...(enEspera > 0
               ? { caja: { valor: enEspera, descripcion: enEspera === 1 ? "1 venta en espera" : `${enEspera} ventas en espera` } }
@@ -156,7 +181,9 @@ export default function App() {
               : {}),
           }}
         />
-        <main className="min-w-0 flex-1">
+        <main className="flex min-w-0 flex-1 flex-col">
+          <AvisoLicencia estado={licencia} onActivar={irALicencia} />
+          <div className="min-h-0 flex-1">
           {/* Caja queda montada siempre: cambiar de sección no borra el carrito. */}
           <div className={seccion === "caja" ? "h-full" : "hidden"}>
             <Caja
@@ -166,6 +193,8 @@ export default function App() {
               onImpresion={refrescarImpresora}
               caja={caja}
               onCambioCaja={refrescarCaja}
+              puedeVender={licencia?.puedeVender ?? true}
+              onIrALicencia={irALicencia}
             />
           </div>
           {seccion === "productos" && (
@@ -205,12 +234,16 @@ export default function App() {
           )}
           {seccion === "configuracion" && (
             <Configuracion
+              key={claveConfig}
               modoBarra={modoBarra}
               onModoBarra={cambiarModoBarra}
               onCambioImpresora={refrescarImpresora}
+              licencia={licencia}
+              onCambioLicencia={setLicencia}
             />
           )}
           {pendiente && <Proximamente seccion={pendiente} />}
+          </div>
         </main>
         {respaldoFallido && (
           <div role="alert" className="fixed right-4 bottom-4 z-30 max-w-md tarjeta p-4 shadow-s3">

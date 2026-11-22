@@ -16,6 +16,7 @@ tauri-build = { version = "2", features = [] }
 [dependencies]
 pos-core.workspace = true
 pos-hardware.workspace = true
+pos-licencia.workspace = true
 serde.workspace = true
 sqlx.workspace = true
 tauri = { version = "2", features = [] }

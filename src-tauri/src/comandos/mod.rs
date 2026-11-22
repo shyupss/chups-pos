@@ -13,6 +13,7 @@ pub mod espera;
 pub mod fiados;
 pub mod impresion;
 pub mod inventario;
+pub mod licencia;
 pub mod negocio;
 pub mod productos;
 pub mod reportes;

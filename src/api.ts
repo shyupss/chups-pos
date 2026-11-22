@@ -193,6 +193,42 @@ export interface EstadoSeguridad {
 }
 
 /**
+ * prueba: los primeros días, con todo. activa: licencia permanente. gracia: 7 días después de la
+ * prueba, con todo y un aviso. consulta: sin licencia después de la gracia; se ve, exporta y
+ * respalda, pero no se abre la caja ni se vende (lo decide Rust).
+ */
+export type ModoLicencia = "prueba" | "activa" | "gracia" | "consulta";
+
+export interface DatosLicencia {
+  id: string;
+  negocio: string;
+  rut: string | null;
+  emitidaEn: string;
+  equipos: number;
+  /** ISO 8601 (UTC). */
+  activadaEn: string | null;
+}
+
+export interface EstadoLicencia {
+  modo: ModoLicencia;
+  /** En prueba, los días que quedan; en gracia, los días de gracia que quedan. */
+  diasRestantes: number | null;
+  diasPrueba: number;
+  inicioPrueba: string;
+  finPrueba: string;
+  finGracia: string;
+  /** El reloj del equipo está más de 48 horas atrás: se avisa y no da días de prueba. */
+  relojAtrasado: boolean;
+  licencia: DatosLicencia | null;
+  /** Hay una licencia guardada que no sirve en este equipo. */
+  errorLicencia: string | null;
+  codigoSolicitud: string;
+  /** Cómo contactar al vendedor (se fija al compilar). */
+  contacto: string;
+  puedeVender: boolean;
+}
+
+/**
  * Error de un comando protegido: falta el PIN, es incorrecto o está bloqueado.
  * Los demás errores llegan como texto. Si el PIN es correcto lo decide siempre Rust.
  */
@@ -1118,6 +1154,12 @@ export const api = {
   imprimirCierre: (turnoId: number) => invoke<void>("imprimir_cierre", { turnoId }),
   /** Guarda el PDF del cierre y, si `abrir`, lo abre. Devuelve la ruta. */
   guardarCierrePdf: (turnoId: number, abrir: boolean) => invoke<string>("guardar_cierre_pdf", { turnoId, abrir }),
+
+  estadoLicencia: () => invoke<EstadoLicencia>("estado_licencia"),
+  /** El texto pegado o dictado (CHUPS-XXXXX-…). Rust revisa la firma y el equipo. */
+  activarLicencia: (texto: string) => invoke<EstadoLicencia>("activar_licencia", { texto }),
+  /** Elige el archivo .chups-licencia y lo activa; null si se canceló. */
+  cargarArchivoLicencia: () => invoke<EstadoLicencia | null>("cargar_archivo_licencia"),
 
   estadoSeguridad: () => invoke<EstadoSeguridad>("estado_seguridad"),
   /** Devuelve el código de recuperación, que se muestra una sola vez. */

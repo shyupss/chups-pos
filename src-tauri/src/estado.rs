@@ -21,4 +21,6 @@ pub struct EstadoApp {
     pub carpeta_respaldos: PathBuf,
     /// El último respaldo automático que falló (o una restauración que no se pudo hacer).
     pub error_respaldo: Mutex<Option<String>>,
+    /// Clave pública, huella de este equipo y archivo de la prueba, para la licencia.
+    pub licencia: pos_core::servicios::licencia::Contexto,
 }

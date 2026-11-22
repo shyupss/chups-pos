@@ -25,6 +25,11 @@ pub enum Error {
     /// La interfaz lo distingue de los demás errores para volver a pedir el PIN.
     #[error("{0}")]
     Pin(FalloPin),
+
+    /// La licencia no permite la acción (la prueba terminó) o la que se quiso activar no sirve.
+    /// El mensaje dice qué hacer.
+    #[error("{0}")]
+    Licencia(String),
 }
 
 /// Por qué no se aceptó el PIN de administrador (o el código de recuperación).

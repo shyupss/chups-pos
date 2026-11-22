@@ -379,3 +379,29 @@ impl Solicitud {
         format!("{}.{}.{}", self.version.0, self.version.1, self.version.2)
     }
 }
+
+/// Contenido del archivo con el inicio de la prueba (va en la carpeta de datos, aparte de la
+/// base, para que reinstalar no la reinicie). Lleva una suma de control ligada al equipo: un
+/// archivo editado o copiado de otro equipo se ignora.
+pub fn marca_prueba(inicio: i64, huella: &Huella) -> String {
+    format!("v1:{inicio}:{}\n", suma_prueba(inicio, huella))
+}
+
+/// El inicio de la prueba guardado en el archivo, si es válido para este equipo.
+pub fn leer_marca_prueba(texto: &str, huella: &Huella) -> Option<i64> {
+    let mut partes = texto.trim().split(':');
+    let (version, inicio, suma) = (partes.next()?, partes.next()?, partes.next()?);
+    let inicio: i64 = inicio.parse().ok()?;
+    (version == "v1" && suma == suma_prueba(inicio, huella)).then_some(inicio)
+}
+
+fn suma_prueba(inicio: i64, huella: &Huella) -> String {
+    let mut h = Sha256::new();
+    h.update(b"chups-prueba-v1|");
+    h.update(inicio.to_string().as_bytes());
+    h.update(huella.0);
+    h.finalize()[..8]
+        .iter()
+        .map(|b| format!("{b:02x}"))
+        .collect()
+}

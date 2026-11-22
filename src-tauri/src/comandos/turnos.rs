@@ -1,6 +1,7 @@
 //! Turnos de caja: abrir, ingresos y retiros, resumen y cierre (con su impresión y PDF).
 
 use pos_core::servicios::impresion;
+use pos_core::servicios::licencia;
 use pos_core::servicios::turnos::{
     self as srv, Conteo, EstadoCaja, MovimientoCaja, ResumenTurno, TipoMovimiento, Turno,
     TurnoBreve,
@@ -21,6 +22,10 @@ pub async fn abrir_turno(
     estado: State<'_, EstadoApp>,
     monto_inicial: i64,
 ) -> ResultadoComando<Turno> {
+    // Después de la prueba y la gracia, sin licencia no se abre un turno nuevo.
+    licencia::exigir_abrir_turno(&estado.pool, &estado.licencia, licencia::ahora())
+        .await
+        .map_err(a_texto)?;
     srv::abrir(&estado.pool, monto_inicial)
         .await
         .map_err(a_texto)

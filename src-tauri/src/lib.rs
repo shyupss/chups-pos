@@ -14,6 +14,16 @@ use tauri::Manager;
 use estado::EstadoApp;
 
 const NOMBRE_ARCHIVO_DB: &str = "chups-pos.db";
+/// Inicio de la prueba, aparte de la base: reinstalar o borrar la base no la reinicia.
+const ARCHIVO_PRUEBA: &str = "prueba.dat";
+/// Cómo contactar al vendedor, para Configuración > Licencia. Se fija al compilar con la
+/// variable de entorno CHUPS_CONTACTO_VENDEDOR.
+const CONTACTO_VENDEDOR: &str = match option_env!("CHUPS_CONTACTO_VENDEDOR") {
+    Some(c) => c,
+    None => {
+        "Envía el código de solicitud a quien te vendió CHUPS POS y te responderá con la licencia."
+    }
+};
 /// Si restaurar un respaldo falla después de cerrar la base, el motivo queda aquí para mostrarlo
 /// al volver a abrir la app (la base anterior queda intacta).
 pub(crate) const ARCHIVO_RESTAURACION_FALLIDA: &str = "restauracion-fallida.txt";
@@ -45,6 +55,25 @@ pub fn run() {
                 .join("CHUPS POS")
                 .join("Boletas");
 
+            // Huella del equipo para la licencia. Si Windows no deja leer su identificador, se usa
+            // solo el nombre del equipo: la licencia se puede atar igual.
+            let huella = pos_licencia::huella_equipo().unwrap_or_else(|_| {
+                pos_licencia::Huella::de("", &std::env::var("COMPUTERNAME").unwrap_or_default())
+            });
+            let licencia = pos_core::servicios::licencia::Contexto {
+                clave_publica: pos_licencia::CLAVE_PUBLICA,
+                huella,
+                archivo_prueba: Some(carpeta.join(ARCHIVO_PRUEBA)),
+                version: env!("CARGO_PKG_VERSION").to_owned(),
+                contacto: CONTACTO_VENDEDOR.to_owned(),
+            };
+            // Fija el inicio de la prueba (primer arranque) y anota el instante para el reloj.
+            tauri::async_runtime::block_on(pos_core::servicios::licencia::iniciar(
+                &pool,
+                &licencia,
+                pos_core::servicios::licencia::ahora(),
+            ))?;
+
             app.manage(EstadoApp {
                 pool,
                 lectura,
@@ -55,6 +84,7 @@ pub fn run() {
                 pin: pos_core::servicios::seguridad::ControlPin::new(),
                 carpeta_respaldos: carpeta.join("Respaldos"),
                 error_respaldo: std::sync::Mutex::new(restauracion_fallida),
+                licencia,
             });
 
             // Respaldo automático si el último tiene más de 24 horas (en segundo plano).
@@ -170,6 +200,9 @@ pub fn run() {
             comandos::fiados::imprimir_pago,
             comandos::fiados::imprimir_estado_cuenta,
             comandos::fiados::guardar_estado_cuenta_pdf,
+            comandos::licencia::estado_licencia,
+            comandos::licencia::activar_licencia,
+            comandos::licencia::cargar_archivo_licencia,
         ])
         .run(tauri::generate_context!())
         .expect("error al iniciar CHUPS POS");
