@@ -10,6 +10,7 @@ import {
   Store,
   Sun,
   Wallet,
+  Wand2,
   type LucideIcon,
 } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
@@ -37,6 +38,8 @@ interface Props {
   /** Estado de la licencia (lo lee App) y el aviso de que cambió al activarla. */
   licencia: EstadoLicencia | null;
   onCambioLicencia: (e: EstadoLicencia) => void;
+  /** Vuelve a abrir el asistente de primer arranque. */
+  onAbrirAsistente: () => void;
 }
 
 export type IdSeccion = "negocio" | "apariencia" | "caja" | "impresora" | "seguridad" | "datos" | "licencia" | "acerca";
@@ -73,7 +76,14 @@ const MODOS_BARRA: Opcion<ModoBarra>[] = [
   { id: "colapsada", nombre: "Colapsada" },
 ];
 
-export default function Configuracion({ modoBarra, onModoBarra, onCambioImpresora, licencia, onCambioLicencia }: Props) {
+export default function Configuracion({
+  modoBarra,
+  onModoBarra,
+  onCambioImpresora,
+  licencia,
+  onCambioLicencia,
+  onAbrirAsistente,
+}: Props) {
   const [seccion, setSeccionEstado] = useState<IdSeccion>(ultimaSeccion);
   const [tema, setTema] = useTema();
   // El PIN se pide en el primer cambio y se recuerda mientras esta pantalla está abierta.
@@ -104,9 +114,14 @@ export default function Configuracion({ modoBarra, onModoBarra, onCambioImpresor
 
   return (
     <div className="flex h-full flex-col px-6 pt-6">
-      <header>
-        <h1 className="text-[22px] font-[650]">Configuración</h1>
-        <p className="mt-0.5 text-tenue">Ajustes del negocio, la caja y el equipo.</p>
+      <header className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-[22px] font-[650]">Configuración</h1>
+          <p className="mt-0.5 text-tenue">Ajustes del negocio, la caja y el equipo.</p>
+        </div>
+        <Boton icono={Wand2} onClick={onAbrirAsistente}>
+          Asistente de configuración
+        </Boton>
       </header>
       {cfg.error && (
         <p role="alert" className="mt-4 rounded-lg bg-peligro-fondo px-4 py-3 text-peligro">

@@ -200,6 +200,8 @@ pub fn run() {
             comandos::fiados::imprimir_pago,
             comandos::fiados::imprimir_estado_cuenta,
             comandos::fiados::guardar_estado_cuenta_pdf,
+            comandos::asistente::asistente_pendiente,
+            comandos::asistente::terminar_asistente,
             comandos::licencia::estado_licencia,
             comandos::licencia::activar_licencia,
             comandos::licencia::cargar_archivo_licencia,

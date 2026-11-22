@@ -18,6 +18,7 @@ pub mod impresion;
 pub mod inventario;
 pub mod licencia;
 pub mod negocio;
+pub mod primer_arranque;
 pub mod productos;
 pub mod proveedores;
 pub mod reportes;

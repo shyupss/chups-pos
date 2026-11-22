@@ -1155,6 +1155,9 @@ export const api = {
   /** Guarda el PDF del cierre y, si `abrir`, lo abre. Devuelve la ruta. */
   guardarCierrePdf: (turnoId: number, abrir: boolean) => invoke<string>("guardar_cierre_pdf", { turnoId, abrir }),
 
+  /** La base está vacía y el asistente de primer arranque no se terminó. */
+  asistentePendiente: () => invoke<boolean>("asistente_pendiente"),
+  terminarAsistente: () => invoke<void>("terminar_asistente"),
   estadoLicencia: () => invoke<EstadoLicencia>("estado_licencia"),
   /** El texto pegado o dictado (CHUPS-XXXXX-…). Rust revisa la firma y el equipo. */
   activarLicencia: (texto: string) => invoke<EstadoLicencia>("activar_licencia", { texto }),

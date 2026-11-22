@@ -6,6 +6,7 @@ import BarraLateral, { type ModoBarra } from "./componentes/BarraLateral";
 import Caja from "./pantallas/Caja";
 import { ProveedorPin } from "./componentes/PedirPin";
 import { escucharCambioStock } from "./eventos";
+import Asistente, { type DestinoAsistente } from "./pantallas/Asistente";
 import Configuracion, { irASeccionConfig } from "./pantallas/Configuracion";
 import Inventario, { type PestanaInventario } from "./pantallas/Inventario";
 import Productos from "./pantallas/Productos";
@@ -66,6 +67,16 @@ export default function App() {
     const intervalo = setInterval(refrescarLicencia, 60_000);
     return () => clearInterval(intervalo);
   }, [refrescarLicencia]);
+  // Asistente de primer arranque: null mientras se pregunta a Rust; true con la base vacía (o si se
+  // abre a mano desde Configuración); false cuando ya no hace falta.
+  const [asistente, setAsistente] = useState<boolean | null>(null);
+  const [asistenteReabierto, setAsistenteReabierto] = useState(false);
+  useEffect(() => {
+    api
+      .asistentePendiente()
+      .then(setAsistente)
+      .catch(() => setAsistente(false));
+  }, []);
   // Abrir Configuración en Licencia (desde el aviso, la barra o Abrir caja). La clave la vuelve a
   // montar si ya estaba abierta en otra sección.
   const [claveConfig, setClaveConfig] = useState(0);
@@ -152,8 +163,35 @@ export default function App() {
     guardarPreferencia(CLAVE_BARRA, modo);
   }, []);
 
+  const terminarAsistente = useCallback(
+    (destino: DestinoAsistente) => {
+      setAsistente(false);
+      setAsistenteReabierto(false);
+      refrescarImpresora();
+      refrescarCaja();
+      refrescarLicencia();
+      if (destino === "producto-nuevo") {
+        setCodigoNuevo("");
+        setSeccion("productos");
+      } else {
+        setSeccion(destino === "productos" ? "productos" : "caja");
+      }
+    },
+    [refrescarImpresora, refrescarCaja, refrescarLicencia],
+  );
+
   const expandida = modoBarra === "expandida" || (modoBarra === "auto" && seccion !== "caja");
   const pendiente = SECCIONES.find((s) => s.id === seccion && s.pendiente);
+
+  // Al abrir con la base vacía, el asistente ocupa el lugar de la Caja (y de todo lo demás).
+  if (asistente === null) return <div className="h-full bg-fondo" />;
+  if (asistente) {
+    return (
+      <ProveedorPin>
+        <Asistente reabierto={asistenteReabierto} onCambioImpresora={refrescarImpresora} onTerminar={terminarAsistente} />
+      </ProveedorPin>
+    );
+  }
 
   return (
     <ProveedorPin>
@@ -240,6 +278,10 @@ export default function App() {
               onCambioImpresora={refrescarImpresora}
               licencia={licencia}
               onCambioLicencia={setLicencia}
+              onAbrirAsistente={() => {
+                setAsistenteReabierto(true);
+                setAsistente(true);
+              }}
             />
           )}
           {pendiente && <Proximamente seccion={pendiente} />}

@@ -81,7 +81,7 @@ export default function EscanerConfig({ cfg }: { cfg: ConfigEditable }) {
 }
 
 /** Mide el tiempo entre teclas para saber si el código lo escribió un lector o una persona. */
-function PruebaEscaner() {
+export function PruebaEscaner() {
   const [texto, setTexto] = useState("");
   const [lectura, setLectura] = useState<Lectura | null>(null);
   const tiempos = useRef<number[]>([]);

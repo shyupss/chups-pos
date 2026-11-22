@@ -232,7 +232,7 @@ function MensajeError({ texto }: { texto: string | null }) {
   ) : null;
 }
 
-function CrearPin({ onCreado }: { onCreado: (codigo: string) => void }) {
+export function CrearPin({ onCreado }: { onCreado: (codigo: string) => void }) {
   const p = useNuevoPin();
   const [error, setError] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
@@ -382,7 +382,7 @@ function RecuperarPin({ onCancelar, onRecuperado }: { onCancelar: () => void; on
 }
 
 /** El código de recuperación se ve una sola vez: al crear el PIN o al usar el anterior. */
-function CodigoRecuperacion({ codigo, onCerrar }: { codigo: string; onCerrar: () => void }) {
+export function CodigoRecuperacion({ codigo, onCerrar }: { codigo: string; onCerrar: () => void }) {
   return (
     <Dialogo titulo="Código de recuperación" onCerrar={onCerrar}>
       <p className="mt-2 text-tenue">Sirve para poner un PIN nuevo si olvidas el actual. No se vuelve a mostrar.</p>
