@@ -321,6 +321,7 @@ pub fn run() {
             comandos::reportes::reporte_fiados,
             comandos::reportes::exportar_reporte,
             comandos::reportes::abrir_archivo,
+            comandos::reportes::mostrar_en_carpeta,
             comandos::datos::elegir_planilla,
             comandos::datos::abrir_planilla,
             comandos::datos::previsualizar_productos,

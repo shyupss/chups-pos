@@ -2,13 +2,14 @@ import Boton from "./Boton";
 import { FileSpreadsheet } from "lucide-react";
 import { useState } from "react";
 import { api, textoError, type Exportacion } from "../api";
+import { carpetaDe } from "../formato";
 
-/** Exporta a Excel con "Guardar como" y deja la ruta con "Abrir". */
+/** Descarga una planilla Excel con "Guardar como" y dice dónde quedó, con "Abrir" y "Mostrar en la carpeta". */
 export default function BotonExportar({
   que,
   desde = null,
   hasta = null,
-  etiqueta = "Exportar a Excel",
+  etiqueta = "Descargar en Excel",
 }: {
   que: Exportacion;
   desde?: string | null;
@@ -27,16 +28,24 @@ export default function BotonExportar({
   };
   return (
     <span className="inline-flex flex-wrap items-center gap-2">
-      <Boton icono={FileSpreadsheet} onClick={() => void exportar()} disabled={estado?.trabajando}>
-        {estado?.trabajando ? "Exportando…" : etiqueta}
+      <Boton
+        icono={FileSpreadsheet}
+        onClick={() => void exportar()}
+        disabled={estado?.trabajando}
+        title="Planilla Excel: para revisar los números o mandarlos al contador"
+      >
+        {estado?.trabajando ? "Descargando…" : etiqueta}
       </Boton>
       {estado?.ruta && (
-        <span className="flex items-center gap-2 text-sm text-exito">
+        <span role="status" className="flex flex-wrap items-center gap-2 text-sm text-exito">
           <span className="max-w-64 truncate" title={estado.ruta}>
-            Guardado
+            Guardado en {carpetaDe(estado.ruta)}
           </span>
-          <Boton variante="enlace" onClick={() => void api.abrirArchivo(estado.ruta!).catch(() => {})}>
+          <Boton variante="terciario" tamano="chico" onClick={() => void api.abrirArchivo(estado.ruta!).catch(() => {})}>
             Abrir
+          </Boton>
+          <Boton variante="terciario" tamano="chico" onClick={() => void api.mostrarEnCarpeta(estado.ruta!).catch(() => {})}>
+            Mostrar en la carpeta
           </Boton>
         </span>
       )}

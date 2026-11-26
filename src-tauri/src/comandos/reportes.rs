@@ -192,6 +192,14 @@ pub async fn exportar_reporte(
     guardar_libro(&app, &estado, libro, nombre, formato).await
 }
 
+/// Muestra un archivo exportado en su carpeta, con el archivo marcado (el Explorador de Windows).
+#[tauri::command]
+pub fn mostrar_en_carpeta(app: AppHandle, ruta: String) -> ResultadoComando<()> {
+    app.opener()
+        .reveal_item_in_dir(ruta)
+        .map_err(|e| format!("No se pudo abrir la carpeta: {e}"))
+}
+
 /// Abre un archivo exportado con el programa del sistema (Excel, el visor de PDF).
 #[tauri::command]
 pub fn abrir_archivo(app: AppHandle, ruta: String) -> ResultadoComando<()> {

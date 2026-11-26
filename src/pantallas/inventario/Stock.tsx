@@ -222,7 +222,7 @@ export default function Stock({ activa, onVerMovimientos, estadoInicial }: Props
           <Boton icono={ClipboardList} onClick={() => setDialogo("conteo")}>
             Contar inventario
           </Boton>
-          <BotonExportar que="stock" etiqueta="Excel" />
+          <BotonExportar que="stock" />
         </div>
 
         {aviso && (

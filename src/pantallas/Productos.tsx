@@ -186,7 +186,7 @@ export default function Productos({ codigoNuevo, onCodigoUsado, onVerMovimientos
           <Boton variante="primario" onClick={() => setPanel({ tipo: "nuevo" })}>
             Nuevo producto
           </Boton>
-          <BotonExportar que="productos" etiqueta="Excel" />
+          <BotonExportar que="productos" />
         </div>
 
         {error && <p className="mt-3 rounded-lg bg-peligro-fondo px-3 py-2 text-peligro">{error}</p>}

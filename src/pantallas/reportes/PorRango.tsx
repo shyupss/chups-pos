@@ -1,20 +1,34 @@
 // Las pestañas de reportes por rango: Ventas, Productos, Ganancia, Turnos y Fiados. Cada una
 // pide su reporte en una llamada y lo dibuja; la exportación la hace Rust (Excel y PDF).
 
+import { ChevronRight } from "lucide-react";
 import { useMemo, useState } from "react";
 import Boton from "../../componentes/Boton";
 import { api, type Categoria, type ProductoVendido } from "../../api";
-import { Barras, Columnas, DIAS, MapaCalor } from "../../componentes/Graficos";
+import { Barras, DIAS, Lineas, MapaCalor } from "../../componentes/Graficos";
 import Opciones from "../../componentes/Opciones";
 import { cantidad, fechaHora, folio, NOMBRE_MEDIO, pesos, pesosConSigno } from "../../formato";
 import { Panel, Tarjeta } from "./Hoy";
 import { pesosCortos, porcentaje } from "./formato";
 import { Exportar, useReporte, type Rango } from "./Rango";
+import { aFecha, completarDias, type VentaDia } from "./reportes-nucleo";
 import TablaVirtual from "./TablaVirtual";
 
+const DIA_LARGO = new Intl.DateTimeFormat("es-CL", { weekday: "long", day: "numeric", month: "long" });
 const DIA_CORTO = new Intl.DateTimeFormat("es-CL", { day: "numeric", month: "short" });
-const dia = (texto: string) => new Date(`${texto}T12:00:00`);
+const dia = aFecha;
 const boletas = (n: number) => (n === 1 ? "1 boleta" : `${n} boletas`);
+const mayuscula = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);
+
+/** Lo que mide cada tarjeta, en una frase (el ícono (i) las muestra). */
+export const AYUDA = {
+  vendido: "Todo lo que vendiste en el período: la suma de las ventas, sin contar las anuladas y descontando las devoluciones.",
+  ventas: "Cuántas ventas (boletas) hiciste en el período. No cuenta las anuladas.",
+  ticket:
+    "Lo que gasta en promedio cada cliente por compra: total vendido dividido por la cantidad de ventas del período. No cuenta ventas anuladas y descuenta las devoluciones. También se le dice «ticket promedio».",
+  ganancia: "Lo vendido menos lo que te costaron esos productos. Solo cuenta productos con costo registrado.",
+  margen: "De cada $100 que vendiste (con costo registrado), cuántos pesos son ganancia.",
+} as const;
 
 function Estado({ error }: { error: string | null }) {
   return error ? <p className="rounded-lg bg-peligro-fondo px-3 py-2 text-peligro">{error}</p> : <p className="text-tenue">Cargando…</p>;
@@ -25,67 +39,97 @@ function Estado({ error }: { error: string | null }) {
 export function ReporteVentas({ activa, rango }: { activa: boolean; rango: Rango }) {
   const { datos: r, error } = useReporte(() => api.reporteVentas(rango.desde, rango.hasta), [rango.desde, rango.hasta]);
   const [medida, setMedida] = useState<"monto" | "boletas">("monto");
+  const dias = useMemo(() => (r ? completarDias(r.porDia, rango.desde, rango.hasta) : []), [r, rango.desde, rango.hasta]);
   if (!r) return <Estado error={error} />;
-  const cada = Math.max(1, Math.ceil(r.porDia.length / 16));
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="grid flex-1 grid-cols-3 gap-3">
-          <Tarjeta titulo="Total vendido" valor={pesos(r.total)} pie="Sin anuladas, menos devoluciones" />
-          <Tarjeta titulo="Boletas" valor={r.boletas.toLocaleString("es-CL")} />
-          <Tarjeta titulo="Ticket promedio" valor={pesos(r.ticketPromedio)} />
+        <div className="grid flex-1 grid-cols-2 gap-3 lg:grid-cols-3">
+          <Tarjeta titulo="Vendido" valor={pesos(r.total)} pie="Sin las anuladas" ayuda={AYUDA.vendido} />
+          <Tarjeta titulo="Ventas" valor={r.boletas.toLocaleString("es-CL")} pie="Boletas del período" ayuda={AYUDA.ventas} />
+          <Tarjeta titulo="Gasto promedio por venta" valor={pesos(r.ticketPromedio)} ayuda={AYUDA.ticket} />
         </div>
-        <Exportar activa={activa} tipo="ventas" rango={rango} />
+        <Exportar activa={activa} tipo="ventas" rango={rango} nombre="Ventas" />
       </div>
-      <Panel titulo="Ventas por día">
-        <Columnas
-          descripcion="Ventas por día"
-          columnas={r.porDia.map((d) => ({
-            etiqueta: DIA_CORTO.format(dia(d.dia)),
-            valor: d.monto,
-            detalle: `${DIA_CORTO.format(dia(d.dia))} · ${pesos(d.monto)} · ${boletas(d.boletas)}`,
-          }))}
-          etiquetaCada={cada}
-          formatoEje={pesosCortos}
-        />
+      <Panel titulo="¿Cuánto vendí cada día?">
+        <GraficoDias dias={dias} />
       </Panel>
       <div className="grid gap-3 lg:grid-cols-3">
-        <Panel titulo="Por medio de pago">
+        <Panel titulo="¿Con qué me pagan?">
           <Barras
             filas={r.porMedio.map((m) => ({ etiqueta: NOMBRE_MEDIO[m.medio], valor: m.monto, detalle: `${pesos(m.monto)} · ${boletas(m.boletas)}` }))}
             formato={pesos}
           />
         </Panel>
-        <Panel titulo="Por categoría">
+        <Panel titulo="¿Qué categorías venden más?">
           <Barras filas={r.porCategoria.map((c) => ({ etiqueta: c.nombre, valor: c.monto }))} formato={pesos} />
         </Panel>
-        <Panel titulo="Por día de la semana">
+        <Panel titulo="¿Qué días de la semana se vende más?">
           <Barras
             filas={r.porDiaSemana.map((c, i) => ({ etiqueta: DIAS[i], valor: c.monto, detalle: `${pesos(c.monto)} · ${boletas(c.boletas)}` }))}
             formato={pesos}
           />
         </Panel>
       </div>
-      <Panel titulo="Día de la semana y hora">
-        <div className="mb-3">
-          <Opciones
-            nombre="medida-mapa"
-            etiqueta="Qué mostrar en el mapa"
-            opciones={[
-              { id: "monto", nombre: "Ventas" },
-              { id: "boletas", nombre: "Boletas" },
-            ]}
-            valor={medida}
-            onCambiar={setMedida}
+      <details className="tarjeta group">
+        <summary className="flex h-12 cursor-pointer list-none items-center gap-2 px-4 font-semibold marker:hidden [&::-webkit-details-marker]:hidden">
+          <ChevronRight size={18} aria-hidden className="text-tenue group-open:rotate-90" />
+          Ver a qué horas se vende más
+        </summary>
+        <div className="border-t border-linea p-4">
+          <div className="mb-3">
+            <Opciones
+              nombre="medida-mapa"
+              etiqueta="Qué mostrar en el mapa"
+              opciones={[
+                { id: "monto", nombre: "Ventas" },
+                { id: "boletas", nombre: "Boletas" },
+              ]}
+              valor={medida}
+              onCambiar={setMedida}
+            />
+          </div>
+          <MapaCalor
+            celdas={r.mapa}
+            valor={(c) => (medida === "monto" ? c.monto : c.boletas)}
+            detalle={(c) => `${pesos(c.monto)} · ${boletas(c.boletas)}`}
           />
         </div>
-        <MapaCalor
-          celdas={r.mapa}
-          valor={(c) => (medida === "monto" ? c.monto : c.boletas)}
-          detalle={(c) => `${pesos(c.monto)} · ${boletas(c.boletas)}`}
-        />
-      </Panel>
+      </details>
     </div>
+  );
+}
+
+/** Las ventas de cada día como una línea; los días sin ventas valen 0. Se usa en Resumen y en Ventas. */
+export function GraficoDias({
+  dias,
+  anteriores,
+  nombreActual = "Este período",
+  nombreAnterior,
+}: {
+  dias: VentaDia[];
+  anteriores?: VentaDia[];
+  nombreActual?: string;
+  nombreAnterior?: string;
+}) {
+  const largo = Math.max(dias.length, anteriores?.length ?? 0);
+  const etiquetas = Array.from({ length: largo }, (_, i) => (largo > 31 ? DIA_CORTO.format(dia((dias[i] ?? anteriores?.[i])?.dia ?? "2000-01-01")) : String(i + 1)));
+  const titulos = Array.from({ length: largo }, (_, i) => {
+    const d = dias[i]?.dia;
+    return d ? mayuscula(DIA_LARGO.format(dia(d))) : `Día ${i + 1}`;
+  });
+  return (
+    <Lineas
+      descripcion="Ventas de cada día del período"
+      etiquetas={etiquetas}
+      titulos={titulos}
+      formatoEje={pesosCortos}
+      formatoValor={pesos}
+      series={[
+        { nombre: nombreActual, valores: dias.map((d) => d.monto) },
+        ...(anteriores ? [{ nombre: nombreAnterior ?? "Período anterior", valores: anteriores.map((d) => d.monto), punteada: true }] : []),
+      ]}
+    />
   );
 }
 
@@ -145,17 +189,17 @@ export function ReporteProductos({
             onCambiar={setOrden}
           />
         </div>
-        <Exportar activa={activa} tipo="productos" rango={rango} categoria={categoria} />
+        <Exportar activa={activa} tipo="productos" rango={rango} categoria={categoria} nombre="Productos" />
       </div>
       {!r ? (
         <Estado error={error} />
       ) : (
         <>
-          <Panel titulo={`Vendidos (${r.productos.length})`}>
+          <Panel titulo={`¿Qué se vende más? (${r.productos.length === 1 ? "1 producto" : `${r.productos.length} productos`})`}>
             <TablaVirtual
               filas={filas}
               clave={(p) => p.productoId}
-              vacia="No hubo ventas en este rango."
+              vacia="No hubo ventas en este período."
               columnas={[
                 { titulo: "#", ancho: "2.5rem", celda: (_, i) => <span className="text-tenue">{i + 1}</span> },
                 {
@@ -181,11 +225,11 @@ export function ReporteProductos({
               ]}
             />
           </Panel>
-          <Panel titulo={`Sin ventas en el rango (${r.sinVentas.length})`}>
+          <Panel titulo={`¿Qué no se vendió? (${r.sinVentas.length})`}>
             <TablaVirtual
               filas={r.sinVentas}
               clave={(p) => p.productoId}
-              vacia="Todos los productos activos tuvieron ventas."
+              vacia="Todos tus productos activos se vendieron."
               alto={300}
               columnas={[
                 {
@@ -220,13 +264,13 @@ export function ReporteGanancia({ activa, rango }: { activa: boolean; rango: Ran
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="grid flex-1 grid-cols-2 gap-3 xl:grid-cols-4">
-          <Tarjeta titulo="Ventas con costo" valor={pesos(r.ventas)} />
-          <Tarjeta titulo="Costo" valor={pesos(r.costo)} />
-          <Tarjeta titulo="Ganancia" valor={pesos(r.ganancia)} />
-          <Tarjeta titulo="Margen" valor={r.margenPb === null ? "—" : porcentaje(r.margenPb)} />
+        <div className="grid flex-1 grid-cols-2 gap-3 lg:grid-cols-4">
+          <Tarjeta titulo="Ganancia" valor={pesos(r.ganancia)} ayuda={AYUDA.ganancia} />
+          <Tarjeta titulo="Margen" valor={r.margenPb === null ? "—" : porcentaje(r.margenPb)} ayuda={AYUDA.margen} />
+          <Tarjeta titulo="Vendido con costo" valor={pesos(r.ventas)} pie="Lo que cuenta para la ganancia" />
+          <Tarjeta titulo="Lo que costó" valor={pesos(r.costo)} pie="El costo de esos productos" />
         </div>
-        <Exportar activa={activa} tipo="ganancia" rango={rango} />
+        <Exportar activa={activa} tipo="ganancia" rango={rango} nombre="Ganancia" />
       </div>
       {(r.ventasEstimadas > 0 || r.ventasSinCosto > 0) && (
         <div className="space-y-2">
@@ -245,11 +289,11 @@ export function ReporteGanancia({ activa, rango }: { activa: boolean; rango: Ran
         </div>
       )}
       <div className="grid gap-3 lg:grid-cols-3">
-        <Panel titulo="Por producto" className="lg:col-span-2">
+        <Panel titulo="¿Qué productos dejan más ganancia?" className="lg:col-span-2">
           <TablaVirtual
             filas={r.productos}
             clave={(p) => p.productoId}
-            vacia="No hay ventas con costo en este rango."
+            vacia="No hay ventas con costo en este período."
             columnas={[
               {
                 titulo: "Producto",
@@ -271,7 +315,7 @@ export function ReporteGanancia({ activa, rango }: { activa: boolean; rango: Ran
           {r.productos.some((p) => p.costoEstimado) && <p className="mt-2 text-xs text-tenue">* Parte del costo es estimada.</p>}
         </Panel>
         <div className="space-y-3">
-          <Panel titulo="Ganancia por categoría">
+          <Panel titulo="¿Qué categorías dejan más ganancia?">
             <Barras
               filas={r.porCategoria.map((c) => ({
                 etiqueta: `${c.nombre}${c.margenPb === null ? "" : ` · ${porcentaje(c.margenPb)}`}`,
@@ -282,7 +326,7 @@ export function ReporteGanancia({ activa, rango }: { activa: boolean; rango: Ran
             />
           </Panel>
           {r.sinCosto.length > 0 && (
-            <Panel titulo="Productos sin costo">
+            <Panel titulo="Productos sin costo (no cuentan en la ganancia)">
               <ul className="max-h-64 space-y-1 overflow-auto">
                 {r.sinCosto.map((p) => (
                   <li key={p.productoId} className="flex justify-between gap-3 text-sm">
@@ -307,19 +351,19 @@ export function ReporteTurnos({ activa, rango }: { activa: boolean; rango: Rango
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="grid flex-1 grid-cols-2 gap-3 xl:grid-cols-4">
-          <Tarjeta titulo="Turnos cerrados" valor={String(r.turnos.length)} />
-          <Tarjeta titulo="Cuadrados" valor={String(r.cuadrados)} />
+        <div className="grid flex-1 grid-cols-2 gap-3 lg:grid-cols-4">
+          <Tarjeta titulo="Turnos cerrados" valor={String(r.turnos.length)} ayuda="Cuántas veces cerraste la caja en el período." />
+          <Tarjeta titulo="Cuadrados" valor={String(r.cuadrados)} ayuda="Cierres en que la plata contada fue justo la que debía haber." />
           <Tarjeta titulo="Sobrantes" valor={pesos(r.sobrantes)} />
           <Tarjeta titulo="Faltantes" valor={<span className={r.faltantes > 0 ? "text-peligro" : ""}>{pesos(r.faltantes)}</span>} />
         </div>
-        <Exportar activa={activa} tipo="turnos" rango={rango} />
+        <Exportar activa={activa} tipo="turnos" rango={rango} nombre="Turnos" />
       </div>
-      <Panel titulo="Turnos">
+      <Panel titulo="¿Cómo cerraron las cajas?">
         <TablaVirtual
           filas={r.turnos}
           clave={(t) => t.id}
-          vacia="No se cerraron turnos en este rango."
+          vacia="No se cerró ningún turno en este período."
           columnas={[
             { titulo: "Turno", ancho: "6rem", orden: (t) => t.id, celda: (t) => folio(t.id) },
             { titulo: "Apertura", ancho: "minmax(0,1fr)", orden: (t) => t.abiertoEn, celda: (t) => fechaHora(t.abiertoEn) },
@@ -352,22 +396,22 @@ export function ReporteFiados({ activa, rango, onVerCliente }: { activa: boolean
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="grid flex-1 grid-cols-2 gap-3 xl:grid-cols-4">
-          <Tarjeta titulo="Deuda al cierre" valor={pesos(r.deudaAlCierre)} pie={`${r.clientesConDeuda} clientes al ${DIA_CORTO.format(dia(r.hasta))}`} />
-          <Tarjeta titulo="Fiado en el rango" valor={pesos(r.otorgado)} />
-          <Tarjeta titulo="Pagado en el rango" valor={pesos(r.pagado)} />
-          <Tarjeta titulo="Diferencia" valor={pesosConSigno(r.otorgado - r.pagado)} pie="Fiado menos pagado" />
+        <div className="grid flex-1 grid-cols-2 gap-3 lg:grid-cols-4">
+          <Tarjeta titulo="Deuda al cierre" ayuda="Lo que te debían los clientes al último día del período." valor={pesos(r.deudaAlCierre)} pie={`${r.clientesConDeuda} clientes al ${DIA_CORTO.format(dia(r.hasta))}`} />
+          <Tarjeta titulo="Fiado otorgado" valor={pesos(r.otorgado)} ayuda="Lo que vendiste fiado en el período." />
+          <Tarjeta titulo="Pagos recibidos" valor={pesos(r.pagado)} ayuda="Lo que los clientes te pagaron de sus deudas en el período." />
+          <Tarjeta titulo="Cómo cambió la deuda" valor={pesosConSigno(r.otorgado - r.pagado)} pie="Fiado menos pagado" ayuda="Si es positivo, te deben más que al empezar; si es negativo, te deben menos." />
         </div>
-        <Exportar activa={activa} tipo="fiados" rango={rango} />
+        <Exportar activa={activa} tipo="fiados" rango={rango} nombre="Fiados" />
       </div>
       <div className="grid gap-3 lg:grid-cols-2">
-        <Panel titulo="Antigüedad de la deuda (días)">
+        <Panel titulo="¿Hace cuánto deben?">
           <Barras
             filas={r.antiguedad.map((t) => ({ etiqueta: `${t.tramo} días`, valor: t.monto, detalle: `${pesos(t.monto)} en ${t.ventas} ventas` }))}
             formato={pesos}
           />
         </Panel>
-        <Panel titulo="Los que más debían al cierre">
+        <Panel titulo="¿Quiénes deben más?">
           {r.deudores.length === 0 ? (
             <p className="text-tenue">Nadie debía nada.</p>
           ) : (

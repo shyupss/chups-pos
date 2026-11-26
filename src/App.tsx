@@ -166,7 +166,7 @@ export default function App() {
   const [respaldoFallido, setRespaldoFallido] = useState<string | null>(null);
   useEffect(() => escucharRespaldoFallido(setRespaldoFallido), []);
   // Enlaces desde Reportes > Hoy: Inventario filtrado bajo el mínimo y la ficha de un cliente.
-  const [pestanaReportes, setPestanaReportes] = useState<PestanaReportes>("hoy");
+  const [pestanaReportes, setPestanaReportes] = useState<PestanaReportes>("resumen");
   const [estadoStock, setEstadoStock] = useState<FiltroEstadoStock | null>(null);
   const [clienteFiados, setClienteFiados] = useState<number | null>(null);
   useEffect(() => {
@@ -232,10 +232,10 @@ export default function App() {
       SECCIONES.map((s) => [
         s.tecla,
         () =>
-          // F6 siempre abre Reportes en Hoy.
+          // F6 siempre abre Reportes en el Resumen del mes.
           s.id === "reportes"
             ? pedirSalida(() => {
-                setPestanaReportes("hoy");
+                setPestanaReportes("resumen");
                 setSeccionDirecto("reportes");
               })
             : setSeccion(s.id),

@@ -154,32 +154,51 @@ abonos vigentes. Nada se borra: pagos y abonos anulados quedan con su motivo.
 
 ## Reportes
 
-**Reportes** (F6) abre siempre en **Hoy**: ventas y boletas del día, ticket promedio, ganancia
-estimada, comparación con el mismo día de la semana pasada a la misma hora, efectivo esperado del
-turno abierto, fiado otorgado y pagos de fiado del día, ventas por hora y por medio de pago, los 10
-más vendidos, los productos bajo el mínimo (lleva a Inventario filtrado) y los clientes con fiado
-atrasado (lleva a su ficha). Se actualiza al volver a la pantalla y cuando Rust avisa que hubo una
-venta, anulación, devolución, pago o movimiento de caja (sin consultar cada tanto).
+**Reportes** (F6) abre siempre en el **Resumen del mes**: cuatro cifras grandes (Vendido, Ganancia, Ventas y Gasto
+promedio por venta), un gráfico de líneas con las ventas de cada día contra el mes pasado (línea punteada), con
+qué pagan los clientes y los 5 productos que más se venden. El detalle está en las demás pestañas.
 
-Las demás pestañas son por rango (hoy, ayer, esta semana, este mes, mes pasado, últimos 30 días,
-este año o personalizado):
+- **Período**: "Este mes" (por defecto), "Mes pasado", "Esta semana", "Hoy" y "Elegir fechas…"; "Más" trae Ayer,
+  Últimos 30 días y Este año. El título dice siempre el período en palabras: "Noviembre 2026" o "Del 3 al 17 de
+  noviembre". Las reglas (rangos, período en palabras, con qué se compara) están en
+  `src/pantallas/reportes/reportes-nucleo.ts`, con tests. Un mes se compara con el mes anterior completo; otro
+  rango, con los mismos días justo antes.
+- **Cada tarjeta** lleva un ícono (i) con lo que mide, en una frase (se ve al pasar el mouse o con el teclado). El
+  *Gasto promedio por venta* (el "ticket promedio") es el total vendido dividido por la cantidad de ventas: no
+  cuenta las anuladas y descuenta las devoluciones. La *Ganancia* es lo vendido menos lo que costaron esos
+  productos y solo cuenta los que tienen costo registrado.
+- **Descargar este reporte**: un solo botón con un menú de dos opciones explicadas: *Planilla Excel* (para revisar los
+  números o mandarlos al contador, Ctrl+E) y *PDF* (para imprimir o enviar por WhatsApp o correo). Debajo dice qué
+  incluye ("lo que ves en pantalla: Ventas, noviembre 2026") y, al terminar, "Guardado en {carpeta}" con "Abrir" y
+  "Mostrar en la carpeta" (el Explorador, con el archivo marcado). Lo mismo en Productos y en Inventario > Stock
+  ("Descargar en Excel").
+- **Gráficos**: el de líneas (SVG propio, `Lineas` en `Graficos.tsx`) tiene el eje Y en pesos cortos ($120 mil), rayas
+  guía suaves y, al pasar el mouse, un punto por línea con el día y el monto; los días sin ventas valen 0. Las
+  barras horizontales se quedan para comparar categorías y medios de pago. El mapa de calor (día y hora) va en
+  "Ver a qué horas se vende más", plegado.
+- Los títulos dicen qué responde cada bloque ("¿Cuánto vendí cada día?", "¿Con qué me pagan?", "¿Qué se vende
+  más?"). Primero las tarjetas y un gráfico; el resto, debajo.
 
-- **Ventas**: total, boletas, ticket promedio; por día, medio de pago, categoría y día de la
-  semana; mapa de calor día × hora.
-- **Productos**: ranking por monto o por cantidad (en kg los de peso), filtro por categoría y
-  productos sin ventas; cada producto lleva a sus movimientos.
-- **Ganancia**: ventas − costo y margen por producto y por categoría. Desde la fase 6 cada venta
-  guarda el costo del producto en ese momento; las ventas anteriores usan el costo actual y se
-  informan aparte como "costos estimados". Lo vendido sin costo no entra en la ganancia y se lista
-  aparte.
-- **Turnos**: los cerrados en el rango con esperado, contado y diferencia, y el total de sobrantes
-  y faltantes.
-- **Fiados**: deuda al cierre del rango, fiado y pagado en el rango, y antigüedad de la deuda.
+Las demás pestañas:
 
-Las ventas anuladas no cuentan y las devoluciones se descuentan de su venta, así los totales
-cuadran con Ventas (F5). La base guarda las fechas en UTC y los reportes agrupan por el día y la
-hora del computador, también en los cambios de horario. Cada reporte se exporta a Excel (Ctrl+E) o
-PDF (con el nombre del negocio, el rango y la fecha de emisión) en `Documentos\CHUPS POS\Reportes`.
+- **Hoy**: cómo va el día: ventas y boletas, gasto promedio por venta, ganancia, comparación con el mismo día de la
+  semana pasada a la misma hora, la plata que debería haber en la caja, fiado otorgado y pagos de fiado, ventas por
+  hora y por medio de pago, los 10 más vendidos, los productos bajo el mínimo (lleva a Inventario filtrado) y los
+  clientes con fiado atrasado (lleva a su ficha). Se actualiza al volver a la pantalla y cuando Rust avisa que hubo
+  una venta, anulación, devolución, pago o movimiento de caja (sin consultar cada tanto).
+- **Ventas**: lo mismo del Resumen más las ventas por categoría y por día de la semana.
+- **Productos**: ranking por monto o por cantidad (en kg los de peso), filtro por categoría y productos sin ventas;
+  cada producto lleva a sus movimientos.
+- **Ganancia**: ventas − costo y margen por producto y por categoría. Desde la fase 6 cada venta guarda el costo del
+  producto en ese momento; las ventas anteriores usan el costo actual y se informan aparte como "costos
+  estimados". Lo vendido sin costo no entra en la ganancia y se lista aparte.
+- **Turnos**: los cerrados en el período con esperado, contado y diferencia, y el total de sobrantes y faltantes.
+- **Fiados**: deuda al cierre, fiado otorgado y pagos recibidos, y hace cuánto deben.
+
+Las ventas anuladas no cuentan y las devoluciones se descuentan de su venta, así los totales cuadran con Ventas
+(F5). La base guarda las fechas en UTC y los reportes agrupan por el día y la hora del computador, también en los
+cambios de horario. Cada reporte se descarga en Excel o PDF (con el nombre del negocio, el período y la fecha de
+emisión) en `Documentos\CHUPS POS\Reportes`.
 
 ## Importar y exportar Excel
 

@@ -1090,6 +1090,8 @@ export const api = {
   exportarReporte: (tipo: TipoReporte, desde: string, hasta: string, categoria: number | null, formato: FormatoExportacion) =>
     invoke<string | null>("exportar_reporte", { tipo, desde, hasta, categoria, formato }),
   abrirArchivo: (ruta: string) => invoke<void>("abrir_archivo", { ruta }),
+  /** Abre su carpeta con el archivo marcado. */
+  mostrarEnCarpeta: (ruta: string) => invoke<void>("mostrar_en_carpeta", { ruta }),
   estadoRespaldos: () => invoke<EstadoRespaldos>("estado_respaldos"),
   respaldarAhora: () => invoke<Respaldo>("respaldar_ahora"),
   /** Otra carpeta (un pendrive); null si se cancela. */
