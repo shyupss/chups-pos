@@ -96,6 +96,12 @@ export type TablaCaracteres = "cp858" | "cp850" | "wpc1252";
 export type FormatoPdf = "ticket" | "carta";
 export type FormatoBalanza = "peso" | "precio";
 
+/** Cuándo se hacen copias de seguridad automáticas: al cerrar la caja (lo de siempre), una vez al día, a la semana o nunca. */
+export type FrecuenciaRespaldos = "cadaHora" | "alCerrarCaja" | "unaVezAlDia" | "unaVezALaSemana" | "soloManual";
+
+/** Tamaño de letra y botones de toda la interfaz: Rust lo aplica como zoom (100 %, 110 % y 125 %). */
+export type EscalaInterfaz = "normal" | "grande" | "masgrande";
+
 /** Configuración tipada de la tabla config (la valida el servicio de Rust). */
 export interface Config {
   redondeoEfectivo: boolean;
@@ -121,6 +127,9 @@ export interface Config {
   /** null = Respaldos junto a los datos de la app. */
   respaldosCarpeta: string | null;
   respaldosConservar: number;
+  /** Cuándo se hacen copias de seguridad solas. */
+  respaldosFrecuencia: FrecuenciaRespaldos;
+  escalaInterfaz: EscalaInterfaz;
 }
 
 /** Una venta en espera en la lista. El total usa los precios actuales de los productos activos. */
@@ -839,7 +848,7 @@ export type FormatoExportacion = "excel" | "pdf";
 export type CampoProducto = "codigo" | "nombre" | "categoria" | "unidad" | "precio" | "costo" | "stock" | "stockMinimo";
 export type CampoCliente = "nombre" | "telefono" | "rut" | "direccion" | "nota" | "limite";
 export type TipoImportacion = "productos" | "clientes";
-export type Exportacion = "productos" | "stock" | "ventas" | "movimientos" | "compras" | "clientes";
+export type Exportacion = "productos" | "stock" | "ventas" | "movimientos" | "compras" | "clientes" | "todo";
 
 /** La planilla elegida y lo que se detectó en cada columna. */
 export interface Apertura {
@@ -1086,6 +1095,8 @@ export const api = {
   exportarReporte: (tipo: TipoReporte, desde: string, hasta: string, categoria: number | null, formato: FormatoExportacion) =>
     invoke<string | null>("exportar_reporte", { tipo, desde, hasta, categoria, formato }),
   abrirArchivo: (ruta: string) => invoke<void>("abrir_archivo", { ruta }),
+  /** Abre su carpeta con el archivo marcado. */
+  mostrarEnCarpeta: (ruta: string) => invoke<void>("mostrar_en_carpeta", { ruta }),
   estadoRespaldos: () => invoke<EstadoRespaldos>("estado_respaldos"),
   respaldarAhora: () => invoke<Respaldo>("respaldar_ahora"),
   /** Otra carpeta (un pendrive); null si se cancela. */

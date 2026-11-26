@@ -7,6 +7,7 @@
 mod comandos;
 mod estado;
 mod registro;
+mod ventana;
 
 use std::path::Path;
 use std::time::Instant;
@@ -37,6 +38,8 @@ const CONTACTO_VENDEDOR: &str = match option_env!("CHUPS_CONTACTO_VENDEDOR") {
 pub(crate) const ARCHIVO_RESTAURACION_FALLIDA: &str = "restauracion-fallida.txt";
 /// El respaldo automático al abrir espera un poco: el arranque y la primera venta van primero.
 const ESPERA_RESPALDO_AL_ABRIR: std::time::Duration = std::time::Duration::from_secs(20);
+/// Cada cuánto se mira si toca una copia "cada hora".
+const REVISION_PERIODICA_RESPALDOS: std::time::Duration = std::time::Duration::from_secs(5 * 60);
 
 /// Abre la base. Si no se puede (dañada de verdad), ofrece restaurar el último respaldo sano antes
 /// de rendirse: la caja no puede quedar sin poder abrir.
@@ -58,8 +61,8 @@ fn abrir_con_recuperacion(
     let Some(sano) = sano else {
         app.dialog()
             .message(
-                "No se pudo abrir la base de datos de CHUPS POS y no hay un respaldo sano para restaurar. \
-                 No borres nada: copia la carpeta de datos y contacta a quien te vendió el sistema.",
+                "CHUPS POS no pudo abrir tus datos y no hay una copia de seguridad sana para recuperarlos. \
+                 No borres nada: copia la carpeta de datos a un pendrive y avisa a quien te vendió el sistema.",
             )
             .title("CHUPS POS")
             .kind(MessageDialogKind::Error)
@@ -69,9 +72,9 @@ fn abrir_con_recuperacion(
     let restaurar = app
         .dialog()
         .message(format!(
-            "La base de datos de CHUPS POS está dañada y no se puede abrir.\n\n\
-             ¿Restaurar el último respaldo sano ({})? Lo vendido después de esa fecha no estará. \
-             La base dañada se guarda aparte en la carpeta de respaldos.",
+            "Tus datos de CHUPS POS están dañados y no se pueden abrir.\n\n\
+             ¿Recuperar la última copia de seguridad sana ({})? Lo vendido después de esa fecha no estará. \
+             Lo dañado se guarda aparte en la carpeta de copias.",
             chrono::DateTime::parse_from_rfc3339(&sano.fecha)
                 .map(|f| f
                     .with_timezone(&chrono::Local)
@@ -82,7 +85,7 @@ fn abrir_con_recuperacion(
         .title("CHUPS POS")
         .kind(MessageDialogKind::Error)
         .buttons(MessageDialogButtons::OkCancelCustom(
-            "Restaurar el respaldo".into(),
+            "Recuperar la copia".into(),
             "Cerrar".into(),
         ))
         .blocking_show();
@@ -108,6 +111,8 @@ pub fn run() {
     let inicio = Instant::now();
 
     tauri::Builder::default()
+        // El tamaño de la interfaz (zoom) se reaplica cada vez que la página empieza o termina de cargar.
+        .on_page_load(|webview, payload| ventana::al_cargar_pagina(webview, payload.event()))
         // Una sola instancia: abrir la app dos veces enfoca la ventana que ya está abierta. Va primero.
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
             if let Some(ventana) = app.get_webview_window("main") {
@@ -117,11 +122,22 @@ pub fn run() {
             }
         }))
         // Recuerda el tamaño, la posición y si estaba maximizada (la primera vez arranca maximizada).
-        .plugin(tauri_plugin_window_state::Builder::default().build())
+        // La visibilidad no se recuerda ni se restaura: la ventana nace oculta y la muestra ventana.rs
+        // cuando el tamaño de la interfaz ya está aplicado.
+        .plugin(
+            tauri_plugin_window_state::Builder::default()
+                .with_state_flags(
+                    tauri_plugin_window_state::StateFlags::all()
+                        - tauri_plugin_window_state::StateFlags::VISIBLE,
+                )
+                .build(),
+        )
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .setup(move |app| {
+            // Antes que nada: que el teclado llegue a la app y no haga cosas de navegador.
+            ventana::preparar(app);
             let carpeta = app.path().app_data_dir()?;
             std::fs::create_dir_all(&carpeta)?;
             let ruta_db = carpeta.join(NOMBRE_ARCHIVO_DB);
@@ -159,6 +175,14 @@ pub fn run() {
                 }
             }
             let lectura = tauri::async_runtime::block_on(pos_core::db::abrir_lectura(&ruta_db))?;
+            // El tamaño de la interfaz se aplica ya, antes de que la ventana pinte la página.
+            if let Some(principal) = app.get_webview_window("main") {
+                let escala =
+                    tauri::async_runtime::block_on(pos_core::servicios::config::obtener(&pool))
+                        .map(|c| c.escala_interfaz)
+                        .unwrap_or_default();
+                ventana::aplicar_escala(&principal, escala);
+            }
             let aviso = carpeta.join(ARCHIVO_RESTAURACION_FALLIDA);
             let restauracion_fallida = std::fs::read_to_string(&aviso).ok();
             let _ = std::fs::remove_file(&aviso);
@@ -213,7 +237,19 @@ pub fn run() {
             let app_respaldo = app.handle().clone();
             tauri::async_runtime::spawn(async move {
                 tokio::time::sleep(ESPERA_RESPALDO_AL_ABRIR).await;
-                comandos::respaldos::automatico(&app_respaldo, false);
+                comandos::respaldos::automatico(
+                    &app_respaldo,
+                    pos_core::servicios::respaldos::Momento::Arranque,
+                );
+                // Con "cada hora" hace falta mirar el reloj con la app abierta. Es una lectura de la
+                // configuración y de la carpeta cada pocos minutos: no pesa.
+                loop {
+                    tokio::time::sleep(REVISION_PERIODICA_RESPALDOS).await;
+                    comandos::respaldos::automatico(
+                        &app_respaldo,
+                        pos_core::servicios::respaldos::Momento::Periodico,
+                    );
+                }
             });
             Ok(())
         })
@@ -299,6 +335,7 @@ pub fn run() {
             comandos::reportes::reporte_fiados,
             comandos::reportes::exportar_reporte,
             comandos::reportes::abrir_archivo,
+            comandos::reportes::mostrar_en_carpeta,
             comandos::datos::elegir_planilla,
             comandos::datos::abrir_planilla,
             comandos::datos::previsualizar_productos,

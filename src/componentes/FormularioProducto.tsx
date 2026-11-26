@@ -7,11 +7,23 @@ import Opciones, { type Opcion } from "./Opciones";
 interface Props {
   /** null = producto nuevo */
   producto: Producto | null;
+  /**
+   * Desde dónde se crea. "compra": desde Registrar compra, donde el stock lo suma la compra; no
+   * hay stock inicial (si no, quedaría el doble) y el costo escrito pasa a la línea de la compra.
+   */
+  origen?: "productos" | "compra";
   codigoInicial?: string;
+  /** Un nombre que ya se escribió (por ejemplo, el que no se encontró al armar una compra). */
+  nombreInicial?: string;
   categorias: Categoria[];
   /** Categoría para un producto nuevo (la del filtro de la lista, si hay una). */
   categoriaInicial: number | null;
-  onGuardado: (p: Producto) => void;
+  /** `que`: qué pasó, para decírselo a quien lo hizo ("creado", "guardado" los cambios, o "estado" si se activó o desactivó). */
+  onGuardado: (p: Producto, que?: "creado" | "guardado" | "estado") => void;
+  /** Lo que se le dice a quien guardó ("Cambios guardados: …"). `id` cambia con cada aviso, aunque el texto sea el mismo. */
+  aviso?: { id: number; texto: string };
+  /** Abre el ajuste de stock (el mismo de Inventario > Stock: queda el movimiento y pide el PIN si hay uno). */
+  onAjustarStock?: (p: Producto) => void;
   /** Abre su historial de stock en Inventario > Movimientos. */
   onVerMovimientos?: (p: Producto) => void;
   onCerrar: () => void;
@@ -24,16 +36,21 @@ const UNIDADES: Opcion<Unidad>[] = [
 
 export default function FormularioProducto({
   producto,
+  origen = "productos",
   codigoInicial,
+  nombreInicial,
   categorias,
   categoriaInicial,
   onGuardado,
   onVerMovimientos,
+  aviso,
+  onAjustarStock,
   onCerrar,
 }: Props) {
   const nuevo = producto === null;
+  const desdeCompra = nuevo && origen === "compra";
   const [codigo, setCodigo] = useState(producto?.codigoBarras ?? codigoInicial ?? "");
-  const [nombre, setNombre] = useState(producto?.nombre ?? "");
+  const [nombre, setNombre] = useState(producto?.nombre ?? nombreInicial ?? "");
   const [categoriaId, setCategoriaId] = useState<number | null>(producto ? producto.categoriaId : categoriaInicial);
   const [unidad, setUnidad] = useState<Unidad>(producto?.unidad ?? "unidad");
   const [precio, setPrecio] = useState(producto ? String(producto.precioVenta) : "");
@@ -45,6 +62,9 @@ export default function FormularioProducto({
   const [error, setError] = useState<string | null>(null);
   const [guardando, setGuardando] = useState(false);
   const primerCampo = useRef<HTMLInputElement>(null);
+  // El aviso de "guardado" se ve hasta que se vuelve a escribir algo.
+  const [verAviso, setVerAviso] = useState(true);
+  useEffect(() => setVerAviso(true), [aviso?.id]);
 
   const porKg = unidad === "kg";
   const enUnidad = porKg ? " (kg)" : "";
@@ -59,7 +79,7 @@ export default function FormularioProducto({
     const precioVenta = aEntero(precio);
     if (precioVenta === null) return setError(porKg ? "Ingresa el precio por kg" : "Ingresa el precio de venta");
     const stockMinimoMil = parseCantidad(stockMinimo || "0", unidad);
-    const stockInicialMil = nuevo ? parseCantidad(stockInicial || "0", unidad) : 0;
+    const stockInicialMil = nuevo && !desdeCompra ? parseCantidad(stockInicial || "0", unidad) : 0;
     if (stockMinimoMil === null || stockInicialMil === null) {
       return setError(
         porKg
@@ -83,7 +103,7 @@ export default function FormularioProducto({
       const guardado = nuevo
         ? await api.crearProducto(datos)
         : await api.editarProducto(producto.id, datos);
-      onGuardado(guardado);
+      onGuardado(guardado, nuevo ? "creado" : "guardado");
     } catch (e) {
       setError(textoError(e));
     } finally {
@@ -95,7 +115,7 @@ export default function FormularioProducto({
     if (!producto) return;
     try {
       await api.cambiarEstadoProducto(producto.id, !producto.activo);
-      onGuardado({ ...producto, activo: !producto.activo });
+      onGuardado({ ...producto, activo: !producto.activo }, "estado");
     } catch (e) {
       setError(textoError(e));
     }
@@ -108,6 +128,7 @@ export default function FormularioProducto({
         void guardar();
       }}
       onKeyDown={(e) => e.key === "Escape" && onCerrar()}
+      onInput={() => setVerAviso(false)}
       className="flex h-full flex-col gap-4 overflow-y-auto p-6"
     >
       <h2 className="text-lg font-semibold">{nuevo ? "Nuevo producto" : "Editar producto"}</h2>
@@ -154,7 +175,7 @@ export default function FormularioProducto({
         </select>
       </Campo>
       <div>
-        <span className="text-xs text-tenue">Se vende por</span>
+        <span className="text-sm text-tenue">Se vende por</span>
         <div className="mt-1">
           <Opciones nombre="unidad" etiqueta="Se vende por" opciones={UNIDADES} valor={unidad} onCambiar={setUnidad} />
         </div>
@@ -168,7 +189,17 @@ export default function FormularioProducto({
             inputMode="numeric"
           />
         </Campo>
-        <Campo etiqueta={porKg ? "Costo por kg (opcional)" : "Costo (opcional)"}>
+        <Campo
+          etiqueta={
+            desdeCompra
+              ? porKg
+                ? "Costo por kg en esta compra (opcional)"
+                : "Costo unitario en esta compra (opcional)"
+              : porKg
+                ? "Costo por kg (opcional)"
+                : "Costo (opcional)"
+          }
+        >
           <input
             value={costo ? pesos(Number(soloDigitos(costo))) : ""}
             onChange={(e) => setCosto(soloDigitos(e.target.value))}
@@ -176,7 +207,12 @@ export default function FormularioProducto({
             inputMode="numeric"
           />
         </Campo>
-        {nuevo ? (
+        {desdeCompra ? (
+          <div>
+            <span className="text-sm text-tenue">Stock</span>
+            <p className="mt-1 flex min-h-11 items-center rounded-lg bg-info-fondo px-3 text-info">El stock lo suma esta compra.</p>
+          </div>
+        ) : nuevo ? (
           <Campo etiqueta={`Stock inicial${enUnidad}`}>
             <input
               value={stockInicial}
@@ -186,9 +222,17 @@ export default function FormularioProducto({
             />
           </Campo>
         ) : (
-          <Campo etiqueta="Stock actual">
-            <div className="flex h-10 items-center tabular-nums">{cantidad(producto.stockMil, unidad)}</div>
-          </Campo>
+          <div>
+            <span className="text-sm text-tenue">Stock actual</span>
+            <div className="mt-1 flex min-h-11 flex-wrap items-center gap-x-3 gap-y-1">
+              <span className="tabular-nums">{cantidad(producto.stockMil, unidad)}</span>
+              {onAjustarStock && (
+                <Boton tamano="chico" onClick={() => onAjustarStock(producto)}>
+                  Ajustar stock
+                </Boton>
+              )}
+            </div>
+          </div>
         )}
         <Campo etiqueta={`Avisar con stock menor o igual a${enUnidad}`}>
           <input
@@ -201,10 +245,15 @@ export default function FormularioProducto({
       </div>
 
       {error && <p className="rounded-lg bg-peligro-fondo px-3 py-2 text-peligro">{error}</p>}
+      {aviso && verAviso && !error && (
+        <p role="status" className="rounded-lg bg-exito-fondo px-3 py-2 font-medium text-exito">
+          {aviso.texto}
+        </p>
+      )}
 
       <div className="mt-auto flex flex-wrap gap-2">
         <Boton type="submit" variante="primario" disabled={guardando} className="flex-1">
-          Guardar
+          {nuevo ? "Guardar producto" : "Guardar cambios"}
         </Boton>
         <Boton variante="terciario" onClick={onCerrar}>
           Cerrar
@@ -225,12 +274,12 @@ export default function FormularioProducto({
 }
 
 const claseCampo =
-  "h-10 w-full rounded-lg border border-borde-control bg-superficie px-3 tabular-nums focus:border-acento";
+  "h-11 w-full rounded-lg border border-borde-control bg-superficie px-3 tabular-nums focus:border-acento";
 
 function Campo({ etiqueta, children }: { etiqueta: string; children: React.ReactNode }) {
   return (
     <label className="block">
-      <span className="text-xs text-tenue">{etiqueta}</span>
+      <span className="text-sm text-tenue">{etiqueta}</span>
       <div className="mt-1">{children}</div>
     </label>
   );

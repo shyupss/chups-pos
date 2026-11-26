@@ -41,7 +41,7 @@ export default function PonerEnEspera({ productos, total, onConfirmar, onCancela
           {productos} {productos === 1 ? "producto" : "productos"} · {pesos(total)}
         </p>
         <label className="mt-4 block">
-          <span className="text-xs text-tenue">Nombre para reconocerla (opcional)</span>
+          <span className="text-sm text-tenue">Nombre para reconocerla (opcional)</span>
           <input
             autoFocus
             value={nombre}

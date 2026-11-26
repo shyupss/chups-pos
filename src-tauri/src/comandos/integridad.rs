@@ -60,9 +60,9 @@ pub async fn restaurar_ultimo_sano(
         .and_then(|c| c.respaldos_carpeta)
         .map(PathBuf::from)
         .unwrap_or_else(|| estado.carpeta_respaldos.clone());
-    let sano = srv::ultimo_sano(&carpeta)
-        .await?
-        .ok_or_else(|| Error::Validacion("No hay ningún respaldo sano para restaurar".into()))?;
+    let sano = srv::ultimo_sano(&carpeta).await?.ok_or_else(|| {
+        Error::Validacion("No hay ninguna copia de seguridad sana para recuperar".into())
+    })?;
     srv::guardar_danada(
         &estado.ruta_db,
         &carpeta,

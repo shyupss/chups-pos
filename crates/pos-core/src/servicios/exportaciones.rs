@@ -33,6 +33,8 @@ pub enum Exportacion {
     Movimientos,
     Compras,
     Clientes,
+    /// Un libro con una hoja por cada tabla importante, con todo el historial.
+    Todo,
 }
 
 impl Exportacion {
@@ -52,6 +54,7 @@ impl Exportacion {
             Exportacion::Movimientos => "movimientos",
             Exportacion::Compras => "compras",
             Exportacion::Clientes => "clientes",
+            Exportacion::Todo => "todos-los-datos",
         }
     }
 
@@ -63,6 +66,7 @@ impl Exportacion {
             Exportacion::Movimientos => "Movimientos de inventario",
             Exportacion::Compras => "Compras",
             Exportacion::Clientes => "Clientes y deudas",
+            Exportacion::Todo => "Todos los datos",
         }
     }
 }
@@ -181,6 +185,20 @@ async fn leer(
     limites: Option<(String, String)>,
     s: &Salida,
 ) -> Resultado<()> {
+    if que == Exportacion::Todo {
+        // Cada parte manda sus propias hojas, una tras otra, con todo el historial (sin rango).
+        for parte in [
+            Exportacion::Productos,
+            Exportacion::Stock,
+            Exportacion::Clientes,
+            Exportacion::Ventas,
+            Exportacion::Movimientos,
+            Exportacion::Compras,
+        ] {
+            Box::pin(leer(pool, parte, None, s)).await?;
+        }
+        return Ok(());
+    }
     let mut conn = pool.acquire().await?;
     let (inicio, fin) = limites.unwrap_or_else(|| ("0000".into(), "9999".into()));
     match que {
@@ -625,6 +643,8 @@ async fn leer(
                 }
             }
         }
+        // Ya se atendió arriba (parte por parte): aquí no llega.
+        Exportacion::Todo => {}
         Exportacion::Clientes => {
             #[derive(FromRow)]
             struct K {

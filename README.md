@@ -100,12 +100,28 @@ valorizadas a costo; la diferencia se calcula contra el stock al confirmar y tod
 transacción. La **merma** saca lo que se perdió con su motivo (vencido, dañado, robo, consumo interno u
 otro). Ambos piden el PIN si "Ajustar inventario" está protegida (sí por defecto).
 
+El ajuste de un producto también se hace desde **Productos**: al abrir un producto, junto a "Stock actual" está
+"Ajustar stock", que abre el mismo diálogo de Inventario (mismo motivo, mismo movimiento, mismo PIN). El campo de stock
+sigue siendo de solo lectura: no hay otra forma de cambiarlo sin dejar rastro. Al crear, guardar, activar o
+desactivar un producto, el panel dice qué pasó ("Producto creado: …", "Cambios guardados: …") en un aviso verde sobre
+los botones; se va al escribir algo y vuelve con cada guardado, aunque el texto sea igual.
+
 ## Compras y proveedores
 
-**Registrar compra** (Ctrl+N en Inventario): proveedor (opcional), número de factura o guía, productos con
-cantidad y costo unitario (por kg en productos por peso). Suma el stock, deja en cada producto el último
-costo y, si se marca "Pagada con efectivo de la caja", registra el retiro en el turno abierto (con el PIN de retiros).
-El historial de compras filtra por proveedor y fechas. **Anular** una compra no la borra: la compensa con
+**Registrar compra** (Ctrl+N en Inventario) ocupa casi toda la pantalla y va en tres pasos, de arriba hacia abajo:
+
+1. **¿A quién le compraste?** El proveedor se busca escribiendo (sin distinguir tildes ni mayúsculas) y, al final de
+   la lista, ofrece **+ Agregar proveedor «texto»**, que pide solo el nombre (y el teléfono, si quieres) en el mismo
+   lugar: el resto de sus datos se completa después en Inventario > Proveedores. Sin proveedor también vale. Más el
+   número de factura o guía y una nota, opcionales.
+2. **Escanea o busca los productos que llegaron.** Cada línea lleva cantidad y costo unitario (por kg en productos por
+   peso), en la tabla común, con campos de 44 px y un botón "Quitar" a la vista. Si el código o el nombre no existe,
+   ofrece **Crear producto** con lo escrito ya puesto. Ese formulario no pide stock inicial (lo suma la compra) y el
+   costo que escribas pasa a la línea; al guardar, el producto queda como línea con el foco en su cantidad.
+3. **¿Cómo se pagó?** "Con plata de la caja" (sale del turno abierto, como un retiro, con el PIN de retiros) o "De otra
+   forma" (no toca la caja). Sin turno abierto, la primera opción aparece desactivada y dice el motivo.
+
+Suma el stock y deja en cada producto el último costo. El historial de compras filtra por proveedor y fechas. **Anular** una compra no la borra: la compensa con
 movimientos negativos (avisa antes si algún producto quedaría con stock negativo) y, si se pagó con la caja,
 devuelve el dinero al turno actual. Pide el PIN de "Ajustar inventario". Los proveedores se crean, editan y
 desactivan; nunca se borran.
@@ -144,32 +160,53 @@ abonos vigentes. Nada se borra: pagos y abonos anulados quedan con su motivo.
 
 ## Reportes
 
-**Reportes** (F6) abre siempre en **Hoy**: ventas y boletas del día, ticket promedio, ganancia
-estimada, comparación con el mismo día de la semana pasada a la misma hora, efectivo esperado del
-turno abierto, fiado otorgado y pagos de fiado del día, ventas por hora y por medio de pago, los 10
-más vendidos, los productos bajo el mínimo (lleva a Inventario filtrado) y los clientes con fiado
-atrasado (lleva a su ficha). Se actualiza al volver a la pantalla y cuando Rust avisa que hubo una
-venta, anulación, devolución, pago o movimiento de caja (sin consultar cada tanto).
+**Reportes** (F6) abre siempre en el **Resumen del mes**: cuatro cifras grandes (Vendido, Ganancia, Ventas y Gasto
+promedio por venta), un gráfico de líneas con las ventas de cada día contra el mes pasado (línea punteada), con
+qué pagan los clientes y los 5 productos que más se venden. El detalle está en las demás pestañas.
 
-Las demás pestañas son por rango (hoy, ayer, esta semana, este mes, mes pasado, últimos 30 días,
-este año o personalizado):
+- **Período**: "Este mes" (por defecto), "Mes pasado", "Esta semana", "Hoy" y "Elegir fechas…"; "Más" trae Ayer,
+  Últimos 30 días y Este año. Donde no hay ancho para la barra en una sola fila (Configuración > Datos y respaldos con la
+  interfaz grande, por ejemplo) es un botón "Período: Este mes" que abre la lista completa; el cambio depende del ancho
+  del contenedor, no de la escala. El título dice siempre el período en palabras: "Noviembre 2026" o "Del 3 al 17 de
+  noviembre". Las reglas (rangos, período en palabras, con qué se compara) están en
+  `src/pantallas/reportes/reportes-nucleo.ts`, con tests. Un mes se compara con el mes anterior completo; otro
+  rango, con los mismos días justo antes.
+- **Cada tarjeta** lleva un ícono (i) con lo que mide, en una frase (se ve al pasar el mouse o con el teclado). El
+  *Gasto promedio por venta* (el "ticket promedio") es el total vendido dividido por la cantidad de ventas: no
+  cuenta las anuladas y descuenta las devoluciones. La *Ganancia* es lo vendido menos lo que costaron esos
+  productos y solo cuenta los que tienen costo registrado.
+- **Descargar este reporte**: un solo botón con un menú de dos opciones explicadas: *Planilla Excel* (para revisar los
+  números o mandarlos al contador, Ctrl+E) y *PDF* (para imprimir o enviar por WhatsApp o correo). Debajo dice qué
+  incluye ("lo que ves en pantalla: Ventas, noviembre 2026") y, al terminar, "Guardado en {carpeta}" con "Abrir" y
+  "Mostrar en la carpeta" (el Explorador, con el archivo marcado). Lo mismo en Productos y en Inventario > Stock
+  ("Descargar en Excel").
+- **Gráficos**: el de líneas (SVG propio, `Lineas` en `Graficos.tsx`) tiene el eje Y en pesos cortos ($120 mil), rayas
+  guía suaves y, al pasar el mouse, un punto por línea con el día y el monto; los días sin ventas valen 0. Las
+  barras horizontales se quedan para comparar categorías y medios de pago. El mapa de calor (día y hora) va en
+  "Ver a qué horas se vende más", plegado.
+- Los títulos dicen qué responde cada bloque ("¿Cuánto vendí cada día?", "¿Con qué me pagan?", "¿Qué se vende
+  más?"). Primero las tarjetas y un gráfico; el resto, debajo.
 
-- **Ventas**: total, boletas, ticket promedio; por día, medio de pago, categoría y día de la
-  semana; mapa de calor día × hora.
-- **Productos**: ranking por monto o por cantidad (en kg los de peso), filtro por categoría y
-  productos sin ventas; cada producto lleva a sus movimientos.
-- **Ganancia**: ventas − costo y margen por producto y por categoría. Desde la fase 6 cada venta
-  guarda el costo del producto en ese momento; las ventas anteriores usan el costo actual y se
-  informan aparte como "costos estimados". Lo vendido sin costo no entra en la ganancia y se lista
-  aparte.
-- **Turnos**: los cerrados en el rango con esperado, contado y diferencia, y el total de sobrantes
-  y faltantes.
-- **Fiados**: deuda al cierre del rango, fiado y pagado en el rango, y antigüedad de la deuda.
+Las demás pestañas:
 
-Las ventas anuladas no cuentan y las devoluciones se descuentan de su venta, así los totales
-cuadran con Ventas (F5). La base guarda las fechas en UTC y los reportes agrupan por el día y la
-hora del computador, también en los cambios de horario. Cada reporte se exporta a Excel (Ctrl+E) o
-PDF (con el nombre del negocio, el rango y la fecha de emisión) en `Documentos\CHUPS POS\Reportes`.
+- **Hoy**: cómo va el día: ventas y boletas, gasto promedio por venta, ganancia, comparación con el mismo día de la
+  semana pasada a la misma hora, la plata que debería haber en la caja, fiado otorgado y pagos de fiado, ventas por
+  hora y por medio de pago, los 10 más vendidos, los productos bajo el mínimo (lleva a Inventario filtrado) y los
+  clientes con fiado atrasado (lleva a su ficha). Se actualiza al volver a la pantalla y cuando Rust avisa que hubo
+  una venta, anulación, devolución, pago o movimiento de caja (sin consultar cada tanto).
+- **Ventas**: lo mismo del Resumen más las ventas por categoría y por día de la semana.
+- **Productos**: ranking por monto o por cantidad (en kg los de peso), filtro por categoría y productos sin ventas;
+  cada producto lleva a sus movimientos.
+- **Ganancia**: ventas − costo y margen por producto y por categoría. Desde la fase 6 cada venta guarda el costo del
+  producto en ese momento; las ventas anteriores usan el costo actual y se informan aparte como "costos
+  estimados". Lo vendido sin costo no entra en la ganancia y se lista aparte.
+- **Turnos**: los cerrados en el período con esperado, contado y diferencia, y el total de sobrantes y faltantes.
+- **Fiados**: deuda al cierre, fiado otorgado y pagos recibidos, y hace cuánto deben.
+
+Las ventas anuladas no cuentan y las devoluciones se descuentan de su venta, así los totales cuadran con Ventas
+(F5). La base guarda las fechas en UTC y los reportes agrupan por el día y la hora del computador, también en los
+cambios de horario. Cada reporte se descarga en Excel o PDF (con el nombre del negocio, el período y la fecha de
+emisión) en `Documentos\CHUPS POS\Reportes`.
 
 ## Importar y exportar Excel
 
@@ -194,25 +231,43 @@ números (se pueden sumar) y las fechas en hora local.
 "Descargar planilla de ejemplo" deja una planilla con los encabezados correctos y dos filas. Una
 exportación de productos o clientes se puede volver a importar tal cual.
 
-## Respaldos
+## Copias de seguridad
 
-Un respaldo es una copia completa de la base hecha con `VACUUM INTO` (consistente aunque la caja
-esté vendiendo), verificada con `PRAGMA integrity_check`, con nombre
-`chups-respaldo-AAAA-MM-DD-HHMM.db`.
+Configuración > **Datos y respaldos** tiene tres tarjetas.
 
-- **Automáticos**: al abrir la app si el último tiene más de 24 horas, y al cerrar cada turno. Van
-  a la carpeta `Respaldos` junto a los datos de la app (o la que se elija en Configuración > Datos)
-  y se conservan los últimos 14 (configurable). Corren en segundo plano: la caja nunca espera, y
-  solo se avisa si fallan.
-- **Manuales**: "Respaldar ahora" y "Respaldar en…" para otra carpeta, por ejemplo un pendrive.
-- Configuración > Datos muestra la ruta y el tamaño de la base, el último respaldo (con aviso si
-  tiene más de 3 días) y la lista de respaldos.
+**1. Copia de seguridad.** Arriba dice en grande cómo va la última copia: "Tu última copia es de hoy a las 13:05" en verde, o
+en aviso si tiene más de 3 días o no hay ninguna. `Hacer una copia ahora` pregunta el formato: **copia completa** (se puede
+importar) o **planilla Excel con todos los datos** (para ver o guardar; no se puede importar como copia).
 
-**Restaurar**: Configuración > Datos > "Restaurar un respaldo…", elegir el archivo y revisar su
-fecha, versión de la base, productos y última venta. Se rechazan los archivos que no son una base
-de CHUPS POS y los de una versión más nueva de la app. Siempre pide el PIN (si hay uno). Antes de
-reemplazar se respalda la base actual (queda como `…-antes-de-restaurar.db`); después la app se
-reinicia y, si el respaldo es de una versión anterior, las migraciones lo ponen al día.
+- **Copias automáticas**, siempre completas y en segundo plano (la caja nunca espera; solo se avisa si fallan):
+  *Al cerrar la caja* (el valor por defecto: al cerrar cada turno y, al abrir la app, si la última tiene más de 24 horas),
+  *Cada hora*, *Una vez al día*, *Una vez a la semana* o *Solo manual* (una lista vertical, con una frase por opción).
+  Con "una vez al día" o "a la semana" la copia sale al abrir la app o al cerrar el turno, si la última ya venció. Con
+  *Cada hora*, además, un temporizador mira cada 5 minutos con la app abierta y hace la copia si la última tiene más de
+  una hora (si falla, el aviso sale una sola vez, no cada 5 minutos). La regla está en `respaldos::toca` (pos-core), con tests; la
+  frecuencia se guarda en `config` (`respaldos_frecuencia`).
+- **Cuántas copias guardar**: un número que se escribe (de 1 a 365; 14 por defecto). Se guardan las últimas de toda la
+  carpeta y las más viejas se borran al hacer una nueva. Con *Cada hora* la pantalla dice cuánto abarcan ("5 copias cubren
+  las últimas 5 horas"). Las copias `…-antes-de-restaurar` que se hacen antes de importar otra no cuentan ni se borran.
+- **La carpeta** (la de siempre, `Respaldos` junto a los datos de la app, o la que se elija) con "Cambiar carpeta" y "Abrir
+  carpeta". `Ver copias guardadas` (plegada) lista las que hay.
+- Una copia completa es el archivo SQLite que deja `VACUUM INTO` (consistente aunque la caja esté vendiendo), verificado con
+  `PRAGMA integrity_check`: `chups-respaldo-AAAA-MM-DD-HHMM.db`.
+
+**2. Llevar tus datos a otro computador.** `Exportar una copia a un archivo…` guarda una copia completa donde elijas (un
+pendrive), con el nombre `chups-respaldo-AAAA-MM-DD-HHMM.chups` (sigue siendo SQLite; la extensión es para reconocerla al
+moverla). `Importar una copia…` acepta `.chups` y `.db`: muestra de qué fecha es, cuántos productos y ventas trae y avisa
+que **reemplaza todos los datos de este computador**. Siempre pide el PIN (si hay uno); antes se hace una copia de lo que
+hay ahora (queda como `…-antes-de-restaurar.db`), y después la app se reinicia y, si la copia es de una versión anterior,
+las migraciones la ponen al día. Se rechazan los archivos que no son una base de CHUPS POS y los de una versión más
+nueva de la app. El asistente de primer arranque ofrece lo mismo en su primer paso ("¿Vienes de otro computador?
+Importar una copia").
+
+**3. Planillas Excel.** Exportar (productos, stock y valorización, clientes y deudas, y ventas, movimientos y compras de un
+período) y `Exportar todo a Excel`: un solo libro con una hoja por tabla importante y todo el historial, escrito en segundo
+plano. Importar productos y clientes, con una planilla de ejemplo cada uno (los clientes no cargan deudas).
+
+La ruta y el tamaño de la base de datos están en Configuración > Acerca de > Información para soporte.
 
 ## PIN de administrador
 
@@ -322,9 +377,18 @@ Todo botón pasa por `src/componentes/Boton.tsx`, con `Tecla` para los atajos:
 
 - **Una sola acción primaria por pantalla o diálogo** (la que el usuario viene a hacer: Cobrar, Guardar,
   Respaldar ahora). Todo lo demás es **secundario**.
-- Lo opcional ("Cancelar" de un diálogo, "Quitar logo", "Cerrar") es **terciario**.
+- Lo opcional ("Cancelar" de un diálogo, "Quitar logo", "Cerrar") es **terciario**: fondo `--suave`, borde
+  `--linea` y texto `--texto`, con un tono más oscuro al pasar el mouse. Tiene caja para que se vea que es un botón.
+- **Enlace** (`variante="enlace"`: texto `--acento` subrayado, sin caja) solo para una acción dentro de una frase
+  ("Abrir" junto a "Guardado en…", el folio de una venta en una lista, el nombre de un producto en un reporte). Una
+  acción de verdad es secundario o terciario.
+- La navegación (secciones de Configuración, líneas de estado de la barra lateral) no usa `Boton`: son
+  `<button>` propios sin caja, con el estado "elegido" en Selección.
+- Todo lo que se puede apretar tiene cursor de mano (regla global en `index.css`), tono al pasar el mouse y
+  contorno de foco de teclado.
 - Lo que descarta o anula (Cancelar venta, Anular, Restaurar) es **peligro**.
-- Tamaños: normal 40 px, chico 32 px, grande 56 px (solo Cobrar) e ícono (un ícono solo, cuadrado de 32 px).
+- Tamaños: normal 44 px, chico 36 px, grande 56 px (solo Cobrar) e ícono (un ícono solo, cuadrado de 36 px).
+  Los campos de texto miden 44 px y el texto base 15 px; ningún texto baja de 13 px (`text-xs` vale 13 px).
 - Sin animaciones: solo una transición de color de 100 ms.
 
 Las filas clicables (listas virtuales, resultados de búsqueda), las pestañas y los ítems de la barra lateral son
@@ -340,6 +404,86 @@ contenido. Para agregar una sección: una entrada en `SECCIONES` de `src/pantall
 componente que devuelva `<Columnas izquierda={…} derecha={…} />` con `Tarjeta` (título, ayuda y cuerpo) y
 `Ajuste` (nombre y ayuda a la izquierda, control a la derecha).
 
+### Tablas
+
+Todas las listas usan `src/componentes/Tabla.tsx` (sobre `@tanstack/react-virtual`, solo se dibujan las filas que
+se ven). Una pantalla declara sus columnas y la tabla se encarga del resto:
+
+- Columnas: `id`, `titulo`, `ancho` (pista de grid), `alinear`, `ocultarBajo` (se oculta cuando la tabla mide menos
+  que ese ancho: primero lo secundario, código y categoría), `celda`, `orden` y `clase`. Los números (precio,
+  stock, total, cantidad) van a la derecha y en cifras tabulares; la columna del nombre no pasa de ~28 rem, para
+  que el precio no quede lejos del nombre en pantallas anchas.
+- El encabezado va fijo dentro de la tarjeta (fondo `--suave`, 13 px, peso 600). Las filas miden 48 px, con
+  separador `--linea`, tono al pasar el mouse y `--seleccion` en la elegida. Una fila que se abre (`onFila`) muestra
+  una flecha "›" al final y responde a Enter y espacio.
+- Clic en un encabezado: ascendente, descendente y sin orden. **Ordena solo lo ya cargado**: las listas se
+  piden por páginas de 100 y el backend no ordena por columna (agregarlo pediría consultas nuevas).
+- Pie con el conteo ("1.234 productos", y "(baja para ver más)" si falta cargar) y un estado vacío con una frase
+  útil y el botón de la acción ("Todavía no hay productos." + "Nuevo producto").
+- Los estados usan `Insignia` (fondo de rol: Bajo el mínimo en aviso, Anulada en peligro, Sin costo en aviso), no
+  solo color de texto.
+- `grupo` agrega encabezados (cada día en Ventas). `TablaVirtual` (Reportes y vistas previas de importar) es un
+  adaptador sobre `Tabla`.
+
+Órdenes de columnas (lo que identifica primero, lo que más se mira después y lo secundario al final): Productos:
+Nombre · Precio · Stock · Categoría · Código. Stock: Nombre · Stock · Mínimo · Estado · Costo · Valor. Ventas: Hora
+y folio · Total · Medio de pago · Productos · Estado. Compras: Fecha · Proveedor · Total · Productos · Documento ·
+N°. Movimientos: Fecha · Producto · Cantidad · Stock · Tipo · Origen. Proveedores: Nombre · Compras · Última
+compra · Contacto · Teléfono. Fiados: Cliente · Deuda · Desde.
+
+### Tamaño de la interfaz
+
+Configuración > Apariencia > **Tamaño de letra y botones**: Normal (100 %), **Grande (110 %, el valor por
+defecto)** y Más grande (125 %). Se aplica al instante, sin reiniciar, y se recuerda al cerrar la app.
+
+- Es el zoom del webview (`Webview::set_zoom`), una sola operación nativa: escala por igual textos, botones,
+  tablas y el alto de las filas virtualizadas, sin costo de rendimiento ni código en la interfaz. Rust lo aplica
+  al arrancar, apenas lee la configuración (`src-tauri/src/ventana.rs`), y al guardar el ajuste.
+- La ventana nace oculta (`"visible": false` en `tauri.conf.json`) y `ventana.rs` la muestra cuando la escala
+  ya está aplicada y la página terminó de cargar. Sin eso la interfaz se veía al 100 % unos 300 ms y luego saltaba
+  al tamaño elegido, porque la página empieza a cargar antes de que `setup` abra la base y lea la configuración.
+  Si la página no llega a cargar, se muestra igual a los 8 s. `tauri-plugin-window-state` no recuerda la
+  visibilidad (si lo hiciera, mostraría la ventana antes de tiempo).
+- Se guarda en la tabla `config` (clave `escala_interfaz`: `normal`, `grande` o `masgrande`). Una clave
+  ausente o rara vale el valor por defecto, así que las bases anteriores quedan en Grande sin migración.
+- Es el único ajuste que **no pide el PIN**: es accesibilidad, y quien está en el mostrador debe poder agrandar la
+  letra. Si junto con el tamaño cambia otra cosa, sí se pide.
+- El zoom reduce lo que ve el CSS: en una pantalla de 1366 × 768 (unos 1366 × 696 útiles con la ventana
+  maximizada) el área mide 1242 × 633 px con Grande y 1093 × 557 px con Más grande. Por eso el panel derecho de la
+  Caja pasa a un modo compacto cuando el alto es menor de 700 px (`[@media(max-height:700px)]`).
+- Instalaciones nuevas: tema Oscuro y barra lateral Expandida. Un equipo que ya usaba la app conserva lo que veía
+  (sin nada guardado, "Sistema" y "Automática"); lo que alguien eligió manda siempre.
+
+## Atajos de teclado
+
+El botón **Atajos**, al pie de la barra lateral, muestra la lista completa.
+
+| Dónde | Atajos |
+| --- | --- |
+| Secciones | F1 Caja · F2 Productos · F3 Inventario · F4 Fiados · F5 Ventas · F6 Reportes · F9 Configuración |
+| Caja | F12 cobrar · F8 poner en espera · F7 ventas en espera · Ctrl+P reimprimir la última boleta · Esc limpiar la búsqueda |
+| Cobro | 1–5 medio de pago (Alt+1–5 mientras escribes un monto) · Enter confirmar · F12 confirmar el fiado · Esc volver |
+| Otras | Ctrl+N nueva compra (Inventario) · Ctrl+E reporte en Excel (Reportes) · Ctrl+P reimprimir (detalle de una venta) o registrar un pago (ficha de fiado) · Esc cierra el diálogo o el detalle abierto |
+
+**¿Las teclas F no responden en un notebook?** Muchos traen las F como teclas de brillo y volumen: aprieta
+**Fn** junto con la tecla, o activa el bloqueo Fn (en muchos equipos, Fn+Esc). La app no puede cambiar eso.
+
+Cómo funciona, para quien programa:
+
+- Un solo despachador en `src/atajos.ts` (las reglas puras están en `src/atajos-nucleo.ts`, con tests). Los
+  componentes registran sus atajos con `useAtajos("global" | "pantalla" | "dialogo", mapa, activo)`; nadie pone
+  su propio `keydown` en `window`.
+- El diálogo de más arriba gana y bloquea los atajos de sección y de pantalla. `Dialogo` ya registra Esc; un
+  diálogo hecho a mano (Cobro) registra el ámbito `dialogo` por su cuenta.
+- Las F y lo que lleva Ctrl/Alt funcionan aunque el foco esté en un campo; las letras y los dígitos sueltos no.
+  Esc, Enter y los caracteres sueltos llegan después de los `onKeyDown` de los campos: si uno ya la atendió
+  (`preventDefault` o `stopPropagation`), el atajo no corre.
+- Las teclas del navegador (F5, Ctrl+R, F3, Ctrl+F, F7, Ctrl+S, Ctrl+P, zoom, Atrás…) están desactivadas en
+  WebView2 (`src-tauri/src/ventana.rs`) y además llevan `preventDefault`. Copiar, pegar, cortar y deshacer
+  siguen funcionando en los campos. El clic derecho solo muestra el menú en los campos de texto.
+- Al volver a la ventana (Alt+Tab, un diálogo de archivo, imprimir), Rust le devuelve el foco del teclado al
+  webview, con una pausa para que el rebote de WebView2 no arme un ciclo de eventos de foco.
+
 ## Licencia
 
 Cada negocio tiene una **licencia permanente**: no vence, no tiene plan y no depende de la versión ni de
@@ -347,6 +491,12 @@ las actualizaciones. Funciona sin internet: es un texto firmado con Ed25519 (`CH
 archivo `.chups-licencia` con ese mismo texto). La app solo trae la clave **pública**
 (`crates/pos-licencia/clave-publica.txt`, incrustada al compilar; también se puede fijar con la variable
 `CHUPS_CLAVE_PUBLICA`). La privada nunca entra al repositorio.
+
+**El nombre de la licencia y el de la boleta son cosas distintas.** El nombre y el RUT van dentro de la licencia firmada, y
+cambiarlos invalidaría la firma: la licencia es del negocio y del equipo, no del texto de la boleta. Por eso editar
+Configuración > Negocio solo cambia la boleta y la licencia sigue valiendo. Configuración > Licencia lo dice: muestra "Emitida a"
+con el nombre grabado al emitirla y, si el de las boletas es otro, también "Nombre en las boletas"; y avisa que, si cambió el
+dueño o la razón social, hay que pedir al vendedor una licencia nueva con el código de solicitud.
 
 **Estados** (los decide Rust, en `abrir_turno` y `confirmar_venta`; la vista solo los muestra):
 
@@ -440,17 +590,17 @@ Todo vive en `%APPDATA%\cl.chups.pos\` (por ejemplo `C:\Users\<usuario>\AppData\
 | Qué | Dónde |
 | --- | --- |
 | La base de datos | `chups-pos.db` (con `-wal` y `-shm` mientras la app está abierta) |
-| Respaldos automáticos y manuales | `Respaldos\` (o la carpeta elegida en Configuración > Datos y respaldos) |
+| Copias de seguridad automáticas y manuales | `Respaldos\` (o la carpeta elegida en Configuración > Datos y respaldos) |
 | Inicio de la prueba | `prueba.dat` |
 | Registro de errores | `Registros\` |
 | Boletas y reportes en PDF o Excel | `Documentos\CHUPS POS\` |
 
 **Cambiar a otro PC** (o reinstalar Windows): 1) en el computador viejo, Configuración > Datos y respaldos >
-"Respaldar ahora" (o "Respaldar en…" a un pendrive); 2) instala CHUPS POS en el nuevo; 3) pídele al vendedor
-una **licencia nueva** para ese equipo con su código de solicitud (la licencia está atada al computador: la
-base copiada no activa la licencia del otro); 4) en el nuevo, Configuración > Datos y respaldos >
-"Restaurar un respaldo…" y elige el archivo (pide el PIN si hay uno). El asistente de primer arranque no
-aparece en un equipo que ya tiene datos restaurados.
+"Exportar una copia a un archivo…" (a un pendrive); 2) instala CHUPS POS en el nuevo y, en el primer paso del
+asistente, elige "Importar una copia" (o después, en Configuración > Datos y respaldos > "Importar una copia…"; pide el PIN
+si hay uno); 3) pídele al vendedor una **licencia nueva** para ese equipo con su código de solicitud (la licencia está
+atada al computador: la base copiada no activa la licencia del otro). El asistente de primer arranque no aparece en un
+equipo que ya tiene datos importados.
 
 ## Desarrollo
 

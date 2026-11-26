@@ -128,7 +128,7 @@ export default function RegistrarPago({ cliente, marcadas, redondeoActivo, onReg
                 onChange={(e) => setRecibido(e.target.value)}
                 inputMode="numeric"
                 placeholder={pesos(entra)}
-                className="h-10 w-40 rounded-lg border border-borde-control bg-superficie px-3 text-right focus:border-acento"
+                className="h-11 w-40 rounded-lg border border-borde-control bg-superficie px-3 text-right focus:border-acento"
               />
             </label>
             <div className="flex items-baseline justify-between">
@@ -146,7 +146,7 @@ export default function RegistrarPago({ cliente, marcadas, redondeoActivo, onReg
             value={nota}
             onChange={(e) => setNota(e.target.value)}
             maxLength={200}
-            className="mt-1 h-10 w-full rounded-lg border border-borde-control bg-superficie px-3 focus:border-acento"
+            className="mt-1 h-11 w-full rounded-lg border border-borde-control bg-superficie px-3 focus:border-acento"
           />
         </label>
 

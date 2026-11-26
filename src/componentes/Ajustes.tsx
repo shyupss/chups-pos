@@ -38,12 +38,13 @@ export function Tarjeta({
  */
 export function Ajuste({ etiqueta, ayuda, children }: { etiqueta: string; ayuda?: string; children: ReactNode }) {
   return (
-    <div className="flex items-center justify-between gap-6 border-t border-linea pt-4 first:border-t-0 first:pt-0">
-      <div className="min-w-0">
+    // flex-wrap: con la interfaz más grande un control ancho baja bajo el texto en vez de desbordar.
+    <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 border-t border-linea pt-4 first:border-t-0 first:pt-0">
+      <div className="min-w-56 flex-1">
         <div className="text-sm font-medium">{etiqueta}</div>
-        {ayuda && <div className="text-[12.5px] text-tenue">{ayuda}</div>}
+        {ayuda && <div className="text-xs text-tenue">{ayuda}</div>}
       </div>
-      <div className="shrink-0">{children}</div>
+      <div className="max-w-full shrink-0">{children}</div>
     </div>
   );
 }

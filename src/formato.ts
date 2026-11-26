@@ -98,6 +98,18 @@ export function diaLocal(fecha: Date): string {
   return `${fecha.getFullYear()}-${dos(fecha.getMonth() + 1)}-${dos(fecha.getDate())}`;
 }
 
+/** "2,4 MB" o "380 KB": el tamaño de un archivo en palabras. */
+export function tamanoArchivo(bytes: number): string {
+  if (bytes >= 1024 * 1024) return `${(bytes / (1024 * 1024)).toLocaleString("es-CL", { maximumFractionDigits: 1 })} MB`;
+  return `${Math.max(1, Math.round(bytes / 1024)).toLocaleString("es-CL")} KB`;
+}
+
+/** La carpeta de una ruta de Windows o de cualquier otra: todo lo que va antes del último separador. */
+export function carpetaDe(ruta: string): string {
+  const i = Math.max(ruta.lastIndexOf("\\"), ruta.lastIndexOf("/"));
+  return i > 0 ? ruta.slice(0, i) : ruta;
+}
+
 /** "21-11-2026 14:05" en la hora local, igual que en la boleta. */
 export function fechaHora(iso: string): string {
   const [a, m, d] = diaLocal(new Date(iso)).split("-");

@@ -1,7 +1,9 @@
+import Boton from "../../componentes/Boton";
 import { ArrowDown, ArrowUp } from "lucide-react";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { api, escucharCambiosDelDia, textoError, type ResumenHoy } from "../../api";
 import { Barras, Columnas } from "../../componentes/Graficos";
+import InfoAyuda from "../../componentes/InfoAyuda";
 import { cantidad, NOMBRE_MEDIO, pesos } from "../../formato";
 import { escucharCambioStock } from "../../eventos";
 import { pesosCortos, porcentaje } from "./formato";
@@ -56,10 +58,20 @@ export default function Hoy({ activa, onVerBajoMinimo, onVerCliente, onVerProduc
       <p className="text-tenue first-letter:uppercase">{DIA_LARGO.format(dia(hoy.fecha))}</p>
 
       <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
-        <Tarjeta titulo="Ventas de hoy" valor={pesos(hoy.ventas)} pie={hoy.boletas === 1 ? "1 boleta" : `${hoy.boletas} boletas`} />
-        <Tarjeta titulo="Ticket promedio" valor={pesos(hoy.ticketPromedio)} />
         <Tarjeta
-          titulo="Ganancia estimada"
+          titulo="Ventas de hoy"
+          valor={pesos(hoy.ventas)}
+          pie={hoy.boletas === 1 ? "1 boleta" : `${hoy.boletas} boletas`}
+          ayuda="Todo lo que vendiste hoy, sin contar las ventas anuladas y descontando las devoluciones."
+        />
+        <Tarjeta
+          titulo="Gasto promedio por venta"
+          valor={pesos(hoy.ticketPromedio)}
+          ayuda="Lo que gasta en promedio cada cliente por compra: lo vendido hoy dividido por la cantidad de ventas. No cuenta ventas anuladas y descuenta las devoluciones. También se le dice «ticket promedio»."
+        />
+        <Tarjeta
+          titulo="Ganancia de hoy"
+          ayuda="Lo vendido menos lo que te costaron esos productos. Solo cuenta productos con costo registrado."
           valor={pesos(hoy.ganancia)}
           pie={hoy.ventasSinCosto > 0 ? `Sin contar ${pesos(hoy.ventasSinCosto)} vendidos sin costo` : "Ventas menos costo"}
         />
@@ -79,16 +91,17 @@ export default function Hoy({ activa, onVerBajoMinimo, onVerCliente, onVerProduc
           pie={`A esta hora llevaba ${pesos(hoy.ventasSemanaAnterior)}`}
         />
         <Tarjeta
-          titulo="Efectivo esperado en caja"
+          titulo="Plata que debería haber en la caja"
+          ayuda="Lo que dejaste al abrir, más lo cobrado en efectivo, más los ingresos, menos los retiros del turno abierto."
           valor={hoy.efectivoEsperado === null ? "Caja cerrada" : pesos(hoy.efectivoEsperado)}
           pie={hoy.efectivoEsperado === null ? "Abre la caja para vender" : "En el turno abierto"}
         />
-        <Tarjeta titulo="Fiado hoy" valor={pesos(hoy.fiadoOtorgado)} pie="Ventas fiadas del día" />
-        <Tarjeta titulo="Pagos de fiado hoy" valor={pesos(hoy.pagosFiado)} pie="Lo que pagaron los clientes" />
+        <Tarjeta titulo="Fiado otorgado hoy" valor={pesos(hoy.fiadoOtorgado)} pie="Ventas fiadas del día" ayuda="Lo que vendiste fiado hoy: todavía no lo cobras." />
+        <Tarjeta titulo="Pagos de fiado hoy" valor={pesos(hoy.pagosFiado)} pie="Lo que pagaron los clientes" ayuda="Lo que los clientes te pagaron hoy de sus deudas." />
       </div>
 
       <div className="grid gap-3 lg:grid-cols-3">
-        <Panel titulo="Ventas por hora" className="lg:col-span-2">
+        <Panel titulo="¿A qué hora vendí?" className="lg:col-span-2">
           <Columnas
             descripcion="Ventas de hoy por hora"
             columnas={hoy.porHora.map((c, h) => ({
@@ -100,7 +113,7 @@ export default function Hoy({ activa, onVerBajoMinimo, onVerCliente, onVerProduc
             formatoEje={pesosCortos}
           />
         </Panel>
-        <Panel titulo="Por medio de pago">
+        <Panel titulo="¿Con qué me pagan?">
           <Barras
             filas={hoy.porMedio.map((m) => ({
               etiqueta: NOMBRE_MEDIO[m.medio],
@@ -113,13 +126,15 @@ export default function Hoy({ activa, onVerBajoMinimo, onVerCliente, onVerProduc
       </div>
 
       <div className="grid gap-3 lg:grid-cols-3">
-        <Panel titulo="Más vendidos hoy">
+        <Panel titulo="¿Qué se vendió más hoy?">
           <Lista vacia="Todavía no hay ventas hoy.">
             {hoy.masVendidos.map((p) => (
               <li key={p.productoId} className="flex items-baseline gap-3">
-                <button type="button" onClick={() => onVerProducto({ id: p.productoId, nombre: p.nombre })} className="min-w-0 flex-1 truncate text-left hover:underline">
-                  {p.nombre}
-                </button>
+                <span className="min-w-0 flex-1 truncate">
+                  <Boton variante="enlace" onClick={() => onVerProducto({ id: p.productoId, nombre: p.nombre })} className="whitespace-nowrap" title="Ver movimientos">
+                    {p.nombre}
+                  </Boton>
+                </span>
                 <span className="text-tenue tabular-nums">{cantidad(p.cantidadMil, p.unidad)}</span>
                 <span className="w-20 text-right font-medium tabular-nums">{pesos(p.monto)}</span>
               </li>
@@ -144,9 +159,11 @@ export default function Hoy({ activa, onVerBajoMinimo, onVerCliente, onVerProduc
           <Lista vacia="Nadie tiene deudas atrasadas.">
             {hoy.atrasados.map((c) => (
               <li key={c.id} className="flex items-baseline gap-3">
-                <button type="button" onClick={() => onVerCliente(c.id)} className="min-w-0 flex-1 truncate text-left hover:underline">
-                  {c.nombre}
-                </button>
+                <span className="min-w-0 flex-1 truncate">
+                  <Boton variante="enlace" onClick={() => onVerCliente(c.id)} className="whitespace-nowrap">
+                    {c.nombre}
+                  </Boton>
+                </span>
                 <span className="rounded bg-aviso-fondo px-1.5 text-xs font-medium text-aviso">{c.dias} días</span>
                 <span className="w-20 text-right font-medium tabular-nums">{pesos(c.deuda)}</span>
               </li>
@@ -158,10 +175,14 @@ export default function Hoy({ activa, onVerBajoMinimo, onVerCliente, onVerProduc
   );
 }
 
-export function Tarjeta({ titulo, valor, pie }: { titulo: string; valor: ReactNode; pie?: string }) {
+/** Una cifra grande con su título; `ayuda` agrega el ícono (i) con lo que mide, en una frase. */
+export function Tarjeta({ titulo, valor, pie, ayuda }: { titulo: string; valor: ReactNode; pie?: string; ayuda?: string }) {
   return (
     <div className="tarjeta p-4">
-      <div className="text-xs font-medium text-tenue">{titulo}</div>
+      <div className="flex items-start justify-between gap-2">
+        <div className="text-xs font-medium text-tenue">{titulo}</div>
+        {ayuda && <InfoAyuda texto={ayuda} etiqueta={titulo} />}
+      </div>
       <div className="mt-1 text-2xl font-semibold tabular-nums">{valor}</div>
       {pie && (
         <div className="mt-1 truncate text-xs text-tenue" title={pie}>
@@ -188,9 +209,9 @@ export function Panel({
       <div className="mb-3 flex items-baseline justify-between gap-3">
         <h2 className="font-semibold">{titulo}</h2>
         {accion && (
-          <button type="button" onClick={accion.alHacer} className="text-sm text-acento hover:underline">
+          <Boton variante="enlace" onClick={accion.alHacer} className="text-sm">
             {accion.texto}
-          </button>
+          </Boton>
         )}
       </div>
       {children}

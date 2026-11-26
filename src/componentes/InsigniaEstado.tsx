@@ -1,19 +1,16 @@
 import type { EstadoVenta } from "../api";
+import Insignia, { type TonoInsignia } from "./Insignia";
 
-const ESTILO: Record<EstadoVenta, [string, string]> = {
-  pagada: ["Pagada", "bg-exito-fondo text-exito"],
-  fiada: ["Fiada", "bg-info-fondo text-info"],
-  anulada: ["Anulada", "border border-peligro/50 bg-peligro-fondo text-peligro"],
-  conDevolucion: ["Con devolución", "bg-aviso-fondo text-aviso"],
-  devuelta: ["Devuelta", "bg-suave text-tenue"],
+const ESTILO: Record<EstadoVenta, [string, TonoInsignia]> = {
+  pagada: ["Pagada", "exito"],
+  fiada: ["Fiada", "info"],
+  anulada: ["Anulada", "peligro"],
+  conDevolucion: ["Con devolución", "aviso"],
+  devuelta: ["Devuelta", "neutro"],
 };
 
 /** Estado de una venta en la lista y en el detalle. */
 export default function InsigniaEstado({ estado }: { estado: EstadoVenta }) {
-  const [texto, clase] = ESTILO[estado];
-  return (
-    <span className={`inline-flex h-6 items-center rounded-full px-2.5 text-xs font-medium whitespace-nowrap ${clase}`}>
-      {texto}
-    </span>
-  );
+  const [texto, tono] = ESTILO[estado];
+  return <Insignia tono={tono}>{texto}</Insignia>;
 }

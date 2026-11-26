@@ -12,7 +12,10 @@
     "isolatedModules": true,
     "skipLibCheck": true,
     "noEmit": true,
+    "allowImportingTsExtensions": true,
     "types": ["vite/client"]
   },
-  "include": ["src", "vite.config.ts"]
+  "include": ["src", "vite.config.ts"],
+  // Los tests corren con node --test (TypeScript nativo de Node, sin dependencias): no se compilan aquí.
+  "exclude": ["src/**/*.test.ts"]
 }

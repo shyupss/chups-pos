@@ -2,6 +2,7 @@
 // librerías de gráficos: cuidan el peso del instalador. Al pasar el mouse se ve el valor exacto.
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { escalaY, indiceMasCercano, polilinea, puntosDeSerie } from "../pantallas/reportes/reportes-nucleo";
 
 /** Ancho real del contenedor, para dibujar el SVG a su tamaño (sin estirar el texto). */
 function useAncho<T extends HTMLElement>(): [React.RefObject<T | null>, number] {
@@ -57,8 +58,9 @@ export function Columnas({
   const [ref, ancho] = useAncho<HTMLDivElement>();
   const [marcada, setMarcada] = useState<number | null>(null);
   const max = Math.max(1, ...columnas.map((c) => c.valor));
-  const izq = 48;
-  const abajo = 20;
+  // Las etiquetas miden 13 px (el mínimo de la interfaz): más margen para el eje y para el pie.
+  const izq = 60;
+  const abajo = 26;
   const util = Math.max(0, ancho - izq);
   const paso = columnas.length > 0 ? util / columnas.length : 0;
   const barra = Math.max(1, paso * 0.72);
@@ -72,7 +74,7 @@ export function Columnas({
           {[0, 0.5, 1].map((f) => (
             <g key={f}>
               <line x1={izq} x2={ancho} y1={y(max * f)} y2={y(max * f)} className="stroke-linea" />
-              <text x={izq - 6} y={y(max * f) + 4} textAnchor="end" className="fill-tenue text-[10px]">
+              <text x={izq - 6} y={y(max * f) + 4.5} textAnchor="end" className="fill-tenue text-[13px]">
                 {formatoEje(Math.round(max * f))}
               </text>
             </g>
@@ -93,7 +95,7 @@ export function Columnas({
                   className={marcada === i ? "fill-texto" : "fill-acento"}
                 />
                 {i % etiquetaCada === 0 && (
-                  <text x={x + barra / 2} y={alto - 6} textAnchor="middle" className="fill-tenue text-[10px]">
+                  <text x={x + barra / 2} y={alto - 7} textAnchor="middle" className="fill-tenue text-[13px]">
                     {c.etiqueta}
                   </text>
                 )}
@@ -155,8 +157,8 @@ export function MapaCalor({
   const [ref, ancho] = useAncho<HTMLDivElement>();
   const [marcada, setMarcada] = useState<[number, number] | null>(null);
   const max = Math.max(1, ...celdas.flat().map(valor));
-  const izq = 34;
-  const arriba = 16;
+  const izq = 36;
+  const arriba = 22;
   const lado = Math.max(8, Math.min(28, (ancho - izq) / 24));
   const alto = arriba + lado * 7;
   return (
@@ -165,14 +167,14 @@ export function MapaCalor({
         <svg width={izq + lado * 24} height={alto} role="img" aria-label="Ventas por día de la semana y hora" className="block">
           {Array.from({ length: 24 }, (_, h) =>
             h % 3 === 0 ? (
-              <text key={h} x={izq + h * lado + lado / 2} y={11} textAnchor="middle" className="fill-tenue text-[10px]">
+              <text key={h} x={izq + h * lado + lado / 2} y={15} textAnchor="middle" className="fill-tenue text-[13px]">
                 {h}
               </text>
             ) : null,
           )}
           {celdas.map((fila, d) => (
             <g key={d}>
-              <text x={izq - 6} y={arriba + d * lado + lado / 2 + 4} textAnchor="end" className="fill-tenue text-[10px]">
+              <text x={izq - 6} y={arriba + d * lado + lado / 2 + 4.5} textAnchor="end" className="fill-tenue text-[13px]">
                 {DIAS[d].slice(0, 2)}
               </text>
               {fila.map((c, h) => {
@@ -206,3 +208,152 @@ export function MapaCalor({
 }
 
 export { DIAS };
+
+export interface SerieLinea {
+  nombre: string;
+  /** Un valor por posición del eje X; una serie puede ser más corta que el eje (el mes que va). */
+  valores: number[];
+  /** Línea punteada, para lo que se compara (el mes pasado). */
+  punteada?: boolean;
+}
+
+/**
+ * Gráfico de líneas (ventas por día): una polyline por serie, rayas guía suaves, el eje Y en pesos cortos
+ * ($120 mil) y, al pasar el mouse por un día, un punto en cada línea con el día y el monto. SVG propio.
+ */
+export function Lineas({
+  series,
+  etiquetas,
+  titulos,
+  formatoEje,
+  formatoValor,
+  descripcion,
+  alto = 240,
+}: {
+  series: SerieLinea[];
+  /** El texto bajo cada posición del eje X ("1", "2"… o "3 nov"); se muestran los que caben. */
+  etiquetas: string[];
+  /** El encabezado del recuadro de cada posición: "Martes 3 de noviembre". */
+  titulos: string[];
+  formatoEje: (n: number) => string;
+  formatoValor: (n: number) => string;
+  /** Para lectores de pantalla. */
+  descripcion: string;
+  alto?: number;
+}) {
+  const [ref, ancho] = useAncho<HTMLDivElement>();
+  const [marcada, setMarcada] = useState<number | null>(null);
+  const izq = 64;
+  const der = 14;
+  const arriba = 12;
+  const abajo = 28;
+  const w = Math.max(0, ancho - izq - der);
+  const h = alto - arriba - abajo;
+  const largoX = etiquetas.length;
+  const max = Math.max(0, ...series.flatMap((s) => s.valores));
+  const { tope, valores: marcas } = escalaY(max);
+  const puntos = series.map((s) => puntosDeSerie(s.valores, w, h, tope, largoX));
+  const cada = Math.max(1, Math.ceil(largoX / Math.max(1, Math.floor(w / 46))));
+  const globo = marcada === null ? null : puntos.map((p) => p[marcada]).filter(Boolean);
+
+  return (
+    <div>
+      <div ref={ref} className="relative w-full" onMouseLeave={() => setMarcada(null)}>
+        {ancho > 0 && (
+          <svg
+            width={ancho}
+            height={alto}
+            role="img"
+            aria-label={descripcion}
+            className="block"
+            onMouseMove={(e) => {
+              const caja = e.currentTarget.getBoundingClientRect();
+              const x = e.clientX - caja.left - izq;
+              setMarcada(x < -izq / 2 || x > w + der ? null : indiceMasCercano(x, w, largoX));
+            }}
+          >
+            {marcas.map((v) => {
+              const y = arriba + h - (v / tope) * h;
+              return (
+                <g key={v}>
+                  <line x1={izq} x2={ancho - der} y1={y} y2={y} className="stroke-linea" />
+                  <text x={izq - 8} y={y + 4.5} textAnchor="end" className="fill-tenue text-[13px]">
+                    {formatoEje(v)}
+                  </text>
+                </g>
+              );
+            })}
+            {etiquetas.map((t, i) =>
+              i % cada === 0 ? (
+                <text
+                  key={i}
+                  x={izq + (largoX <= 1 ? w / 2 : (i / (largoX - 1)) * w)}
+                  y={alto - 6}
+                  textAnchor="middle"
+                  className="fill-tenue text-[13px]"
+                >
+                  {t}
+                </text>
+              ) : null,
+            )}
+            {marcada !== null && largoX > 1 && (
+              <line x1={izq + (marcada / (largoX - 1)) * w} x2={izq + (marcada / (largoX - 1)) * w} y1={arriba} y2={arriba + h} className="stroke-borde-control" />
+            )}
+            {series.map((s, i) => (
+              <polyline
+                key={s.nombre}
+                points={polilinea(puntos[i].map((p) => ({ x: p.x + izq, y: p.y + arriba })))}
+                fill="none"
+                strokeWidth={s.punteada ? 2 : 3}
+                strokeLinejoin="round"
+                strokeLinecap="round"
+                strokeDasharray={s.punteada ? "6 6" : undefined}
+                className={s.punteada ? "stroke-tenue" : "stroke-acento"}
+              />
+            ))}
+            {/* Con un solo día no hay línea que dibujar: se ve el punto. */}
+            {largoX === 1 &&
+              puntos.map((p, i) => p[0] && <circle key={i} cx={p[0].x + izq} cy={p[0].y + arriba} r={4} className={series[i].punteada ? "fill-tenue" : "fill-acento"} />)}
+            {marcada !== null &&
+              puntos.map((p, i) =>
+                p[marcada] ? (
+                  <circle
+                    key={series[i].nombre}
+                    cx={p[marcada].x + izq}
+                    cy={p[marcada].y + arriba}
+                    r={5}
+                    strokeWidth={2}
+                    className={`stroke-superficie ${series[i].punteada ? "fill-tenue" : "fill-acento"}`}
+                  />
+                ) : null,
+              )}
+          </svg>
+        )}
+        {marcada !== null && globo && globo.length > 0 && (
+          <Globo x={izq + (largoX <= 1 ? w / 2 : (marcada / (largoX - 1)) * w)} y={arriba + Math.min(...globo.map((p) => p.y))}>
+            <div className="font-medium">{titulos[marcada]}</div>
+            {series.map((s) =>
+              s.valores[marcada] === undefined ? null : (
+                <div key={s.nombre} className={s.punteada ? "text-tenue" : ""}>
+                  {s.nombre}: {formatoValor(s.valores[marcada])}
+                </div>
+              ),
+            )}
+          </Globo>
+        )}
+      </div>
+      {series.length > 1 && (
+        <ul className="mt-2 flex flex-wrap gap-x-5 gap-y-1 text-sm text-tenue">
+          {series.map((s) => (
+            <li key={s.nombre} className="flex items-center gap-2">
+              <svg width="26" height="8" aria-hidden>
+                <line x1="1" x2="25" y1="4" y2="4" strokeWidth={s.punteada ? 2 : 3} strokeLinecap="round" strokeDasharray={s.punteada ? "5 5" : undefined} className={s.punteada ? "stroke-tenue" : "stroke-acento"} />
+              </svg>
+              {s.nombre}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}

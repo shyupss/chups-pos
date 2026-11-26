@@ -15,12 +15,22 @@ use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 use sqlx::SqlitePool;
 
 use crate::error::validacion;
+use crate::servicios::config::FrecuenciaRespaldos;
 use crate::zona::Zona;
 use crate::{db, Error, Resultado};
 
 pub const PREFIJO: &str = "chups-respaldo-";
+/// Extensión de las copias que se llevan a otro computador (sigue siendo SQLite). Las automáticas son `.db`.
+pub const EXTENSION_COPIA: &str = "chups";
+/// Una copia semanal se hace si la última tiene más de esto.
+pub const CADA_HORAS_SEMANAL: i64 = 24 * 7;
 /// Un respaldo automático se hace si el último tiene más de esto.
 pub const CADA_HORAS: i64 = 24;
+/// Con la frecuencia "cada hora", una copia se hace si la última tiene más de esto.
+pub const CADA_HORAS_HORARIO: i64 = 1;
+/// Las copias que se hacen antes de importar otra son la red de seguridad de esa importación: la rotación
+/// no las borra (si no, una copia por hora las borraría en unas horas).
+const SUFIJO_ANTES_DE_RESTAURAR: &str = "antes-de-restaurar";
 
 #[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
@@ -50,7 +60,9 @@ pub fn listar(carpeta: &Path) -> Resultado<Vec<Respaldo>> {
         .filter_map(Result::ok)
         .filter_map(|e| {
             let nombre = e.file_name().to_string_lossy().into_owned();
-            if !nombre.starts_with(PREFIJO) || !nombre.ends_with(".db") {
+            if !nombre.starts_with(PREFIJO)
+                || !(nombre.ends_with(".db") || nombre.ends_with(".chups"))
+            {
                 return None;
             }
             let meta = e.metadata().ok()?;
@@ -62,7 +74,12 @@ pub fn listar(carpeta: &Path) -> Resultado<Vec<Respaldo>> {
             })
         })
         .collect();
-    let tronco = |r: &Respaldo| r.nombre.trim_end_matches(".db").to_owned();
+    let tronco = |r: &Respaldo| {
+        r.nombre
+            .trim_end_matches(".db")
+            .trim_end_matches(".chups")
+            .to_owned()
+    };
     v.sort_by(|a, b| {
         b.fecha
             .cmp(&a.fecha)
@@ -71,10 +88,14 @@ pub fn listar(carpeta: &Path) -> Resultado<Vec<Respaldo>> {
     Ok(v)
 }
 
-/// Borra los respaldos más antiguos y deja los `conservar` más nuevos. Devuelve cuántos borró.
+/// Borra los respaldos más antiguos y deja los `conservar` más nuevos. Devuelve cuántos borró. No cuenta ni
+/// borra las copias "antes de restaurar".
 pub fn rotar(carpeta: &Path, conservar: usize) -> Resultado<usize> {
     let mut borrados = 0;
-    for r in listar(carpeta)?.into_iter().skip(conservar.max(1)) {
+    let por_rotar = listar(carpeta)?
+        .into_iter()
+        .filter(|r| !r.nombre.contains(SUFIJO_ANTES_DE_RESTAURAR));
+    for r in por_rotar.skip(conservar.max(1)) {
         std::fs::remove_file(&r.ruta)
             .map_err(|e| io("No se pudo borrar un respaldo antiguo", e))?;
         borrados += 1;
@@ -82,14 +103,59 @@ pub fn rotar(carpeta: &Path, conservar: usize) -> Resultado<usize> {
     Ok(borrados)
 }
 
-/// ¿Toca un respaldo automático? Sí si no hay ninguno o el último tiene más de 24 horas.
-pub fn toca_automatico(carpeta: &Path, ahora: DateTime<Utc>) -> bool {
-    match listar(carpeta).ok().and_then(|v| v.into_iter().next()) {
-        None => true,
-        Some(r) => {
-            crate::zona::de_texto(&r.fecha).is_none_or(|f| ahora - f > Duration::hours(CADA_HORAS))
-        }
+/// Cuándo se evalúa si toca un respaldo automático.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Momento {
+    /// La app acaba de abrirse.
+    Arranque,
+    /// Se acaba de cerrar un turno de caja.
+    CierreDeCaja,
+    /// El temporizador (cada pocos minutos con la app abierta): solo la frecuencia "cada hora" hace copias aquí.
+    Periodico,
+}
+
+/// Cuándo se hizo el último respaldo de la carpeta (UTC); `None` si no hay ninguno.
+pub fn fecha_del_ultimo(carpeta: &Path) -> Option<DateTime<Utc>> {
+    let r = listar(carpeta).ok()?.into_iter().next()?;
+    crate::zona::de_texto(&r.fecha)
+}
+
+/**
+ * ¿Toca un respaldo automático? Depende de lo que se eligió en Configuración:
+ * - al cerrar la caja (lo de siempre): al cerrar el turno, siempre; al abrir la app, si no hay ninguno o el
+ *   último tiene más de 24 horas;
+ * - cada hora: al abrir la app, al cerrar el turno y con el temporizador, si el último tiene más de una hora;
+ * - una vez al día: al abrir la app o al cerrar el turno, si el último tiene más de 24 horas;
+ * - una vez a la semana: lo mismo con 7 días;
+ * - solo manual: nunca.
+ */
+pub fn toca(
+    frecuencia: FrecuenciaRespaldos,
+    momento: Momento,
+    ultimo: Option<DateTime<Utc>>,
+    ahora: DateTime<Utc>,
+) -> bool {
+    let vencido = |horas: i64| ultimo.is_none_or(|f| ahora - f > Duration::hours(horas));
+    match (frecuencia, momento) {
+        (FrecuenciaRespaldos::SoloManual, _) => false,
+        (FrecuenciaRespaldos::CadaHora, _) => vencido(CADA_HORAS_HORARIO),
+        // El temporizador solo sirve a "cada hora": las demás frecuencias se evalúan al abrir y al cerrar la caja.
+        (_, Momento::Periodico) => false,
+        (FrecuenciaRespaldos::AlCerrarCaja, Momento::CierreDeCaja) => true,
+        (FrecuenciaRespaldos::AlCerrarCaja, Momento::Arranque)
+        | (FrecuenciaRespaldos::UnaVezAlDia, _) => vencido(CADA_HORAS),
+        (FrecuenciaRespaldos::UnaVezALaSemana, _) => vencido(CADA_HORAS_SEMANAL),
     }
+}
+
+/// ¿Toca al abrir la app con la frecuencia de siempre? Sí si no hay ninguno o el último tiene más de 24 horas.
+pub fn toca_automatico(carpeta: &Path, ahora: DateTime<Utc>) -> bool {
+    toca(
+        FrecuenciaRespaldos::AlCerrarCaja,
+        Momento::Arranque,
+        fecha_del_ultimo(carpeta),
+        ahora,
+    )
 }
 
 /// Abre un archivo de base solo para leer, sin migrar ni crear nada.
@@ -109,6 +175,68 @@ async fn integridad(pool: &SqlitePool) -> Resultado<bool> {
         .fetch_one(pool)
         .await?;
     Ok(r == "ok")
+}
+
+/// Copia la base con `VACUUM INTO` a `destino`: primero a un temporal, la verifica y recién entonces le pone su
+/// nombre (un archivo que ya estaba se reemplaza). Devuelve los bytes de la copia.
+async fn copiar_verificada(pool: &SqlitePool, destino: &Path) -> Resultado<u64> {
+    let temporal = destino.with_extension(format!(
+        "{}.tmp",
+        destino.extension().and_then(|e| e.to_str()).unwrap_or("db")
+    ));
+    let _ = std::fs::remove_file(&temporal);
+    sqlx::query("VACUUM INTO ?")
+        .bind(temporal.to_string_lossy().as_ref())
+        .execute(pool)
+        .await
+        .map_err(|e| Error::Validacion(format!("No se pudo copiar la base: {e}")))?;
+    let copia = abrir_solo_lectura(&temporal).await?;
+    let sana = integridad(&copia).await;
+    copia.close().await;
+    if !matches!(sana, Ok(true)) {
+        let _ = std::fs::remove_file(&temporal);
+        return validacion("La copia del respaldo no pasó la verificación de integridad");
+    }
+    std::fs::rename(&temporal, destino).map_err(|e| io("No se pudo guardar el respaldo", e))?;
+    Ok(std::fs::metadata(destino)
+        .map_err(|e| io("No se pudo leer el respaldo", e))?
+        .len())
+}
+
+/// El nombre que se propone para una copia que se lleva a otro computador:
+/// `chups-respaldo-AAAA-MM-DD-HHMM.chups`.
+pub fn nombre_de_copia(zona: &dyn Zona, ahora: DateTime<Utc>) -> String {
+    format!(
+        "{PREFIJO}{}.{EXTENSION_COPIA}",
+        zona.a_local(ahora).format("%Y-%m-%d-%H%M")
+    )
+}
+
+/// Guarda una copia completa de la base en el archivo que se eligió (un pendrive, por ejemplo). Es la misma
+/// copia verificada de siempre: se puede importar en otro computador con "Importar una copia".
+pub async fn exportar_copia(
+    pool: &SqlitePool,
+    destino: &Path,
+    ahora: DateTime<Utc>,
+) -> Resultado<Respaldo> {
+    if let Some(carpeta) = destino.parent().filter(|c| !c.as_os_str().is_empty()) {
+        std::fs::create_dir_all(carpeta).map_err(|e| {
+            io(
+                &format!("No se pudo crear la carpeta {}", carpeta.display()),
+                e,
+            )
+        })?;
+    }
+    let bytes = copiar_verificada(pool, destino).await?;
+    Ok(Respaldo {
+        nombre: destino
+            .file_name()
+            .map(|n| n.to_string_lossy().into_owned())
+            .unwrap_or_default(),
+        bytes,
+        fecha: crate::zona::a_texto(ahora),
+        ruta: destino.to_string_lossy().into_owned(),
+    })
 }
 
 /// Respalda la base en `carpeta`: copia con `VACUUM INTO` a un archivo temporal, la verifica y
@@ -137,28 +265,14 @@ pub async fn respaldar(
         ruta = carpeta.join(format!("{base}-{n}.db"));
         n += 1;
     }
-    let temporal = ruta.with_extension("db.tmp");
-    let _ = std::fs::remove_file(&temporal);
-    sqlx::query("VACUUM INTO ?")
-        .bind(temporal.to_string_lossy().as_ref())
-        .execute(pool)
-        .await
-        .map_err(|e| Error::Validacion(format!("No se pudo copiar la base: {e}")))?;
-    let copia = abrir_solo_lectura(&temporal).await?;
-    let sana = integridad(&copia).await;
-    copia.close().await;
-    if !matches!(sana, Ok(true)) {
-        let _ = std::fs::remove_file(&temporal);
-        return validacion("La copia del respaldo no pasó la verificación de integridad");
-    }
-    std::fs::rename(&temporal, &ruta).map_err(|e| io("No se pudo guardar el respaldo", e))?;
+    let bytes = copiar_verificada(pool, &ruta).await?;
     let meta = std::fs::metadata(&ruta).map_err(|e| io("No se pudo leer el respaldo", e))?;
     Ok(Respaldo {
         nombre: ruta
             .file_name()
             .map(|n| n.to_string_lossy().into_owned())
             .unwrap_or_default(),
-        bytes: meta.len(),
+        bytes,
         fecha: crate::zona::a_texto(meta.modified().map(a_utc).unwrap_or(ahora)),
         ruta: ruta.to_string_lossy().into_owned(),
     })

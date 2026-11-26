@@ -117,7 +117,7 @@ export default function ImpresoraConfig({
               value={config.impresora ?? ""}
               onChange={(e) => void cambiarImpresora(e.target.value)}
               aria-label="Impresora"
-              className="h-10 min-w-0 flex-1 rounded-lg border border-borde-control px-3 focus:border-acento"
+              className="h-11 min-w-0 flex-1 rounded-lg border border-borde-control px-3 focus:border-acento"
             >
               <option value="">{impresoras === null ? "Buscando impresoras…" : "Elige una impresora…"}</option>
               {impresoras?.map((i) => (
@@ -281,7 +281,7 @@ export default function ImpresoraConfig({
 export function Seccion({ titulo, children }: { titulo: string; children: ReactNode }) {
   return (
     <section className="flex flex-col gap-4 border-t border-linea pt-4 first:border-t-0 first:pt-0">
-      <h3 className="text-[12.5px] font-semibold text-tenue">{titulo}</h3>
+      <h3 className="text-xs font-semibold text-tenue">{titulo}</h3>
       {children}
     </section>
   );

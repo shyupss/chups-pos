@@ -42,6 +42,48 @@ pub enum FormatoBalanza {
     Precio,
 }
 
+/// Cuándo hace copias de seguridad solas la app (Configuración > Datos y respaldos).
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum FrecuenciaRespaldos {
+    /// Cada hora mientras la app está abierta (también al abrirla y al cerrar la caja, si la última tiene más de una hora).
+    CadaHora,
+    /// Al cerrar la caja y, como siempre, al abrir la app si la última copia tiene más de 24 horas.
+    #[default]
+    AlCerrarCaja,
+    /// Una vez al día: al abrir la app o al cerrar la caja, si la última tiene más de 24 horas.
+    UnaVezAlDia,
+    /// Una vez a la semana: al abrir la app o al cerrar la caja, si la última tiene más de 7 días.
+    UnaVezALaSemana,
+    /// Nunca solas: solo cuando se pide.
+    SoloManual,
+}
+
+/// Tamaño de letra y botones de toda la interfaz. Rust lo aplica como zoom del webview: una sola
+/// operación nativa que escala textos, botones y tablas por igual.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum EscalaInterfaz {
+    /// 100 %.
+    Normal,
+    /// 110 %: el valor por defecto, pensado para quien mira de lejos o ve poco.
+    #[default]
+    Grande,
+    /// 125 %.
+    MasGrande,
+}
+
+impl EscalaInterfaz {
+    /// El zoom del webview (1.0 = 100 %).
+    pub fn factor(self) -> f64 {
+        match self {
+            Self::Normal => 1.0,
+            Self::Grande => 1.10,
+            Self::MasGrande => 1.25,
+        }
+    }
+}
+
 /// Nombre con que cada enum se guarda en la tabla config (el mismo que usa la vista).
 macro_rules! enum_de_texto {
     ($tipo:ty { $($variante:ident => $texto:literal),+ $(,)? }) => {
@@ -59,6 +101,8 @@ macro_rules! enum_de_texto {
 enum_de_texto!(TablaCaracteres { Cp858 => "cp858", Cp850 => "cp850", Wpc1252 => "wpc1252" });
 enum_de_texto!(FormatoPdf { Ticket => "ticket", Carta => "carta" });
 enum_de_texto!(FormatoBalanza { Peso => "peso", Precio => "precio" });
+enum_de_texto!(FrecuenciaRespaldos { CadaHora => "hora", AlCerrarCaja => "cierre", UnaVezAlDia => "dia", UnaVezALaSemana => "semana", SoloManual => "manual" });
+enum_de_texto!(EscalaInterfaz { Normal => "normal", Grande => "grande", MasGrande => "masgrande" });
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -111,6 +155,12 @@ pub struct Config {
     pub respaldos_carpeta: Option<String>,
     /// Cuántos respaldos automáticos se conservan (los más antiguos se borran).
     pub respaldos_conservar: u16,
+    /// Cuándo se hacen copias automáticas; el valor por defecto mantiene lo de siempre.
+    pub respaldos_frecuencia: FrecuenciaRespaldos,
+
+    // Interfaz
+    /// Tamaño de letra y botones (zoom del webview). Cambiarlo no pide el PIN: es accesibilidad.
+    pub escala_interfaz: EscalaInterfaz,
 }
 
 impl Default for Config {
@@ -137,6 +187,8 @@ impl Default for Config {
             fiado_dias_alerta: 30,
             respaldos_carpeta: None,
             respaldos_conservar: 14,
+            respaldos_frecuencia: FrecuenciaRespaldos::default(),
+            escala_interfaz: EscalaInterfaz::default(),
         }
     }
 }
@@ -243,6 +295,8 @@ const BALANZA_LARGO_CODIGO: &str = "balanza_largo_codigo";
 const FIADO_DIAS_ALERTA: &str = "fiado_dias_alerta";
 const RESPALDOS_CARPETA: &str = "respaldos_carpeta";
 const RESPALDOS_CONSERVAR: &str = "respaldos_conservar";
+const RESPALDOS_FRECUENCIA: &str = "respaldos_frecuencia";
+const ESCALA_INTERFAZ: &str = "escala_interfaz";
 // Seguridad: fuera de `Config`.
 const PIN_HASH: &str = "pin_hash";
 const RECUPERACION_HASH: &str = "pin_recuperacion_hash";
@@ -370,6 +424,12 @@ impl Config {
                 .and_then(|v| v.parse().ok())
                 .filter(|n| (1..=365).contains(n))
                 .unwrap_or(d.respaldos_conservar),
+            respaldos_frecuencia: texto(RESPALDOS_FRECUENCIA)
+                .and_then(FrecuenciaRespaldos::desde_texto)
+                .unwrap_or(d.respaldos_frecuencia),
+            escala_interfaz: texto(ESCALA_INTERFAZ)
+                .and_then(EscalaInterfaz::desde_texto)
+                .unwrap_or(d.escala_interfaz),
         }
     }
 
@@ -399,6 +459,11 @@ impl Config {
                 self.respaldos_carpeta.clone().unwrap_or_default(),
             ),
             (RESPALDOS_CONSERVAR, self.respaldos_conservar.to_string()),
+            (
+                RESPALDOS_FRECUENCIA,
+                self.respaldos_frecuencia.como_texto().into(),
+            ),
+            (ESCALA_INTERFAZ, self.escala_interfaz.como_texto().into()),
         ]
     }
 
@@ -468,7 +533,8 @@ pub async fn obtener(pool: &SqlitePool) -> Resultado<Config> {
 }
 
 /// Guarda toda la configuración en una transacción y devuelve lo que quedó.
-/// Pide el PIN si "cambiar configuración" está protegida.
+/// Pide el PIN si "cambiar configuración" está protegida, salvo que lo único que cambie sea el
+/// tamaño de la interfaz: eso es accesibilidad y lo puede hacer quien esté en el mostrador.
 pub async fn guardar(
     pool: &SqlitePool,
     control: &ControlPin,
@@ -476,7 +542,14 @@ pub async fn guardar(
     nueva: &Config,
 ) -> Resultado<Config> {
     let limpia = nueva.clone().validar()?;
-    seguridad::exigir(pool, control, Accion::CambiarConfiguracion, pin).await?;
+    let guardada = obtener(pool).await?;
+    let solo_el_tamano = Config {
+        escala_interfaz: guardada.escala_interfaz,
+        ..limpia.clone()
+    } == guardada;
+    if !solo_el_tamano {
+        seguridad::exigir(pool, control, Accion::CambiarConfiguracion, pin).await?;
+    }
     let mut tx = pool.begin().await?;
     for (clave, valor) in limpia.a_claves() {
         repo::guardar(&mut tx, clave, &valor).await?;

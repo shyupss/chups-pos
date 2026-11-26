@@ -23,6 +23,7 @@ import PonerEnEspera from "../componentes/PonerEnEspera";
 import { cantidad, MAX_KG_MIL, MAX_UNIDADES_MIL, parseKg, pesos, subtotalLinea } from "../formato";
 import { avisarCambioStock } from "../eventos";
 import { useSalidasVenta } from "../hooks/useSalidasVenta";
+import { IMPRIMIBLE, useAtajos } from "../atajos";
 
 interface Linea {
   producto: Producto;
@@ -314,43 +315,33 @@ export default function Caja({
     void imprimir(ultimaVentaId, 1, true);
   }, [ultimaVentaId, aviso, salida, iniciar, imprimir]);
 
-  // Atajos y "foco pegajoso": si el lector escribe mientras el foco está en otro lado,
-  // las teclas van igual al campo de escaneo.
-  useEffect(() => {
-    if (!activa || dialogoAbierto) return;
-    const alPresionar = (e: KeyboardEvent) => {
-      if (e.key === "F12") {
-        e.preventDefault();
+  // Atajos y "foco pegajoso": si el lector escribe mientras el foco está en otro lado, las teclas
+  // van igual al campo de escaneo. Con un diálogo abierto (Cobro, peso, espera, PIN…) no corren:
+  // lo decide el despachador. Con la caja cerrada se muestra "Abrir caja" y tampoco actúan.
+  useAtajos(
+    "pantalla",
+    {
+      F12: () => {
         if (lineas.length > 0) setCobrando(true);
-        return;
-      }
-      if (e.ctrlKey && e.key.toLowerCase() === "p") {
-        e.preventDefault();
-        reimprimirUltima();
-        return;
-      }
-      if (e.key === "F7") {
-        e.preventDefault();
-        abrirListaEspera();
-        return;
-      }
-      if (e.key === "F8") {
-        e.preventDefault();
+      },
+      "Ctrl+P": () => reimprimirUltima(),
+      F7: () => abrirListaEspera(),
+      F8: () => {
         if (lineas.length > 0) setDialogo("poner-espera");
-        return;
-      }
-      if (e.key === "Escape") {
+      },
+      Escape: () => {
         setResultados([]);
         setEntrada("");
         enfocar();
-        return;
-      }
-      const enCampo = e.target instanceof HTMLInputElement;
-      if (!enCampo && e.key.length === 1 && !e.ctrlKey && !e.altKey && !e.metaKey) enfocar();
-    };
-    window.addEventListener("keydown", alPresionar);
-    return () => window.removeEventListener("keydown", alPresionar);
-  }, [activa, dialogoAbierto, lineas.length, enfocar, abrirListaEspera, reimprimirUltima]);
+      },
+      // Enfoca el campo y deja que el carácter se escriba ahí (sin preventDefault).
+      [IMPRIMIBLE]: () => {
+        enfocar();
+        return false;
+      },
+    },
+    activa && !cerrada,
+  );
 
   // La venta ya está guardada: la boleta y el cajón van en segundo plano y nada de eso la deshace.
   const alConfirmar = (venta: VentaConfirmada) => {
@@ -374,7 +365,7 @@ export default function Caja({
           {lineas.length === 0 ? (
             <p className="p-8 text-center text-tenue">Escanea productos para empezar una venta</p>
           ) : (
-            <table className="w-full">
+            <table className="w-full max-[1150px]:[&_td]:px-2 max-[1150px]:[&_th]:px-2">
               <thead className="sticky top-0 bg-suave text-left text-[13px] text-tenue">
                 <tr className="h-10">
                   <th className="px-4 font-medium">Producto</th>
@@ -399,13 +390,13 @@ export default function Caja({
                       </td>
                       <td className="px-4">
                         {l.producto.unidad === "kg" ? (
-                          <div className="mx-auto flex h-8 w-fit items-center gap-2 rounded-lg border border-borde-control bg-superficie pr-1 pl-3">
+                          <div className="mx-auto flex h-9 w-fit items-center gap-2 rounded-lg border border-borde-control bg-superficie pr-1 pl-3">
                             <span>{cantidad(l.cantidadMil, "kg")}</span>
                             <Boton
                               variante="terciario"
                               tamano="chico"
                               onClick={() => setPesando({ producto: l.producto, cambiar: true })}
-                              className="h-6 rounded-md bg-seleccion px-2 text-xs font-semibold text-acento hover:text-acento"
+                              className="h-7 rounded-md bg-seleccion px-2 text-xs font-semibold text-acento hover:text-acento"
                               aria-label={`Cambiar el peso de ${l.producto.nombre}`}
                             >
                               Cambiar
@@ -413,18 +404,18 @@ export default function Caja({
                           </div>
                         ) : (
                           <div className="flex items-center justify-center gap-1">
-                            <Boton tamano="icono" className="size-7" aria-label={`Una menos de ${l.producto.nombre}`} onClick={() => cambiarUnidades(l.producto.id, l.cantidadMil / 1000 - 1)}>
+                            <Boton tamano="icono" className="size-9" aria-label={`Una menos de ${l.producto.nombre}`} onClick={() => cambiarUnidades(l.producto.id, l.cantidadMil / 1000 - 1)}>
                               −
                             </Boton>
                             <input
                               value={l.cantidadMil / 1000}
                               onChange={(e) => cambiarUnidades(l.producto.id, Number(e.target.value.replace(/\D/g, "")) || 1)}
                               onKeyDown={(e) => e.key === "Enter" && enfocar()}
-                              className="h-7 w-14 rounded-lg border border-borde-control px-1 text-center focus:border-acento"
+                              className="h-9 w-14 rounded-lg border border-borde-control px-1 text-center focus:border-acento"
                               inputMode="numeric"
                               aria-label={`Cantidad de ${l.producto.nombre}`}
                             />
-                            <Boton tamano="icono" className="size-7" aria-label={`Una más de ${l.producto.nombre}`} onClick={() => cambiarUnidades(l.producto.id, l.cantidadMil / 1000 + 1)}>
+                            <Boton tamano="icono" className="size-9" aria-label={`Una más de ${l.producto.nombre}`} onClick={() => cambiarUnidades(l.producto.id, l.cantidadMil / 1000 + 1)}>
                               +
                             </Boton>
                           </div>
@@ -434,7 +425,7 @@ export default function Caja({
                         {pesos(subtotalLinea(l.producto.precioVenta, l.cantidadMil))}
                       </td>
                       <td className="pr-2 text-center">
-                        <Boton tamano="icono" className="size-7" onClick={() => quitar(l.producto.id)} title="Quitar" aria-label={`Quitar ${l.producto.nombre}`}>
+                        <Boton tamano="icono" className="size-9" onClick={() => quitar(l.producto.id)} title="Quitar" aria-label={`Quitar ${l.producto.nombre}`}>
                           ×
                         </Boton>
                       </td>
@@ -451,29 +442,29 @@ export default function Caja({
   );
   const panel = useMemo(
     () => (
-      <aside className="flex w-82 shrink-0 flex-col gap-5 overflow-y-auto border-l border-linea bg-superficie p-5">
-        <div className="rounded-panel bg-visor-bg pt-4 pr-[18px] pb-[18px] pl-[18px] text-visor-texto shadow-s2">
+      <aside className="flex w-82 shrink-0 flex-col gap-5 overflow-y-auto border-l border-linea bg-superficie p-5 [@media(max-height:700px)]:gap-3 [@media(max-height:700px)]:p-4">
+        <div className="rounded-panel bg-visor-bg pt-4 pr-[18px] pb-[18px] pl-[18px] text-visor-texto shadow-s2 [@media(max-height:700px)]:pt-3 [@media(max-height:700px)]:pb-3">
           {ultima ? (
             <div>
               <div className="flex items-baseline justify-between gap-3 text-sm font-semibold">
                 <span className="min-w-0 truncate">{ultima.producto.nombre}</span>
                 <span className="shrink-0 tabular-nums">{pesos(subtotalLinea(ultima.producto.precioVenta, ultima.cantidadMil))}</span>
               </div>
-              <div className="mt-0.5 text-[12.5px] text-visor-tenue tabular-nums">
+              <div className="mt-0.5 text-xs text-visor-tenue tabular-nums">
                 {ultima.producto.unidad === "kg"
                   ? `${cantidad(ultima.cantidadMil, "kg")} a ${pesos(ultima.producto.precioVenta)} el kilo`
                   : `${cantidad(ultima.cantidadMil, "unidad")} × ${pesos(ultima.producto.precioVenta)}`}
               </div>
             </div>
           ) : (
-            <div className="text-[12.5px] text-visor-tenue">Escanea un producto para empezar</div>
+            <div className="text-xs text-visor-tenue">Escanea un producto para empezar</div>
           )}
-          <hr className="my-3 border-visor-tenue/30" />
+          <hr className="my-3 border-visor-tenue/30 [@media(max-height:700px)]:my-2" />
           <div className="text-[13px] text-visor-tenue">Total a pagar</div>
-          <div role="status" aria-live="polite" className="text-[46px] leading-[1.1] font-bold tabular-nums">
+          <div role="status" aria-live="polite" className="text-[46px] leading-[1.1] font-bold tabular-nums [@media(max-height:700px)]:text-[40px]">
             {pesos(total)}
           </div>
-          <div className="mt-1 text-[12.5px] text-visor-tenue">{resumenCarrito(lineas)}</div>
+          <div className="mt-1 text-xs text-visor-tenue">{resumenCarrito(lineas)}</div>
         </div>
 
         <Boton
@@ -487,8 +478,8 @@ export default function Caja({
           Cobrar
         </Boton>
 
-        <div className="flex flex-col gap-2">
-          <h2 className="text-[12.5px] font-semibold text-tenue">Venta actual</h2>
+        <div className="flex flex-col gap-2 [@media(max-height:700px)]:gap-1.5 [@media(max-height:700px)]:[&_.boton]:h-9">
+          <h2 className="text-xs font-semibold text-tenue [@media(max-height:700px)]:sr-only">Venta actual</h2>
           <Boton
             bloque
             icono={Pause}
@@ -518,8 +509,8 @@ export default function Caja({
           </Boton>
         </div>
 
-        <div className="flex flex-col gap-2">
-          <h2 className="text-[12.5px] font-semibold text-tenue">Caja</h2>
+        <div className="flex flex-col gap-2 [@media(max-height:700px)]:gap-1.5 [@media(max-height:700px)]:[&_.boton]:h-9">
+          <h2 className="text-xs font-semibold text-tenue [@media(max-height:700px)]:sr-only">Caja</h2>
           <Boton bloque icono={ArrowDownUp} disabled={!turno} onClick={() => setDialogo("movimiento")}>
             Ingreso o retiro de efectivo
           </Boton>
@@ -602,7 +593,7 @@ export default function Caja({
                       elegir(p, multiploPendiente);
                       enfocar();
                     }}
-                    className="flex h-10 w-full items-center justify-between px-4 text-left hover:bg-suave"
+                    className="flex h-11 w-full items-center justify-between px-4 text-left hover:bg-suave"
                   >
                     <span>{p.nombre}</span>
                     <span className="text-tenue tabular-nums">

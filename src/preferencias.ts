@@ -10,6 +10,16 @@ export function leerPreferencia<T extends string>(clave: string, validos: readon
   return defecto;
 }
 
+/** Si hay un valor válido guardado (alguien lo eligió): distingue "eligió el de siempre" de "no eligió". */
+export function hayPreferencia(clave: string, validos: readonly string[]): boolean {
+  try {
+    const v = localStorage.getItem(clave);
+    return v !== null && validos.includes(v);
+  } catch {
+    return false;
+  }
+}
+
 export function guardarPreferencia(clave: string, valor: string) {
   try {
     localStorage.setItem(clave, valor);

@@ -38,6 +38,8 @@ jobs:
       - name: Las notas de la versión actual existen en CHANGELOG.md
         run: node scripts/notas-version.mjs "$(node -p "require('./package.json').version")" > /dev/null
       - run: npm run build
+      - name: Tests de la vista (node --test, TypeScript nativo de Node)
+        run: npm test
       - run: cargo fmt --all --check
       - run: cargo clippy --workspace --all-targets -- -D warnings
       - run: cargo test --workspace

@@ -426,3 +426,61 @@ async fn la_exportacion_de_ventas_trae_ventas_y_detalle_con_numeros() {
     assert_eq!((v.nuevas.len(), v.errores.len()), (2, 0));
     let _ = DatosProducto::clone;
 }
+
+#[tokio::test]
+async fn exportar_todo_trae_una_hoja_por_cada_tabla_importante() {
+    let pool = comun::con_caja().await;
+    let p = comun::crear(&pool, "A", "Leche", 1190, 100).await;
+    ventas::confirmar(
+        &pool,
+        &NuevaVenta {
+            items: vec![ItemPedido {
+                producto_id: p.id,
+                cantidad_mil: 2000,
+            }],
+            medio_pago: MedioPago::Debito,
+            monto_recibido: None,
+            descuento: 0,
+            cliente_id: None,
+        },
+    )
+    .await
+    .unwrap();
+    let dir = tempfile::tempdir().unwrap();
+    let ruta = dir.path().join("todo.xlsx");
+    // Sin rango: es todo el historial, no un período.
+    exportaciones::exportar(
+        &pool,
+        &ZonaLocal,
+        Exportacion::Todo,
+        None,
+        ruta.clone(),
+        Utc::now(),
+    )
+    .await
+    .unwrap();
+    let mut libro = open_workbook_auto(&ruta).unwrap();
+    let hojas = libro.sheet_names();
+    for esperada in [
+        "Productos",
+        "Stock",
+        "Clientes",
+        "Ventas",
+        "Detalle",
+        "Movimientos",
+        "Compras",
+    ] {
+        assert!(
+            hojas.iter().any(|h| h.starts_with(esperada)),
+            "falta una hoja de {esperada}: {hojas:?}"
+        );
+    }
+    let ventas = libro.worksheet_range("Ventas").unwrap();
+    assert_eq!(
+        ventas.height(),
+        5,
+        "título, detalle, línea en blanco, encabezados y 1 venta"
+    );
+    assert_eq!(Exportacion::Todo.nombre_base(), "todos-los-datos");
+    assert!(!Exportacion::Todo.usa_rango());
+}

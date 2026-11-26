@@ -4,9 +4,11 @@ import { api, textoError, type EstadoLicencia, type EstadoSeguridad } from "../a
 import { Tarjeta } from "../componentes/Ajustes";
 import Boton from "../componentes/Boton";
 import DialogoImportar from "../componentes/DialogoImportar";
+import ImportarCopia from "../componentes/ImportarCopia";
 import { useConPin } from "../componentes/PedirPin";
 import { avisarCambioStock } from "../eventos";
 import { useConfig } from "../hooks/useConfig";
+import { pedirSalida } from "../salida";
 import { PruebaEscaner } from "./configuracion/Escaner";
 import ImpresoraConfig from "./configuracion/Impresora";
 import LicenciaConfig from "./configuracion/Licencia";
@@ -71,6 +73,10 @@ export default function Asistente({ reabierto, onCambioImpresora, onTerminar }: 
     licencia?.modo === "activa",
   ];
 
+  // Moverse entre pasos o salir pregunta antes si quedaron cambios sin guardar en Negocio.
+  const irAPaso = (n: number) => pedirSalida(() => setPaso(n));
+  const siguiente = () => pedirSalida(() => (paso === PASOS.length - 1 ? setFinal(true) : setPaso(paso + 1)));
+
   const terminar = async (destino: DestinoAsistente) => {
     try {
       await api.terminarAsistente();
@@ -81,7 +87,19 @@ export default function Asistente({ reabierto, onCambioImpresora, onTerminar }: 
   };
 
   const contenido = [
-    <NegocioConfig key="negocio" conPin={conPin} onGuardado={(n) => setNegocioListo(n.nombre.trim() !== "")} />,
+    <div key="negocio" className="flex flex-col gap-4">
+      {/* Quien cambia de computador no parte de cero: importa su copia y sigue donde quedó. */}
+      {!reabierto && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-panel border border-linea bg-superficie px-4 py-3">
+          <div>
+            <div className="font-medium">¿Vienes de otro computador?</div>
+            <div className="text-sm text-tenue">Si ya usabas CHUPS POS en otro equipo, importa tu copia y sigue donde quedaste.</div>
+          </div>
+          <ImportarCopia etiqueta="Importar una copia" />
+        </div>
+      )}
+      <NegocioConfig conPin={conPin} onGuardado={(n) => setNegocioListo(n.nombre.trim() !== "")} />
+    </div>,
     <ImpresoraConfig key="impresora" cfg={cfg} onCambioImpresora={onCambioImpresora} soloImpresora />,
     <Tarjeta
       key="escaner"
@@ -117,7 +135,7 @@ export default function Asistente({ reabierto, onCambioImpresora, onTerminar }: 
             </p>
           </div>
           {reabierto && (
-            <Boton variante="terciario" onClick={() => void terminar("caja")}>
+            <Boton variante="terciario" onClick={() => pedirSalida(() => void terminar("caja"))}>
               Salir del asistente
             </Boton>
           )}
@@ -174,21 +192,21 @@ export default function Asistente({ reabierto, onCambioImpresora, onTerminar }: 
 
         {!final && (
           <footer className="sticky bottom-0 -mx-6 flex flex-wrap items-center gap-2 border-t border-linea bg-fondo px-6 py-3">
-            <Boton variante="terciario" disabled={paso === 0} onClick={() => setPaso(paso - 1)}>
+            <Boton variante="terciario" disabled={paso === 0} onClick={() => irAPaso(paso - 1)}>
               Atrás
             </Boton>
             <span className="flex-1 text-[13px] text-tenue">
               Paso {paso + 1} de {PASOS.length}
             </span>
             {paso > 0 && (
-              <Boton onClick={() => (paso === PASOS.length - 1 ? setFinal(true) : setPaso(paso + 1))}>
+              <Boton onClick={siguiente}>
                 {paso === PASOS.length - 1 ? "Seguir en prueba" : "Omitir"}
               </Boton>
             )}
             <Boton
               variante="primario"
               disabled={!hecho[paso]}
-              onClick={() => (paso === PASOS.length - 1 ? setFinal(true) : setPaso(paso + 1))}
+              onClick={siguiente}
             >
               {paso === PASOS.length - 1 ? "Terminar" : "Siguiente"}
             </Boton>

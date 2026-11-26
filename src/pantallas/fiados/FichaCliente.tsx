@@ -1,6 +1,7 @@
 import Boton from "../../componentes/Boton";
 import { FileDown, Pencil, Printer } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
+import { useAtajos } from "../../atajos";
 import { api, textoError, type Config, type FichaCliente as Ficha, type Pago, type VentaFiada } from "../../api";
 import Dialogo from "../../componentes/Dialogo";
 import { esCancelado, useConPin } from "../../componentes/PedirPin";
@@ -50,18 +51,16 @@ export default function FichaCliente({ clienteId, activa, config, onCambio, onEd
   }, [leer]);
 
   const deuda = ficha?.cliente.deuda ?? 0;
-  useEffect(() => {
-    if (!activa) return;
-    const alPresionar = (e: KeyboardEvent) => {
-      if (e.ctrlKey && e.key.toLowerCase() === "p") {
-        // Ctrl+P es "registrar pago", no imprimir la ventana.
-        e.preventDefault();
-        if (!document.querySelector('[role="dialog"]') && deuda > 0) setPagando(true);
-      }
-    };
-    window.addEventListener("keydown", alPresionar);
-    return () => window.removeEventListener("keydown", alPresionar);
-  }, [activa, deuda]);
+  // Ctrl+P es "registrar pago", no imprimir la ventana.
+  useAtajos(
+    "pantalla",
+    {
+      "Ctrl+P": () => {
+        if (deuda > 0) setPagando(true);
+      },
+    },
+    activa,
+  );
 
   /** Imprime en segundo plano y deja el resultado a la vista, con "Reintentar" si falla. */
   const imprimir = useCallback(
@@ -269,9 +268,9 @@ export default function FichaCliente({ clienteId, activa, config, onCambio, onEd
           <ul className="mt-2 divide-y divide-linea rounded-lg border border-linea tabular-nums">
             {pagadas.map((v) => (
               <li key={v.ventaId} className="flex items-center gap-4 px-3 py-2">
-                <button type="button" onClick={() => onIrAVenta(v.folio)} className="font-medium text-acento hover:underline">
+                <Boton variante="enlace" onClick={() => onIrAVenta(v.folio)}>
                   {folio(v.folio)}
-                </button>
+                </Boton>
                 <span className="text-tenue">{fechaHora(v.fechaHora)}</span>
                 <span className="flex-1" />
                 <span>{pesos(v.total)}</span>
@@ -346,9 +345,9 @@ function FilaPendiente({
         <input type="checkbox" checked={marcada} onChange={onMarcar} aria-label={`Marcar ${folio(v.folio)}`} />
       </td>
       <td className="py-2">
-        <button type="button" onClick={() => onIrAVenta(v.folio)} className="font-medium text-acento hover:underline">
+        <Boton variante="enlace" onClick={() => onIrAVenta(v.folio)}>
           {folio(v.folio)}
-        </button>
+        </Boton>
       </td>
       <td className="py-2">
         {fechaHora(v.fechaHora)}
@@ -413,7 +412,7 @@ function DialogoAnularPago({
             onChange={(e) => setMotivo(e.target.value)}
             maxLength={200}
             placeholder="Se ingresó mal el monto"
-            className="mt-1 h-10 w-full rounded-lg border border-borde-control bg-superficie px-3 focus:border-acento"
+            className="mt-1 h-11 w-full rounded-lg border border-borde-control bg-superficie px-3 focus:border-acento"
           />
         </label>
         {error && <p className="rounded-lg bg-peligro-fondo px-3 py-2 text-peligro">{error}</p>}

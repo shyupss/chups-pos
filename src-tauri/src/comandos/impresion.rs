@@ -28,7 +28,7 @@ where
     let hilo = tauri::async_runtime::spawn_blocking(move || tarea(&hw));
     match tokio::time::timeout(TIEMPO_MAXIMO, hilo).await {
         Err(_) => Err(
-            "La impresora no respondió en 10 segundos: revisa que esté encendida y conectada"
+            "La impresora no respondió en 10 segundos. Revisa que esté encendida y conectada, y prueba de nuevo."
                 .into(),
         ),
         Ok(Err(e)) => Err(e.to_string()),

@@ -41,3 +41,6 @@ tempfile = "3"
 
 [target."cfg(windows)".dependencies]
 winreg = "0.56"
+# Desactivar las teclas del navegador de WebView2 (las mismas versiones que ya trae Tauri).
+webview2-com = "0.39"
+windows-core = "0.62"

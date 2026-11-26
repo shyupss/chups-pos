@@ -37,7 +37,7 @@ const ACCIONES: { clave: keyof AccionesProtegidas; nombre: string; ayuda: string
 ];
 
 const claseCampo =
-  "h-10 w-full rounded-lg border border-borde-control bg-superficie px-3 text-center text-lg tracking-[0.4em] tabular-nums [-webkit-text-security:disc] focus:border-acento";
+  "h-11 w-full rounded-lg border border-borde-control bg-superficie px-3 text-center text-lg tracking-[0.4em] tabular-nums [-webkit-text-security:disc] focus:border-acento";
 
 
 const digitos = (texto: string) => texto.replace(/\D/g, "").slice(0, 6);
@@ -98,7 +98,7 @@ export default function SeguridadConfig({ conPin, onPinCambiado }: Props) {
       <Columnas
         izquierda={
           <>
-            <Tarjeta titulo="PIN de administrador" ayuda="Protege las acciones sensibles con un PIN de 4 a 6 dígitos.">
+            <Tarjeta titulo="PIN de administrador" ayuda="Un número de 4 a 6 dígitos que se pide antes de hacer algo delicado, como anular una venta o sacar plata de la caja.">
               {estado.tienePin ? (
                 <>
                   <span className="flex w-fit items-center gap-2 rounded-lg bg-exito-fondo px-3 py-2 font-medium text-exito">
@@ -139,7 +139,7 @@ export default function SeguridadConfig({ conPin, onPinCambiado }: Props) {
           </>
         }
         derecha={
-          <Tarjeta titulo="Acciones que piden el PIN" ayuda="Cambiar esta lista siempre lo pide.">
+          <Tarjeta titulo="Acciones que piden el PIN" ayuda="Elige cuáles piden el PIN. Cambiar esta lista también lo pide.">
             {estado.tienePin ? (
               <>
                 {ACCIONES.map((a) => (
@@ -152,7 +152,7 @@ export default function SeguridadConfig({ conPin, onPinCambiado }: Props) {
                     />
                   </Ajuste>
                 ))}
-                <Ajuste etiqueta="Restaurar un respaldo" ayuda="Reemplaza toda la base de datos: siempre pide el PIN.">
+                <Ajuste etiqueta="Importar una copia de seguridad" ayuda="Reemplaza todos los datos de este computador: siempre pide el PIN.">
                   <span className="text-tenue">Siempre</span>
                 </Ajuste>
               </>
@@ -201,7 +201,7 @@ function CampoPin({
 }) {
   return (
     <label className="block">
-      <span className="text-xs text-tenue">{etiqueta}</span>
+      <span className="text-sm text-tenue">{etiqueta}</span>
       <input
         autoFocus={autoFocus}
         value={valor}
@@ -361,7 +361,7 @@ function RecuperarPin({ onCancelar, onRecuperado }: { onCancelar: () => void; on
     <FormularioDialogo titulo="Olvidé el PIN" onCancelar={onCancelar} onEnviar={() => void enviar()}>
       <p className="text-tenue">Escribe el código de recuperación que anotaste al crear el PIN.</p>
       <label className="block">
-        <span className="text-xs text-tenue">Código de recuperación</span>
+        <span className="text-sm text-tenue">Código de recuperación</span>
         <input
           autoFocus
           value={codigo}
@@ -369,7 +369,7 @@ function RecuperarPin({ onCancelar, onRecuperado }: { onCancelar: () => void; on
           placeholder="ABCDE-12345"
           autoComplete="off"
           spellCheck={false}
-          className="mt-1 h-10 w-full rounded-lg border border-borde-control bg-superficie px-3 text-center font-mono text-lg tracking-widest focus:border-acento"
+          className="mt-1 h-11 w-full rounded-lg border border-borde-control bg-superficie px-3 text-center font-mono text-lg tracking-widest focus:border-acento"
         />
       </label>
       <CampoPin etiqueta="PIN nuevo (4 a 6 dígitos)" valor={p.nuevo} onCambiar={p.setNuevo} />

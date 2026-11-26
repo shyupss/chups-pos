@@ -39,19 +39,19 @@ export default function AvisoIntegridad() {
   };
 
   return (
-    <Dialogo titulo="La base de datos tiene un problema" onCerrar={() => setDescartado(true)} ancho="w-[34rem]">
+    <Dialogo titulo="Hay un problema con tus datos" onCerrar={() => setDescartado(true)} ancho="w-[34rem]">
       <p className="mt-3">
         CHUPS POS se cerró de golpe la última vez (por ejemplo, por un corte de luz) y al volver a abrirlo se encontró un
-        problema en la base de datos. Puede faltar lo último que se registró.
+        problema en tus datos. Puede faltar lo último que se registró.
       </p>
       {sano ? (
         <p className="mt-3 rounded-lg bg-info-fondo px-3 py-2 text-info">
-          Hay un respaldo sano del {fechaHora(sano.fecha)}. Si lo restauras, lo vendido después de esa fecha no estará; la base dañada
-          se guarda aparte en la carpeta de respaldos.
+          Hay una copia de seguridad sana del {fechaHora(sano.fecha)}. Si lo recuperas, lo vendido después de esa fecha no estará; lo dañado
+          se guarda aparte en la carpeta de copias.
         </p>
       ) : (
         <p className="mt-3 rounded-lg bg-aviso-fondo px-3 py-2 text-aviso">
-          No hay un respaldo sano para restaurar. No borres nada y contacta a quien te vendió el sistema; el detalle quedó en
+          No hay una copia sana para recuperar. No borres nada y contacta a quien te vendió el sistema; el detalle quedó en
           el registro (Configuración &gt; Acerca de &gt; Abrir carpeta de registros).
         </p>
       )}
@@ -66,11 +66,11 @@ export default function AvisoIntegridad() {
       {error && <p className="mt-3 rounded-lg bg-peligro-fondo px-3 py-2 text-peligro">{error}</p>}
       <div className="mt-5 flex gap-2">
         <Boton variante="terciario" onClick={() => setDescartado(true)} className="flex-1">
-          {sano ? "Seguir sin restaurar" : "Entendido"}
+          {sano ? "Seguir sin recuperar" : "Entendido"}
         </Boton>
         {sano && (
           <Boton variante="primario" disabled={restaurando} onClick={() => void restaurar()} className="flex-[2]">
-            {restaurando ? "Restaurando…" : "Restaurar el respaldo sano"}
+            {restaurando ? "Recuperando…" : "Recuperar la última copia sana"}
           </Boton>
         )}
       </div>

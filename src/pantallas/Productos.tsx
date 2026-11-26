@@ -1,9 +1,11 @@
 import Boton from "../componentes/Boton";
 import BotonExportar from "../componentes/BotonExportar";
-import { useVirtualizer } from "@tanstack/react-virtual";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api, textoError, type Categoria, type FiltroCategoria, type Producto } from "../api";
+import DialogoAjuste from "../componentes/DialogoAjuste";
 import FormularioProducto from "../componentes/FormularioProducto";
+import Tabla, { type ColumnaTabla } from "../componentes/Tabla";
+import { textoConteo } from "../componentes/tabla-nucleo";
 import PanelCategorias from "../componentes/PanelCategorias";
 import { avisarCambioStock } from "../eventos";
 import { cantidad, pesos } from "../formato";
@@ -16,17 +18,10 @@ interface Props {
 }
 
 const POR_PAGINA = 100;
-const ALTO_FILA = 40;
-// Columnas según el ancho de la lista (container queries): con el panel abierto o la ventana
-// angosta se ocultan primero el código y luego la categoría, para que nada se corte.
-const COLUMNAS =
-  "grid-cols-[minmax(0,1fr)_6.5rem_6.5rem] @md:grid-cols-[minmax(0,1fr)_7rem_6.5rem_6.5rem] @xl:grid-cols-[minmax(0,1fr)_7rem_8rem_6.5rem_6.5rem]";
-const COL_CATEGORIA = "hidden truncate @md:block";
-const COL_CODIGO = "hidden truncate @xl:block";
 
 type Panel =
   | { tipo: "nuevo"; codigo?: string }
-  | { tipo: "editar"; producto: Producto }
+  | { tipo: "editar"; producto: Producto; aviso?: { id: number; texto: string } }
   | { tipo: "categorias" }
   | null;
 
@@ -43,9 +38,11 @@ export default function Productos({ codigoNuevo, onCodigoUsado, onVerMovimientos
   const [hayMas, setHayMas] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [panel, setPanel] = useState<Panel>(null);
+  /** El producto cuyo stock se está ajustando (el diálogo de Inventario > Stock). */
+  const [ajustando, setAjustando] = useState<Producto | null>(null);
+  const avisos = useRef(0);
   const cargando = useRef(false);
   const consultaActual = useRef(0);
-  const contenedor = useRef<HTMLDivElement>(null);
 
   const nombreCategoria = useMemo(() => new Map(categorias.map((c) => [c.id, c.nombre])), [categorias]);
 
@@ -98,27 +95,63 @@ export default function Productos({ codigoNuevo, onCodigoUsado, onVerMovimientos
   );
 
   useEffect(() => {
-    contenedor.current?.scrollTo({ top: 0 });
     void cargar(0);
   }, [cargar]);
 
-  const virtual = useVirtualizer({
-    count: filas.length,
-    getScrollElement: () => contenedor.current,
-    estimateSize: () => ALTO_FILA,
-    overscan: 10,
-  });
-  const visibles = virtual.getVirtualItems();
-  const ultimaVisible = visibles.at(-1)?.index ?? 0;
-
   // Carga la siguiente página al acercarse al final.
-  useEffect(() => {
-    if (hayMas && !cargando.current && ultimaVisible >= filas.length - 20 && filas.length > 0) {
-      void cargar(filas.length);
-    }
-  }, [ultimaVisible, filas.length, hayMas, cargar]);
+  const cargarMas = useCallback(() => {
+    if (hayMas && !cargando.current && filas.length > 0) void cargar(filas.length);
+  }, [hayMas, filas.length, cargar]);
 
-  const alGuardar = (p: Producto) => {
+  // Nombre · Precio · Stock · Categoría · Código: lo que identifica, lo que más se mira, y lo secundario al final.
+  const columnas = useMemo<ColumnaTabla<Producto>[]>(
+    () => [
+      { id: "nombre", titulo: "Nombre", ancho: "minmax(10rem,28rem)", orden: (p) => p.nombre, celda: (p) => <span title={p.nombre}>{p.nombre}</span> },
+      {
+        id: "precio",
+        titulo: "Precio",
+        ancho: "7.5rem",
+        alinear: "derecha",
+        orden: (p) => p.precioVenta,
+        celda: (p) => (
+          <>
+            {pesos(p.precioVenta)}
+            {p.unidad === "kg" && <span className="text-tenue">/kg</span>}
+          </>
+        ),
+      },
+      {
+        id: "stock",
+        titulo: "Stock",
+        ancho: "6.5rem",
+        alinear: "derecha",
+        orden: (p) => p.stockMil,
+        clase: (p) => (p.stockMinimoMil > 0 && p.stockMil <= p.stockMinimoMil) || p.stockMil < 0 ? "font-semibold text-peligro" : "",
+        celda: (p) => cantidad(p.stockMil, p.unidad),
+      },
+      {
+        id: "categoria",
+        titulo: "Categoría",
+        ancho: "9rem",
+        ocultarBajo: 640,
+        orden: (p) => (p.categoriaId === null ? null : nombreCategoria.get(p.categoriaId)),
+        clase: () => "text-tenue",
+        celda: (p) => (p.categoriaId === null ? "—" : (nombreCategoria.get(p.categoriaId) ?? "—")),
+      },
+      { id: "codigo", titulo: "Código", ancho: "9rem", ocultarBajo: 820, orden: (p) => p.codigoBarras, clase: () => "text-tenue", celda: (p) => p.codigoBarras ?? "—" },
+    ],
+    [nombreCategoria],
+  );
+
+  const alGuardar = (p: Producto, que: "creado" | "guardado" | "estado" = "guardado") => {
+    const texto =
+      que === "creado"
+        ? `Producto creado: ${p.nombre}.`
+        : que === "estado"
+          ? p.activo
+            ? `${p.nombre} volvió a activarse.`
+            : `${p.nombre} se desactivó: ya no aparece en la caja.`
+          : `Cambios guardados: ${p.nombre}.`;
     setFilas((f) => {
       const i = f.findIndex((x) => x.id === p.id);
       if (i === -1) return [p, ...f];
@@ -126,7 +159,7 @@ export default function Productos({ codigoNuevo, onCodigoUsado, onVerMovimientos
       copia[i] = p;
       return copia;
     });
-    setPanel({ tipo: "editar", producto: p });
+    setPanel({ tipo: "editar", producto: p, aviso: { id: ++avisos.current, texto } });
     // Los contadores de productos por categoría pueden haber cambiado, y el mínimo o el stock inicial.
     void cargarCategorias();
     avisarCambioStock();
@@ -135,19 +168,20 @@ export default function Productos({ codigoNuevo, onCodigoUsado, onVerMovimientos
   return (
     <div className="flex h-full">
       <section className="@container flex min-w-0 flex-1 flex-col p-6">
+        {/* Los dos botones de acción van juntos y a la derecha; si la fila no alcanza, bajan juntos. */}
         <div className="flex flex-wrap items-center gap-3">
           <input
             value={texto}
             onChange={(e) => setTexto(e.target.value)}
             placeholder="Buscar por nombre o código"
-            className="h-10 min-w-48 flex-1 rounded-lg border border-borde-control bg-superficie px-4 focus:border-acento"
+            className="h-11 min-w-64 flex-1 rounded-lg border border-borde-control bg-superficie px-4 focus:border-acento"
             autoFocus
           />
           <select
             value={String(filtro)}
             onChange={(e) => setFiltro(aFiltro(e.target.value))}
             aria-label="Filtrar por categoría"
-            className="h-10 max-w-48 rounded-lg border border-borde-control bg-superficie px-3 focus:border-acento"
+            className="h-11 max-w-48 rounded-lg border border-borde-control bg-superficie px-3 focus:border-acento"
           >
             <option value="todas">Todas las categorías</option>
             {categorias.map((c) => (
@@ -162,63 +196,34 @@ export default function Productos({ codigoNuevo, onCodigoUsado, onVerMovimientos
             <input type="checkbox" checked={inactivos} onChange={(e) => setInactivos(e.target.checked)} />
             Ver desactivados
           </label>
-          <Boton variante="primario" onClick={() => setPanel({ tipo: "nuevo" })}>
-            Nuevo producto
-          </Boton>
-          <BotonExportar que="productos" etiqueta="Excel" />
+          <div className="ml-auto flex flex-wrap items-center justify-end gap-3">
+            <BotonExportar que="productos" />
+            <Boton variante="primario" onClick={() => setPanel({ tipo: "nuevo" })}>
+              Nuevo producto
+            </Boton>
+          </div>
         </div>
 
         {error && <p className="mt-3 rounded-lg bg-peligro-fondo px-3 py-2 text-peligro">{error}</p>}
 
-        <div className={`mt-4 grid ${COLUMNAS} gap-2 px-4 text-xs font-medium text-tenue`}>
-          <span>Nombre</span>
-          <span className={COL_CATEGORIA}>Categoría</span>
-          <span className={COL_CODIGO}>Código</span>
-          <span className="text-right">Precio</span>
-          <span className="text-right">Stock</span>
-        </div>
-        <div ref={contenedor} className="mt-1 min-h-0 flex-1 overflow-auto tarjeta tabular-nums">
-          {filas.length === 0 ? (
-            <p className="p-8 text-center text-tenue">
-              {busqueda || filtro !== "todas"
-                ? "Sin resultados"
-                : "Todavía no hay productos. Crea el primero con \"Nuevo producto\"."}
-            </p>
-          ) : (
-            <div style={{ height: virtual.getTotalSize(), position: "relative" }}>
-              {visibles.map((v) => {
-                const p = filas[v.index];
-                const bajo = p.stockMinimoMil > 0 && p.stockMil <= p.stockMinimoMil;
-                const seleccionado = panel?.tipo === "editar" && panel.producto.id === p.id;
-                return (
-                  <button
-                    key={p.id}
-                    onClick={() => setPanel({ tipo: "editar", producto: p })}
-                    style={{ position: "absolute", top: 0, left: 0, width: "100%", height: ALTO_FILA, transform: `translateY(${v.start}px)` }}
-                    className={`grid ${COLUMNAS} items-center gap-2 border-b border-linea px-4 text-left ${
-                      seleccionado ? "bg-seleccion" : "hover:bg-suave"
-                    } ${p.activo ? "" : "text-tenue line-through"}`}
-                  >
-                    <span className="truncate" title={p.nombre}>
-                      {p.nombre}
-                    </span>
-                    <span className={`${COL_CATEGORIA} text-tenue`}>
-                      {p.categoriaId === null ? "—" : (nombreCategoria.get(p.categoriaId) ?? "—")}
-                    </span>
-                    <span className={`${COL_CODIGO} text-tenue`}>{p.codigoBarras ?? "—"}</span>
-                    <span className="text-right">
-                      {pesos(p.precioVenta)}
-                      {p.unidad === "kg" && <span className="text-tenue">/kg</span>}
-                    </span>
-                    <span className={`text-right ${bajo || p.stockMil < 0 ? "font-semibold text-peligro" : ""}`}>
-                      {cantidad(p.stockMil, p.unidad)}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          )}
-        </div>
+        <Tabla
+          etiqueta="Productos"
+          className="mt-4 flex-1"
+          columnas={columnas}
+          filas={filas}
+          clave={(p) => p.id}
+          onFila={(p) => setPanel({ tipo: "editar", producto: p })}
+          seleccionada={(p) => panel?.tipo === "editar" && panel.producto.id === p.id}
+          claseFila={(p) => (p.activo ? "" : "text-tenue line-through")}
+          reiniciar={`${busqueda}|${inactivos}|${String(filtro)}`}
+          onCercaDelFinal={cargarMas}
+          pie={textoConteo(filas.length, "producto", "productos", hayMas)}
+          vacio={
+            busqueda || filtro !== "todas"
+              ? { texto: "No hay productos con esa búsqueda." }
+              : { texto: "Todavía no hay productos.", accion: { etiqueta: "Nuevo producto", onClick: () => setPanel({ tipo: "nuevo" }) } }
+          }
+        />
       </section>
 
       {panel && (
@@ -233,11 +238,28 @@ export default function Productos({ codigoNuevo, onCodigoUsado, onVerMovimientos
               categorias={categorias}
               categoriaInicial={typeof filtro === "number" ? filtro : null}
               onGuardado={alGuardar}
+              aviso={panel.tipo === "editar" ? panel.aviso : undefined}
+              onAjustarStock={setAjustando}
               onVerMovimientos={onVerMovimientos}
               onCerrar={() => setPanel(null)}
             />
           )}
         </aside>
+      )}
+
+      {ajustando && (
+        <DialogoAjuste
+          producto={ajustando}
+          onCerrar={() => setAjustando(null)}
+          onAjustado={(d) => {
+            const al = { ...ajustando, stockMil: d.contadoMil };
+            setAjustando(null);
+            setFilas((f) => f.map((x) => (x.id === al.id ? al : x)));
+            const texto = `Stock de ${al.nombre} ajustado a ${cantidad(d.contadoMil, d.unidad)}.`;
+            setPanel((p) => (p?.tipo === "editar" && p.producto.id === al.id ? { tipo: "editar", producto: al, aviso: { id: ++avisos.current, texto } } : p));
+            avisarCambioStock();
+          }}
+        />
       )}
     </div>
   );

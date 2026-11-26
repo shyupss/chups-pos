@@ -162,7 +162,7 @@ export default function ConteoInventario({ onTerminado, onCerrar }: Props) {
               value={motivo}
               onChange={(e) => setMotivo(e.target.value)}
               maxLength={200}
-              className="mt-1 h-10 w-full rounded-lg border border-borde-control bg-superficie px-3 focus:border-acento"
+              className="mt-1 h-11 w-full rounded-lg border border-borde-control bg-superficie px-3 focus:border-acento"
             />
           </label>
           {error && <p className="mt-3 rounded-lg bg-peligro-fondo px-3 py-2 text-peligro">{error}</p>}
@@ -213,7 +213,7 @@ export default function ConteoInventario({ onTerminado, onCerrar }: Props) {
                 <button
                   type="button"
                   onClick={() => elegir(p)}
-                  className="flex h-10 w-full items-center justify-between px-4 text-left hover:bg-suave"
+                  className="flex h-11 w-full items-center justify-between px-4 text-left hover:bg-suave"
                 >
                   <span>{p.nombre}</span>
                   <span className="text-tenue tabular-nums">{cantidad(p.stockMil, p.unidad)}</span>

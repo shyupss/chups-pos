@@ -357,3 +357,44 @@ async fn el_detalle_advierte_si_anular_deja_stock_negativo() {
         ["Leche"]
     );
 }
+
+/// Producto creado desde Registrar compra: el formulario no tiene stock inicial (va en 0) y la
+/// compra suma lo que llegó. Queda exactamente lo comprado, no el doble.
+#[tokio::test]
+async fn producto_nuevo_desde_la_compra_queda_con_lo_comprado() {
+    let pool = db::abrir_en_memoria().await.unwrap();
+    // Lo que envía FormularioProducto con origen="compra": stock inicial 0 y el costo escrito.
+    let mut d = comun::datos(Some("7801234567890"), "Galletas de agua", 990, 0);
+    d.costo = Some(620);
+    let nuevo = productos::crear(&pool, &d).await.unwrap();
+    assert_eq!(nuevo.stock_mil, 0);
+
+    compras::registrar(
+        &pool,
+        &ControlPin::new(),
+        &compra(None, &[(nuevo.id, 24_000, 620)], false),
+        None,
+    )
+    .await
+    .unwrap();
+    let despues = producto(&pool, "7801234567890").await;
+    assert_eq!(despues.stock_mil, 24_000);
+    assert_eq!(despues.costo, Some(620));
+}
+
+/// La regla del servicio no cambió: un stock inicial se suma a lo que trae la compra. Por eso el
+/// formulario no lo pide cuando el producto se crea desde una compra (era el stock fantasma).
+#[tokio::test]
+async fn un_stock_inicial_se_suma_a_la_compra() {
+    let pool = db::abrir_en_memoria().await.unwrap();
+    let nuevo = comun::crear(&pool, "G", "Galletas de agua", 990, 10).await;
+    compras::registrar(
+        &pool,
+        &ControlPin::new(),
+        &compra(None, &[(nuevo.id, 24_000, 620)], false),
+        None,
+    )
+    .await
+    .unwrap();
+    assert_eq!(producto(&pool, "G").await.stock_mil, 34_000);
+}

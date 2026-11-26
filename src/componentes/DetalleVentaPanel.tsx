@@ -1,6 +1,7 @@
 import Boton from "./Boton";
 import { Ban, FileDown, Printer, Undo2, X } from "lucide-react";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { useAtajos } from "../atajos";
 import { api, textoError, type Config, type DetalleVenta, type LineaDetalle, type MedioPago } from "../api";
 import { cantidad, fechaHora, folio, NOMBRE_MEDIO, pesos, pesosConSigno } from "../formato";
 import { avisarCambioStock } from "../eventos";
@@ -117,20 +118,7 @@ export default function DetalleVentaPanel({ ventaId, activa, onImpresion, onCamb
   }, [venta, preparar, imprimir]);
 
   // Ctrl+P reimprime; Esc cierra el detalle.
-  useEffect(() => {
-    if (!activa) return;
-    const alPresionar = (e: KeyboardEvent) => {
-      if (document.querySelector('[role="dialog"]')) return;
-      if (e.ctrlKey && e.key.toLowerCase() === "p") {
-        e.preventDefault();
-        reimprimir();
-      } else if (e.key === "Escape") {
-        onCerrar();
-      }
-    };
-    window.addEventListener("keydown", alPresionar);
-    return () => window.removeEventListener("keydown", alPresionar);
-  }, [activa, reimprimir, onCerrar]);
+  useAtajos("pantalla", { "Ctrl+P": () => reimprimir(), Escape: () => onCerrar() }, activa);
 
   return (
     <div className="flex h-full flex-col">

@@ -1,5 +1,5 @@
 import Boton from "./Boton";
-import { PanelLeftClose, PanelLeftOpen, Printer } from "lucide-react";
+import { Keyboard, PanelLeftClose, PanelLeftOpen, Printer } from "lucide-react";
 import type { EstadoActualizacion, EstadoConfigurada, EstadoLicencia, Turno } from "../api";
 import { fechaHora, horaODia } from "../formato";
 import { SECCIONES, type DatosSeccion, type Seccion } from "../secciones";
@@ -25,6 +25,8 @@ interface Props {
   /** Una versión nueva encontrada: una línea discreta que lleva a Configuración > Acerca de. */
   actualizacion?: EstadoActualizacion | null;
   onActualizacion?: () => void;
+  /** Abre la ayuda con la lista de atajos de teclado. */
+  onAtajos?: () => void;
 }
 
 interface Insignia {
@@ -45,6 +47,7 @@ export default function BarraLateral({
   onLicencia,
   actualizacion = null,
   onActualizacion,
+  onAtajos,
 }: Props) {
   const item = (s: DatosSeccion) => (
     <li key={s.id}>
@@ -55,10 +58,10 @@ export default function BarraLateral({
 
   return (
     <aside
-      className={`flex shrink-0 flex-col border-r border-linea bg-superficie ${expandida ? "w-52" : "w-16"}`}
+      className={`flex shrink-0 flex-col border-r border-linea bg-superficie ${expandida ? "w-56" : "w-16"}`}
     >
       <div
-        className={`flex h-14 shrink-0 items-center font-semibold ${expandida ? "px-5" : "justify-center"}`}
+        className={`flex h-14 shrink-0 items-center font-semibold [@media(max-height:600px)]:h-11 ${expandida ? "px-5" : "justify-center"}`}
         title="CHUPS POS"
       >
         {expandida ? "CHUPS POS" : "CP"}
@@ -79,7 +82,17 @@ export default function BarraLateral({
         onLicencia={onLicencia}
         onActualizacion={onActualizacion}
       />
-      <div className={`flex shrink-0 items-center gap-2 px-2 pb-2 ${expandida ? "justify-end" : "flex-col"}`}>
+      <div className={`flex shrink-0 items-center gap-2 px-2 pb-2 ${expandida ? "justify-between" : "flex-col"}`}>
+        {onAtajos &&
+          (expandida ? (
+            <Boton variante="terciario" tamano="chico" icono={Keyboard} onClick={onAtajos} title="Ver los atajos de teclado">
+              Atajos
+            </Boton>
+          ) : (
+            <Boton tamano="icono" onClick={onAtajos} title="Atajos de teclado" aria-label="Atajos de teclado">
+              <Keyboard size={18} aria-hidden />
+            </Boton>
+          ))}
         <Boton tamano="icono" onClick={onAlternar} title={accion} aria-label={accion}>
           {expandida ? <PanelLeftClose size={18} aria-hidden /> : <PanelLeftOpen size={18} aria-hidden />}
         </Boton>
@@ -108,7 +121,7 @@ function Item({
       aria-current={activa ? "page" : undefined}
       aria-keyshortcuts={tecla}
       title={expandida ? undefined : `${nombre} (${tecla})${insignia ? ` · ${insignia.descripcion}` : ""}`}
-      className={`relative flex h-10 w-full items-center gap-3 rounded-lg ${expandida ? "px-3" : "justify-center"} ${
+      className={`relative flex h-11 w-full items-center gap-3 rounded-lg ${expandida ? "px-3" : "justify-center"} ${
         activa ? "bg-seleccion font-semibold text-acento" : "text-texto hover:bg-suave"
       }`}
     >
@@ -251,42 +264,38 @@ function Estados({
     );
   }
 
+  // Cada línea de estado lleva a donde se arregla: es navegación, así que va sin caja (como los ítems de arriba).
   const linea = (e: { texto: string; nivel: Nivel; detalle: string }, destino: Seccion) => (
-    <Boton key={e.texto} variante="terciario" tamano="chico" bloque onClick={() => onIr(destino)} title={e.detalle} className="text-xs">
-      <span aria-hidden className={`size-2 shrink-0 rounded-full ${PUNTO[e.nivel]}`} />
-      <span className="truncate">{e.texto}</span>
-    </Boton>
+    <LineaEstado key={e.texto} nivel={e.nivel} texto={e.texto} detalle={e.detalle} onClick={() => onIr(destino)} />
   );
   return (
     <div className="flex shrink-0 flex-col gap-0.5 border-t border-linea p-2">
       {caja && linea(caja, "caja")}
       {imp && linea(imp, "configuracion")}
       {nueva && (
-        <Boton
-          variante="terciario"
-          tamano="chico"
-          bloque
+        <LineaEstado
+          nivel="info"
+          texto={`Actualización ${nueva.version}`}
+          detalle={`Hay una versión nueva de CHUPS POS (${nueva.version}). Se instala desde Configuración > Acerca de.`}
           onClick={() => (onActualizacion ? onActualizacion() : onIr("configuracion"))}
-          title={`Hay una versión nueva de CHUPS POS (${nueva.version}). Se instala desde Configuración > Acerca de.`}
-          className="text-xs"
-        >
-          <span aria-hidden className={`size-2 shrink-0 rounded-full ${PUNTO.info}`} />
-          <span className="truncate">Actualización {nueva.version}</span>
-        </Boton>
+        />
       )}
-      {lic && (
-        <Boton
-          variante="terciario"
-          tamano="chico"
-          bloque
-          onClick={() => (onLicencia ? onLicencia() : onIr("configuracion"))}
-          title={lic.detalle}
-          className="text-xs"
-        >
-          <span aria-hidden className={`size-2 shrink-0 rounded-full ${PUNTO[lic.nivel]}`} />
-          <span className="truncate">{lic.texto}</span>
-        </Boton>
-      )}
+      {lic && <LineaEstado nivel={lic.nivel} texto={lic.texto} detalle={lic.detalle} onClick={() => (onLicencia ? onLicencia() : onIr("configuracion"))} />}
     </div>
+  );
+}
+
+/** Una línea de estado al pie de la barra: un punto de color y su texto; al pasar el mouse se resalta. */
+function LineaEstado({ nivel, texto, detalle, onClick }: { nivel: Nivel; texto: string; detalle: string; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title={detalle}
+      className="flex h-9 w-full items-center gap-2 rounded-lg px-2 text-left text-[13px] text-texto hover:bg-suave [@media(max-height:600px)]:h-8"
+    >
+      <span aria-hidden className={`size-2 shrink-0 rounded-full ${PUNTO[nivel]}`} />
+      <span className="truncate">{texto}</span>
+    </button>
   );
 }
