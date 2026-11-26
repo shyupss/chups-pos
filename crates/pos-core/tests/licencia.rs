@@ -316,7 +316,11 @@ async fn licencias_invalidas_se_rechazan_con_un_mensaje_claro() {
     ));
     // Alterada.
     let mut b: Vec<char> = emitir(&v, None).chars().collect();
-    let i = b.len() - 2;
+    // Un carácter del medio (nunca un guion ni los bits de relleno del final): siempre cambia datos firmados.
+    let mut i = b.len() / 2;
+    while b[i] == '-' {
+        i += 1;
+    }
     b[i] = if b[i] == 'A' { 'B' } else { 'A' };
     let alterada: String = b.into_iter().collect();
     assert!(matches!(
