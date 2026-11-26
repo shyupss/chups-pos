@@ -2,6 +2,7 @@ import Boton from "../componentes/Boton";
 import BotonExportar from "../componentes/BotonExportar";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api, textoError, type Categoria, type FiltroCategoria, type Producto } from "../api";
+import DialogoAjuste from "../componentes/DialogoAjuste";
 import FormularioProducto from "../componentes/FormularioProducto";
 import Tabla, { type ColumnaTabla } from "../componentes/Tabla";
 import { textoConteo } from "../componentes/tabla-nucleo";
@@ -20,7 +21,7 @@ const POR_PAGINA = 100;
 
 type Panel =
   | { tipo: "nuevo"; codigo?: string }
-  | { tipo: "editar"; producto: Producto }
+  | { tipo: "editar"; producto: Producto; aviso?: { id: number; texto: string } }
   | { tipo: "categorias" }
   | null;
 
@@ -37,6 +38,9 @@ export default function Productos({ codigoNuevo, onCodigoUsado, onVerMovimientos
   const [hayMas, setHayMas] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [panel, setPanel] = useState<Panel>(null);
+  /** El producto cuyo stock se está ajustando (el diálogo de Inventario > Stock). */
+  const [ajustando, setAjustando] = useState<Producto | null>(null);
+  const avisos = useRef(0);
   const cargando = useRef(false);
   const consultaActual = useRef(0);
 
@@ -139,7 +143,15 @@ export default function Productos({ codigoNuevo, onCodigoUsado, onVerMovimientos
     [nombreCategoria],
   );
 
-  const alGuardar = (p: Producto) => {
+  const alGuardar = (p: Producto, que: "creado" | "guardado" | "estado" = "guardado") => {
+    const texto =
+      que === "creado"
+        ? `Producto creado: ${p.nombre}.`
+        : que === "estado"
+          ? p.activo
+            ? `${p.nombre} volvió a activarse.`
+            : `${p.nombre} se desactivó: ya no aparece en la caja.`
+          : `Cambios guardados: ${p.nombre}.`;
     setFilas((f) => {
       const i = f.findIndex((x) => x.id === p.id);
       if (i === -1) return [p, ...f];
@@ -147,7 +159,7 @@ export default function Productos({ codigoNuevo, onCodigoUsado, onVerMovimientos
       copia[i] = p;
       return copia;
     });
-    setPanel({ tipo: "editar", producto: p });
+    setPanel({ tipo: "editar", producto: p, aviso: { id: ++avisos.current, texto } });
     // Los contadores de productos por categoría pueden haber cambiado, y el mínimo o el stock inicial.
     void cargarCategorias();
     avisarCambioStock();
@@ -226,11 +238,28 @@ export default function Productos({ codigoNuevo, onCodigoUsado, onVerMovimientos
               categorias={categorias}
               categoriaInicial={typeof filtro === "number" ? filtro : null}
               onGuardado={alGuardar}
+              aviso={panel.tipo === "editar" ? panel.aviso : undefined}
+              onAjustarStock={setAjustando}
               onVerMovimientos={onVerMovimientos}
               onCerrar={() => setPanel(null)}
             />
           )}
         </aside>
+      )}
+
+      {ajustando && (
+        <DialogoAjuste
+          producto={ajustando}
+          onCerrar={() => setAjustando(null)}
+          onAjustado={(d) => {
+            const al = { ...ajustando, stockMil: d.contadoMil };
+            setAjustando(null);
+            setFilas((f) => f.map((x) => (x.id === al.id ? al : x)));
+            const texto = `Stock de ${al.nombre} ajustado a ${cantidad(d.contadoMil, d.unidad)}.`;
+            setPanel((p) => (p?.tipo === "editar" && p.producto.id === al.id ? { tipo: "editar", producto: al, aviso: { id: ++avisos.current, texto } } : p));
+            avisarCambioStock();
+          }}
+        />
       )}
     </div>
   );

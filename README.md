@@ -100,6 +100,12 @@ valorizadas a costo; la diferencia se calcula contra el stock al confirmar y tod
 transacción. La **merma** saca lo que se perdió con su motivo (vencido, dañado, robo, consumo interno u
 otro). Ambos piden el PIN si "Ajustar inventario" está protegida (sí por defecto).
 
+El ajuste de un producto también se hace desde **Productos**: al abrir un producto, junto a "Stock actual" está
+"Ajustar stock", que abre el mismo diálogo de Inventario (mismo motivo, mismo movimiento, mismo PIN). El campo de stock
+sigue siendo de solo lectura: no hay otra forma de cambiarlo sin dejar rastro. Al crear, guardar, activar o
+desactivar un producto, el panel dice qué pasó ("Producto creado: …", "Cambios guardados: …") en un aviso verde sobre
+los botones; se va al escribir algo y vuelve con cada guardado, aunque el texto sea igual.
+
 ## Compras y proveedores
 
 **Registrar compra** (Ctrl+N en Inventario) ocupa casi toda la pantalla y va en tres pasos, de arriba hacia abajo:

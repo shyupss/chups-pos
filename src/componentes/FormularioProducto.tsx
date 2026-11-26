@@ -18,7 +18,12 @@ interface Props {
   categorias: Categoria[];
   /** Categoría para un producto nuevo (la del filtro de la lista, si hay una). */
   categoriaInicial: number | null;
-  onGuardado: (p: Producto) => void;
+  /** `que`: qué pasó, para decírselo a quien lo hizo ("creado", "guardado" los cambios, o "estado" si se activó o desactivó). */
+  onGuardado: (p: Producto, que?: "creado" | "guardado" | "estado") => void;
+  /** Lo que se le dice a quien guardó ("Cambios guardados: …"). `id` cambia con cada aviso, aunque el texto sea el mismo. */
+  aviso?: { id: number; texto: string };
+  /** Abre el ajuste de stock (el mismo de Inventario > Stock: queda el movimiento y pide el PIN si hay uno). */
+  onAjustarStock?: (p: Producto) => void;
   /** Abre su historial de stock en Inventario > Movimientos. */
   onVerMovimientos?: (p: Producto) => void;
   onCerrar: () => void;
@@ -38,6 +43,8 @@ export default function FormularioProducto({
   categoriaInicial,
   onGuardado,
   onVerMovimientos,
+  aviso,
+  onAjustarStock,
   onCerrar,
 }: Props) {
   const nuevo = producto === null;
@@ -55,6 +62,9 @@ export default function FormularioProducto({
   const [error, setError] = useState<string | null>(null);
   const [guardando, setGuardando] = useState(false);
   const primerCampo = useRef<HTMLInputElement>(null);
+  // El aviso de "guardado" se ve hasta que se vuelve a escribir algo.
+  const [verAviso, setVerAviso] = useState(true);
+  useEffect(() => setVerAviso(true), [aviso?.id]);
 
   const porKg = unidad === "kg";
   const enUnidad = porKg ? " (kg)" : "";
@@ -93,7 +103,7 @@ export default function FormularioProducto({
       const guardado = nuevo
         ? await api.crearProducto(datos)
         : await api.editarProducto(producto.id, datos);
-      onGuardado(guardado);
+      onGuardado(guardado, nuevo ? "creado" : "guardado");
     } catch (e) {
       setError(textoError(e));
     } finally {
@@ -105,7 +115,7 @@ export default function FormularioProducto({
     if (!producto) return;
     try {
       await api.cambiarEstadoProducto(producto.id, !producto.activo);
-      onGuardado({ ...producto, activo: !producto.activo });
+      onGuardado({ ...producto, activo: !producto.activo }, "estado");
     } catch (e) {
       setError(textoError(e));
     }
@@ -118,6 +128,7 @@ export default function FormularioProducto({
         void guardar();
       }}
       onKeyDown={(e) => e.key === "Escape" && onCerrar()}
+      onInput={() => setVerAviso(false)}
       className="flex h-full flex-col gap-4 overflow-y-auto p-6"
     >
       <h2 className="text-lg font-semibold">{nuevo ? "Nuevo producto" : "Editar producto"}</h2>
@@ -211,9 +222,17 @@ export default function FormularioProducto({
             />
           </Campo>
         ) : (
-          <Campo etiqueta="Stock actual">
-            <div className="flex h-11 items-center tabular-nums">{cantidad(producto.stockMil, unidad)}</div>
-          </Campo>
+          <div>
+            <span className="text-sm text-tenue">Stock actual</span>
+            <div className="mt-1 flex min-h-11 flex-wrap items-center gap-x-3 gap-y-1">
+              <span className="tabular-nums">{cantidad(producto.stockMil, unidad)}</span>
+              {onAjustarStock && (
+                <Boton tamano="chico" onClick={() => onAjustarStock(producto)}>
+                  Ajustar stock
+                </Boton>
+              )}
+            </div>
+          </div>
         )}
         <Campo etiqueta={`Avisar con stock menor o igual a${enUnidad}`}>
           <input
@@ -226,6 +245,11 @@ export default function FormularioProducto({
       </div>
 
       {error && <p className="rounded-lg bg-peligro-fondo px-3 py-2 text-peligro">{error}</p>}
+      {aviso && verAviso && !error && (
+        <p role="status" className="rounded-lg bg-exito-fondo px-3 py-2 font-medium text-exito">
+          {aviso.texto}
+        </p>
+      )}
 
       <div className="mt-auto flex flex-wrap gap-2">
         <Boton type="submit" variante="primario" disabled={guardando} className="flex-1">
