@@ -159,7 +159,9 @@ promedio por venta), un gráfico de líneas con las ventas de cada día contra e
 qué pagan los clientes y los 5 productos que más se venden. El detalle está en las demás pestañas.
 
 - **Período**: "Este mes" (por defecto), "Mes pasado", "Esta semana", "Hoy" y "Elegir fechas…"; "Más" trae Ayer,
-  Últimos 30 días y Este año. El título dice siempre el período en palabras: "Noviembre 2026" o "Del 3 al 17 de
+  Últimos 30 días y Este año. Donde no hay ancho para la barra en una sola fila (Configuración > Datos y respaldos con la
+  interfaz grande, por ejemplo) es un botón "Período: Este mes" que abre la lista completa; el cambio depende del ancho
+  del contenedor, no de la escala. El título dice siempre el período en palabras: "Noviembre 2026" o "Del 3 al 17 de
   noviembre". Las reglas (rangos, período en palabras, con qué se compara) están en
   `src/pantallas/reportes/reportes-nucleo.ts`, con tests. Un mes se compara con el mes anterior completo; otro
   rango, con los mismos días justo antes.

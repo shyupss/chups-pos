@@ -240,6 +240,7 @@ function Apariencia({
                 nombre="escala"
                 etiqueta="Tamaño de letra y botones"
                 opciones={ESCALAS}
+                completa
                 valor={cfg.config.escalaInterfaz}
                 onCambiar={(v) => void cfg.cambiar({ escalaInterfaz: v })}
               />

@@ -47,80 +47,123 @@ function useCerrarAfuera(abierto: boolean, cerrar: () => void) {
   return ref;
 }
 
-/** El rango de fechas: lo de siempre a la vista ("Este mes" por defecto), el resto en "Más" y "Elegir fechas…". */
+/** Un botón que abre un menú de períodos (uno elegible por fila, con el actual marcado). */
+function MenuPeriodos({
+  nombre,
+  opciones,
+  texto,
+  activo,
+  resaltado,
+  onElegir,
+}: {
+  nombre: string;
+  opciones: { id: Atajo; nombre: string }[];
+  texto: string;
+  activo: Atajo;
+  /** El botón se ve elegido (cuando lo elegido está dentro del menú). */
+  resaltado: boolean;
+  onElegir: (id: Atajo) => void;
+}) {
+  const [abierto, setAbierto] = useState(false);
+  const cerrar = useCallback(() => setAbierto(false), []);
+  const ref = useCerrarAfuera(abierto, cerrar);
+  return (
+    <div ref={ref} className="relative">
+      <Boton
+        variante={resaltado ? "secundario" : "terciario"}
+        icono={ChevronDown}
+        aria-haspopup="menu"
+        aria-expanded={abierto}
+        onClick={() => setAbierto((v) => !v)}
+        className={resaltado ? "border-acento bg-seleccion font-semibold text-acento" : ""}
+      >
+        {texto}
+      </Boton>
+      {abierto && (
+        <ul role="menu" aria-label={nombre} className="absolute left-0 z-20 mt-1 w-56 overflow-hidden tarjeta shadow-s2">
+          {opciones.map((a) => (
+            <li key={a.id} role="none">
+              <button
+                type="button"
+                role="menuitemradio"
+                aria-checked={activo === a.id}
+                onClick={() => {
+                  onElegir(a.id);
+                  setAbierto(false);
+                }}
+                className={`flex h-11 w-full items-center px-4 text-left hover:bg-suave ${activo === a.id ? "bg-seleccion font-semibold text-acento" : ""}`}
+              >
+                {a.nombre}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+/**
+ * El rango de fechas. Con espacio de sobra, lo de siempre a la vista en una barra ("Este mes" por defecto) y el resto en
+ * "Más". En un lugar angosto (o con la interfaz muy grande) la barra se partiría en dos filas y dejaría de verse como
+ * opciones: entonces es un solo botón "Período: …" que abre la lista completa. El cambio es por el ancho del contenedor
+ * (consulta de contenedor: `@min-[42rem]`, que es donde cabe la barra con "Más"), así que vale con cualquier escala.
+ */
 export function SelectorRango({ rango, onCambiar }: { rango: Rango; onCambiar: (r: Rango) => void }) {
-  const [masAbierto, setMasAbierto] = useState(false);
-  const cerrarMas = useCallback(() => setMasAbierto(false), []);
-  const refMas = useCerrarAfuera(masAbierto, cerrarMas);
   const enMas = MAS.find((a) => a.id === rango.atajo);
   const elegir = (id: Atajo) => onCambiar(id === "personalizado" ? { ...rango, atajo: id } : rangoDe(id));
+  const todos = [...PRINCIPALES, ...MAS];
+  const actual = todos.find((a) => a.id === rango.atajo) ?? PRINCIPALES[0];
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      <div role="radiogroup" aria-label="Período" className="flex flex-wrap gap-1 rounded-lg border border-borde-control bg-suave p-0.5">
-        {PRINCIPALES.map((a) => (
-          <label key={a.id} className={claseOpcion}>
-            <input type="radio" name="rango" className="sr-only" checked={rango.atajo === a.id} onChange={() => elegir(a.id)} />
-            {a.nombre}
-          </label>
-        ))}
-      </div>
-      <div ref={refMas} className="relative">
-        <Boton
-          variante={enMas ? "secundario" : "terciario"}
-          icono={ChevronDown}
-          aria-haspopup="menu"
-          aria-expanded={masAbierto}
-          onClick={() => setMasAbierto((v) => !v)}
-          className={enMas ? "border-acento bg-seleccion font-semibold text-acento" : ""}
-        >
-          {enMas ? enMas.nombre : "Más"}
-        </Boton>
-        {masAbierto && (
-          <ul role="menu" aria-label="Más períodos" className="absolute left-0 z-20 mt-1 w-48 overflow-hidden tarjeta shadow-s2">
-            {MAS.map((a) => (
-              <li key={a.id} role="none">
-                <button
-                  type="button"
-                  role="menuitemradio"
-                  aria-checked={rango.atajo === a.id}
-                  onClick={() => {
-                    elegir(a.id);
-                    setMasAbierto(false);
-                  }}
-                  className={`flex h-11 w-full items-center px-4 text-left hover:bg-suave ${rango.atajo === a.id ? "bg-seleccion font-semibold text-acento" : ""}`}
-                >
-                  {a.nombre}
-                </button>
-              </li>
+    <div className="@container">
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="hidden items-center gap-2 @min-[42rem]:flex">
+          <div role="radiogroup" aria-label="Período" className="flex rounded-lg border border-borde-control bg-suave p-0.5">
+            {PRINCIPALES.map((a) => (
+              <label key={a.id} className={claseOpcion}>
+                <input type="radio" name="rango" className="sr-only" checked={rango.atajo === a.id} onChange={() => elegir(a.id)} />
+                {a.nombre}
+              </label>
             ))}
-          </ul>
+          </div>
+          <MenuPeriodos
+            nombre="Más períodos"
+            opciones={MAS}
+            texto={enMas ? enMas.nombre : "Más"}
+            activo={rango.atajo}
+            resaltado={!!enMas}
+            onElegir={elegir}
+          />
+        </div>
+        <div className="@min-[42rem]:hidden">
+          <MenuPeriodos nombre="Período" opciones={todos} texto={`Período: ${actual.nombre}`} activo={rango.atajo} resaltado onElegir={elegir} />
+        </div>
+        {rango.atajo === "personalizado" && (
+          <span className="flex flex-wrap items-center gap-2">
+            <label className="flex items-center gap-2 text-tenue">
+              Desde
+              <input
+                type="date"
+                value={rango.desde}
+                max={rango.hasta}
+                onChange={(e) => e.target.value && onCambiar({ ...rango, desde: e.target.value })}
+                className="h-11 tarjeta px-2 text-texto"
+              />
+            </label>
+            <label className="flex items-center gap-2 text-tenue">
+              hasta
+              <input
+                type="date"
+                value={rango.hasta}
+                min={rango.desde}
+                onChange={(e) => e.target.value && onCambiar({ ...rango, hasta: e.target.value })}
+                className="h-11 tarjeta px-2 text-texto"
+              />
+            </label>
+          </span>
         )}
       </div>
-      {rango.atajo === "personalizado" && (
-        <span className="flex flex-wrap items-center gap-2">
-          <label className="flex items-center gap-2 text-tenue">
-            Desde
-            <input
-              type="date"
-              value={rango.desde}
-              max={rango.hasta}
-              onChange={(e) => e.target.value && onCambiar({ ...rango, desde: e.target.value })}
-              className="h-11 tarjeta px-2 text-texto"
-            />
-          </label>
-          <label className="flex items-center gap-2 text-tenue">
-            hasta
-            <input
-              type="date"
-              value={rango.hasta}
-              min={rango.desde}
-              onChange={(e) => e.target.value && onCambiar({ ...rango, hasta: e.target.value })}
-              className="h-11 tarjeta px-2 text-texto"
-            />
-          </label>
-        </span>
-      )}
     </div>
   );
 }
