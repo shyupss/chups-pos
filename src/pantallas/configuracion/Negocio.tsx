@@ -210,7 +210,7 @@ export default function NegocioConfig({ conPin, onGuardado }: { conPin: ConPin; 
                     if (await guardar()) continuar();
                   }}
                 >
-                  Guardar
+                  Guardar cambios
                 </Boton>
               </div>
             </Dialogo>

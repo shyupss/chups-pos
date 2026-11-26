@@ -275,25 +275,31 @@ function ElegirCliente({ cliente, onElegir, aPagar }: { cliente: Cliente | null;
     return (
       <div className="mt-5 space-y-2 rounded-lg border border-linea p-4">
         <div className="font-medium">Nuevo cliente</div>
-        <input
-          autoFocus
-          data-cliente
-          value={nuevo.nombre}
-          onChange={(e) => setNuevo({ ...nuevo, nombre: e.target.value })}
-          onKeyDown={(e) => e.key === "Enter" && void crear()}
-          placeholder="Nombre"
-          maxLength={80}
-          className="h-11 w-full rounded-lg border border-borde-control bg-superficie px-3 focus:border-acento"
-        />
-        <input
-          data-cliente
-          value={nuevo.telefono}
-          onChange={(e) => setNuevo({ ...nuevo, telefono: e.target.value })}
-          onKeyDown={(e) => e.key === "Enter" && void crear()}
-          placeholder="Teléfono (opcional)"
-          maxLength={30}
-          className="h-11 w-full rounded-lg border border-borde-control bg-superficie px-3 focus:border-acento"
-        />
+        <label className="block">
+          <span className="text-sm text-tenue">Nombre</span>
+          <input
+            autoFocus
+            data-cliente
+            value={nuevo.nombre}
+            onChange={(e) => setNuevo({ ...nuevo, nombre: e.target.value })}
+            onKeyDown={(e) => e.key === "Enter" && void crear()}
+            placeholder="Por ejemplo, Rosa Muñoz"
+            maxLength={80}
+            className="mt-1 h-11 w-full rounded-lg border border-borde-control bg-superficie px-3 focus:border-acento"
+          />
+        </label>
+        <label className="block">
+          <span className="text-sm text-tenue">Teléfono (opcional)</span>
+          <input
+            data-cliente
+            value={nuevo.telefono}
+            onChange={(e) => setNuevo({ ...nuevo, telefono: e.target.value })}
+            onKeyDown={(e) => e.key === "Enter" && void crear()}
+            placeholder="Por ejemplo, +56 9 1234 5678"
+            maxLength={30}
+            className="mt-1 h-11 w-full rounded-lg border border-borde-control bg-superficie px-3 focus:border-acento"
+          />
+        </label>
         {error && <p className="text-peligro">{error}</p>}
         <div className="flex gap-2">
           <Boton variante="terciario" onClick={() => setNuevo(null)} className="flex-1">

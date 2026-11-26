@@ -278,15 +278,17 @@ function DetalleCompraPanel({ id, onCerrar, onAnulada }: { id: number; onCerrar:
                 Quedarían con stock negativo: {d.quedarianNegativos.join(", ")}.
               </p>
             )}
-            <input
-              autoFocus
-              value={motivo}
-              onChange={(e) => setMotivo(e.target.value)}
-              maxLength={200}
-              placeholder="Motivo (obligatorio)"
-              aria-label="Motivo de la anulación"
-              className="h-11 w-full rounded-lg border border-borde-control bg-superficie px-3 focus:border-acento"
-            />
+            <label className="block">
+              <span className="text-sm text-tenue">Motivo de la anulación (obligatorio)</span>
+              <input
+                autoFocus
+                value={motivo}
+                onChange={(e) => setMotivo(e.target.value)}
+                maxLength={200}
+                placeholder="Por ejemplo, se registró dos veces"
+                className="mt-1 h-11 w-full rounded-lg border border-borde-control bg-superficie px-3 focus:border-acento"
+              />
+            </label>
             {error && <p className="rounded-lg bg-peligro-fondo px-3 py-2 text-peligro">{error}</p>}
             <div className="flex gap-2">
               <Boton variante="terciario" atajo="Esc" onClick={() => setAnulando(false)} className="flex-1">

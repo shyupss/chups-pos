@@ -27,7 +27,7 @@ pub const IMPRESORA_ARCHIVO: &str = "Archivo (pruebas)";
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
-    #[error("No se encontró la impresora «{0}»: revisa que esté instalada y encendida")]
+    #[error("No se encontró la impresora «{0}». Revisa que esté encendida y conectada, y prueba de nuevo.")]
     NoEncontrada(String),
     #[error("{0}")]
     Sistema(String),

@@ -196,7 +196,7 @@ function FormularioProveedor({
       {error && <p className="rounded-lg bg-peligro-fondo px-3 py-2 text-peligro">{error}</p>}
       <div className="mt-auto flex flex-wrap gap-2">
         <Boton type="submit" variante="primario" disabled={guardando} className="flex-1">
-          Guardar
+          Guardar proveedor
         </Boton>
         <Boton variante="terciario" onClick={onCerrar}>
           Cerrar

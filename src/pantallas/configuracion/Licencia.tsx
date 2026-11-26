@@ -134,8 +134,8 @@ export default function LicenciaConfig({
             )}
             {estado.modo === "consulta" && (
               <p className="rounded-lg bg-peligro-fondo px-3 py-2 text-[13px] text-peligro">
-                Sin licencia no se puede abrir la caja ni registrar ventas. Puedes ver y exportar todos tus datos, respaldar y
-                restaurar, cobrar fiados y cerrar el turno abierto. Nada se pierde: al activar la licencia todo sigue igual.
+                Sin licencia no se puede abrir la caja ni registrar ventas. Puedes ver y exportar todos tus datos, hacer copias de seguridad
+                e importarlas, cobrar fiados y cerrar el turno abierto. Nada se pierde: al activar la licencia todo sigue igual.
               </p>
             )}
             {estado.errorLicencia && (

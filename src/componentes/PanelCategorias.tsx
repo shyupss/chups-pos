@@ -70,17 +70,19 @@ export default function PanelCategorias({ categorias, onCambio, onCerrar }: Prop
           void crear();
         }}
       >
-        <input
-          autoFocus
-          value={nueva}
-          onChange={(e) => setNueva(e.target.value)}
-          placeholder="Nueva categoría"
-          aria-label="Nombre de la nueva categoría"
-          maxLength={60}
-          className={claseCampo}
-        />
-        <Boton type="submit" variante="primario" disabled={!nueva.trim()}>
-          Agregar
+        <label className="min-w-0 flex-1">
+          <span className="text-sm text-tenue">Nombre de la categoría nueva</span>
+          <input
+            autoFocus
+            value={nueva}
+            onChange={(e) => setNueva(e.target.value)}
+            placeholder="Por ejemplo, Bebidas"
+            maxLength={60}
+            className={`mt-1 ${claseCampo}`}
+          />
+        </label>
+        <Boton type="submit" variante="primario" disabled={!nueva.trim()} className="self-end">
+          Agregar categoría
         </Boton>
       </form>
 
@@ -107,7 +109,7 @@ export default function PanelCategorias({ categorias, onCambio, onCerrar }: Prop
                   className={claseCampo}
                 />
                 <Boton type="submit" tamano="chico">
-                  Guardar
+                  Guardar nombre
                 </Boton>
               </form>
             ) : eliminando === c.id ? (

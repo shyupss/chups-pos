@@ -140,7 +140,7 @@ export default function AcercaDe({ actualizacion, onActualizacion, hayTurno, onI
       izquierda={
         <Tarjeta
           titulo="Actualizaciones"
-          ayuda="Se busca una vez al día, solo con internet y nunca con un turno abierto. Antes de instalar se hace un respaldo."
+          ayuda="Se busca una vez al día, solo con internet y nunca con un turno abierto. Antes de instalar se hace una copia de seguridad."
         >
           <dl className="grid grid-cols-[12rem_1fr] gap-x-4 gap-y-2">
             <dt className="text-tenue">Versión instalada</dt>

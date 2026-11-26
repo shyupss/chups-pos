@@ -229,7 +229,7 @@ export default function FormularioProducto({
 
       <div className="mt-auto flex flex-wrap gap-2">
         <Boton type="submit" variante="primario" disabled={guardando} className="flex-1">
-          {desdeCompra ? "Guardar producto" : "Guardar"}
+          {nuevo ? "Guardar producto" : "Guardar cambios"}
         </Boton>
         <Boton variante="terciario" onClick={onCerrar}>
           Cerrar

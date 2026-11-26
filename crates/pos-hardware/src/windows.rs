@@ -116,7 +116,7 @@ pub fn listar() -> Resultado<Vec<Impresora>> {
             &mut cantidad,
         )
     }
-    .map_err(|e| Error::Sistema(format!("No se pudo listar las impresoras: {e}")))?;
+    .map_err(|e| Error::Sistema(format!("No se pudo ver las impresoras de Windows. Cierra y vuelve a abrir CHUPS POS; si sigue igual, avisa a quien te vendió el sistema. ({e})")))?;
     let infos = unsafe {
         std::slice::from_raw_parts(buffer.as_ptr().cast::<PRINTER_INFO_2W>(), cantidad as usize)
     };
@@ -172,7 +172,7 @@ pub fn estado(impresora: &str) -> Resultado<EstadoImpresora> {
     }
     let mut buffer = buffer_alineado(necesarios);
     unsafe { GetPrinterW(manija.0, 2, Some(como_bytes(&mut buffer)), &mut necesarios) }
-        .map_err(|e| Error::Sistema(format!("No se pudo leer el estado de la impresora: {e}")))?;
+        .map_err(|e| Error::Sistema(format!("No se pudo saber si la impresora está lista. Revisa que esté encendida y conectada, y prueba de nuevo. ({e})")))?;
     let info = unsafe { &*buffer.as_ptr().cast::<PRINTER_INFO_2W>() };
     Ok(estado_de(info.Status, info.Attributes))
 }
@@ -207,7 +207,7 @@ pub fn enviar(impresora: &str, documento: &str, bytes: &[u8]) -> Resultado<()> {
             let _ = EndPagePrinter(manija.0);
         }
         if !ok.as_bool() || escritos as usize != bytes.len() {
-            return Err(error_sistema("La impresora no recibió todos los datos"));
+            return Err(error_sistema("La impresora no recibió todo lo que se le mandó. Revisa el cable, apágala y préndela, y prueba de nuevo."));
         }
         Ok(())
     })();

@@ -395,7 +395,7 @@ export default function App() {
         {instalando && (
           <Dialogo titulo="Instalando la actualización" onCerrar={() => {}}>
             <p role="alert" className="mt-2 text-tenue">
-              Se hizo un respaldo de tus datos. CHUPS POS se cerrará y volverá a abrirse en unos instantes: no apagues el
+              Se hizo una copia de seguridad de tus datos. CHUPS POS se cerrará y volverá a abrirse en unos instantes: no apagues el
               computador.
             </p>
           </Dialogo>
@@ -424,7 +424,7 @@ export default function App() {
                   setSeccion("configuracion");
                 }}
               >
-                Ver respaldos
+                Ver copias de seguridad
               </Boton>
             </div>
           </div>

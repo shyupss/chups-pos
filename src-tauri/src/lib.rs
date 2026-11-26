@@ -59,8 +59,8 @@ fn abrir_con_recuperacion(
     let Some(sano) = sano else {
         app.dialog()
             .message(
-                "No se pudo abrir la base de datos de CHUPS POS y no hay un respaldo sano para restaurar. \
-                 No borres nada: copia la carpeta de datos y contacta a quien te vendió el sistema.",
+                "CHUPS POS no pudo abrir tus datos y no hay una copia de seguridad sana para recuperarlos. \
+                 No borres nada: copia la carpeta de datos a un pendrive y avisa a quien te vendió el sistema.",
             )
             .title("CHUPS POS")
             .kind(MessageDialogKind::Error)
@@ -70,9 +70,9 @@ fn abrir_con_recuperacion(
     let restaurar = app
         .dialog()
         .message(format!(
-            "La base de datos de CHUPS POS está dañada y no se puede abrir.\n\n\
-             ¿Restaurar el último respaldo sano ({})? Lo vendido después de esa fecha no estará. \
-             La base dañada se guarda aparte en la carpeta de respaldos.",
+            "Tus datos de CHUPS POS están dañados y no se pueden abrir.\n\n\
+             ¿Recuperar la última copia de seguridad sana ({})? Lo vendido después de esa fecha no estará. \
+             Lo dañado se guarda aparte en la carpeta de copias.",
             chrono::DateTime::parse_from_rfc3339(&sano.fecha)
                 .map(|f| f
                     .with_timezone(&chrono::Local)
@@ -83,7 +83,7 @@ fn abrir_con_recuperacion(
         .title("CHUPS POS")
         .kind(MessageDialogKind::Error)
         .buttons(MessageDialogButtons::OkCancelCustom(
-            "Restaurar el respaldo".into(),
+            "Recuperar la copia".into(),
             "Cerrar".into(),
         ))
         .blocking_show();

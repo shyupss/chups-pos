@@ -98,7 +98,7 @@ export default function SeguridadConfig({ conPin, onPinCambiado }: Props) {
       <Columnas
         izquierda={
           <>
-            <Tarjeta titulo="PIN de administrador" ayuda="Protege las acciones sensibles con un PIN de 4 a 6 dígitos.">
+            <Tarjeta titulo="PIN de administrador" ayuda="Un número de 4 a 6 dígitos que se pide antes de hacer algo delicado, como anular una venta o sacar plata de la caja.">
               {estado.tienePin ? (
                 <>
                   <span className="flex w-fit items-center gap-2 rounded-lg bg-exito-fondo px-3 py-2 font-medium text-exito">
@@ -139,7 +139,7 @@ export default function SeguridadConfig({ conPin, onPinCambiado }: Props) {
           </>
         }
         derecha={
-          <Tarjeta titulo="Acciones que piden el PIN" ayuda="Cambiar esta lista siempre lo pide.">
+          <Tarjeta titulo="Acciones que piden el PIN" ayuda="Elige cuáles piden el PIN. Cambiar esta lista también lo pide.">
             {estado.tienePin ? (
               <>
                 {ACCIONES.map((a) => (
@@ -152,7 +152,7 @@ export default function SeguridadConfig({ conPin, onPinCambiado }: Props) {
                     />
                   </Ajuste>
                 ))}
-                <Ajuste etiqueta="Restaurar un respaldo" ayuda="Reemplaza toda la base de datos: siempre pide el PIN.">
+                <Ajuste etiqueta="Importar una copia de seguridad" ayuda="Reemplaza todos los datos de este computador: siempre pide el PIN.">
                   <span className="text-tenue">Siempre</span>
                 </Ajuste>
               </>

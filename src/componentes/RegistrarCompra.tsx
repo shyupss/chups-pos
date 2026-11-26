@@ -229,25 +229,20 @@ export default function RegistrarCompra({ onRegistrada, onCerrar }: Props) {
        <div className="flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto pr-1 [@media(min-height:620px)]:overflow-y-hidden">
         <Paso numero={1} titulo="¿A quién le compraste?">
           <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_14rem_14rem]">
-            <CampoProveedor valor={proveedor} onElegir={setProveedor} />
+            <div>
+              <span className="text-sm text-tenue">Proveedor</span>
+              <div className="mt-1">
+                <CampoProveedor valor={proveedor} onElegir={setProveedor} />
+              </div>
+            </div>
             <label className="block">
-              <input
-                value={documento}
-                onChange={(e) => setDocumento(e.target.value)}
-                maxLength={40}
-                placeholder="N° de factura o guía (opcional)"
-                aria-label="N° de factura o guía (opcional)"
-                className={claseCampo}
-              />
+              <span className="text-sm text-tenue">N° de factura o guía (opcional)</span>
+              <input value={documento} onChange={(e) => setDocumento(e.target.value)} maxLength={40} placeholder="Por ejemplo, F-1234" className={`mt-1 ${claseCampo}`} />
             </label>
-            <input
-              value={nota}
-              onChange={(e) => setNota(e.target.value)}
-              maxLength={200}
-              placeholder="Nota (opcional)"
-              aria-label="Nota"
-              className={claseCampo}
-            />
+            <label className="block">
+              <span className="text-sm text-tenue">Nota (opcional)</span>
+              <input value={nota} onChange={(e) => setNota(e.target.value)} maxLength={200} className={`mt-1 ${claseCampo}`} />
+            </label>
           </div>
         </Paso>
 

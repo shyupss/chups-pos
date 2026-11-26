@@ -15,7 +15,7 @@ export default function AvisoLicencia({ estado, onActivar }: { estado: EstadoLic
       ? {
           peligro: true,
           texto:
-            "Modo consulta: la prueba terminó. Puedes ver, exportar y respaldar tus datos, cobrar fiados y cerrar el turno, pero no abrir la caja ni vender.",
+            "Modo consulta: la prueba terminó. Puedes ver, exportar y guardar copias de tus datos, cobrar fiados y cerrar el turno, pero no abrir la caja ni vender.",
         }
       : estado.modo === "gracia"
         ? {

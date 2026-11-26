@@ -50,7 +50,7 @@ pub(crate) async fn respaldar_antes_de_actualizar(estado: &EstadoApp) -> Result<
     respaldar_y_rotar(estado)
         .await
         .map(|_| ())
-        .map_err(|e| format!("No se instaló la actualización porque falló el respaldo previo: {e}"))
+        .map_err(|e| format!("No se instaló la actualización porque no se pudo hacer la copia de seguridad previa: {e}"))
 }
 
 /// Respaldo automático en segundo plano, si toca según la frecuencia elegida y el `momento` (al abrir la app
@@ -79,7 +79,7 @@ pub(crate) fn automatico(app: &AppHandle, momento: Momento) {
             Ok(()) => *error = None,
             Err(e) => {
                 tracing::error!("el respaldo automático falló: {e}");
-                let mensaje = format!("No se pudo hacer el respaldo automático: {e}");
+                let mensaje = format!("No se pudo hacer la copia de seguridad automática: {e}. Revisa que haya espacio en el disco y que la carpeta de copias exista.");
                 *error = Some(mensaje.clone());
                 let _ = app.emit(EVENTO_FALLO, mensaje);
             }
@@ -282,7 +282,7 @@ pub(crate) async fn reemplazar_y_reiniciar(
             estado
                 .ruta_db
                 .with_file_name(crate::ARCHIVO_RESTAURACION_FALLIDA),
-            format!("No se pudo restaurar el respaldo: {e}"),
+            format!("No se pudo importar la copia: {e}"),
         );
     }
     app.restart();
