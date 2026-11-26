@@ -1,5 +1,5 @@
 import Boton from "./Boton";
-import { PanelLeftClose, PanelLeftOpen, Printer } from "lucide-react";
+import { Keyboard, PanelLeftClose, PanelLeftOpen, Printer } from "lucide-react";
 import type { EstadoActualizacion, EstadoConfigurada, EstadoLicencia, Turno } from "../api";
 import { fechaHora, horaODia } from "../formato";
 import { SECCIONES, type DatosSeccion, type Seccion } from "../secciones";
@@ -25,6 +25,8 @@ interface Props {
   /** Una versión nueva encontrada: una línea discreta que lleva a Configuración > Acerca de. */
   actualizacion?: EstadoActualizacion | null;
   onActualizacion?: () => void;
+  /** Abre la ayuda con la lista de atajos de teclado. */
+  onAtajos?: () => void;
 }
 
 interface Insignia {
@@ -45,6 +47,7 @@ export default function BarraLateral({
   onLicencia,
   actualizacion = null,
   onActualizacion,
+  onAtajos,
 }: Props) {
   const item = (s: DatosSeccion) => (
     <li key={s.id}>
@@ -79,7 +82,17 @@ export default function BarraLateral({
         onLicencia={onLicencia}
         onActualizacion={onActualizacion}
       />
-      <div className={`flex shrink-0 items-center gap-2 px-2 pb-2 ${expandida ? "justify-end" : "flex-col"}`}>
+      <div className={`flex shrink-0 items-center gap-2 px-2 pb-2 ${expandida ? "justify-between" : "flex-col"}`}>
+        {onAtajos &&
+          (expandida ? (
+            <Boton variante="terciario" tamano="chico" icono={Keyboard} onClick={onAtajos} title="Ver los atajos de teclado">
+              Atajos
+            </Boton>
+          ) : (
+            <Boton tamano="icono" onClick={onAtajos} title="Atajos de teclado" aria-label="Atajos de teclado">
+              <Keyboard size={18} aria-hidden />
+            </Boton>
+          ))}
         <Boton tamano="icono" onClick={onAlternar} title={accion} aria-label={accion}>
           {expandida ? <PanelLeftClose size={18} aria-hidden /> : <PanelLeftOpen size={18} aria-hidden />}
         </Boton>

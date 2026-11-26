@@ -3,12 +3,13 @@ import { useEffect, useState, type ReactNode } from "react";
 import { api, textoError, type DatosNegocio, type Negocio } from "../../api";
 import { Columnas, Tarjeta } from "../../componentes/Ajustes";
 import Boton from "../../componentes/Boton";
+import Dialogo from "../../componentes/Dialogo";
 import { esCancelado, type ConPin } from "../../componentes/PedirPin";
 import { pesos } from "../../formato";
+import { useGuardiaSalida } from "../../salida";
+import { conLogo, DATOS_VACIOS, desdeGuardado, hayCambios, type EstadoNegocio } from "./negocio-estado";
 
 const claseCampo = "h-10 w-full rounded-lg border border-borde-control px-3 focus:border-acento";
-
-const VACIO: DatosNegocio = { nombre: "", rut: "", direccion: "", telefono: "", mensajePie: "" };
 
 /** Las tres líneas de ejemplo de la vista previa: fijas, no salen de la base. */
 const EJEMPLO: [string, number][] = [
@@ -19,51 +20,64 @@ const EJEMPLO: [string, number][] = [
 
 /** Configuración > Negocio: los datos que encabezan cada boleta, el logo y una vista previa. */
 export default function NegocioConfig({ conPin, onGuardado }: { conPin: ConPin; onGuardado?: (n: Negocio) => void }) {
-  const [datos, setDatos] = useState<DatosNegocio>(VACIO);
-  const [logo, setLogo] = useState<string | null>(null);
+  const [estado, setEstado] = useState<EstadoNegocio>({ datos: DATOS_VACIOS, guardados: DATOS_VACIOS, logo: null });
+  const { datos, logo } = estado;
   const [cargado, setCargado] = useState(false);
   const [mensaje, setMensaje] = useState<{ error: boolean; texto: string } | null>(null);
   const [ocupado, setOcupado] = useState(false);
-
-  const mostrar = (n: Negocio) => {
-    setDatos({
-      nombre: n.nombre,
-      rut: n.rut ?? "",
-      direccion: n.direccion ?? "",
-      telefono: n.telefono ?? "",
-      mensajePie: n.mensajePie,
-    });
-    setLogo(n.logoPng);
-  };
+  // Salir con cambios sin guardar: lo que se iba a hacer queda aquí mientras se pregunta.
+  const [salida, setSalida] = useState<(() => void) | null>(null);
+  const pendientes = cargado && hayCambios(datos, estado.guardados);
 
   useEffect(() => {
     api
       .obtenerNegocio()
-      .then(mostrar)
+      .then((n) => setEstado(desdeGuardado(n)))
       .catch((e) => setMensaje({ error: true, texto: textoError(e) }))
       .finally(() => setCargado(true));
   }, []);
 
-  const ejecutar = async (accion: () => Promise<Negocio | null>, exito: string) => {
-    if (ocupado) return;
+  useGuardiaSalida(pendientes, (continuar) => setSalida(() => continuar));
+
+  /**
+   * Corre una acción protegida con el PIN. `aplicar` decide qué cambia en pantalla: guardar los
+   * datos lo reemplaza todo; el logo solo cambia el logo. Devuelve si se hizo.
+   */
+  const ejecutar = async (
+    accion: () => Promise<Negocio | null>,
+    aplicar: (e: EstadoNegocio, n: Negocio) => EstadoNegocio,
+    exito: string,
+  ): Promise<boolean> => {
+    if (ocupado) return false;
     setOcupado(true);
     setMensaje(null);
     try {
       const n = await accion();
-      if (n) {
-        mostrar(n);
-        setMensaje({ error: false, texto: exito });
-        onGuardado?.(n);
-      }
+      if (!n) return false;
+      setEstado((e) => aplicar(e, n));
+      setMensaje({ error: false, texto: exito });
+      onGuardado?.(n);
+      return true;
     } catch (e) {
       if (!esCancelado(e)) setMensaje({ error: true, texto: textoError(e) });
+      return false;
     } finally {
       setOcupado(false);
     }
   };
 
-  const cambiar = (campo: keyof DatosNegocio) => (e: { target: { value: string } }) =>
-    setDatos((d) => ({ ...d, [campo]: e.target.value }));
+  const guardar = () =>
+    ejecutar(
+      () => conPin((pin) => api.guardarNegocio(datos, pin), { accion: "Guardar los datos del negocio" }),
+      (_, n) => desdeGuardado(n),
+      "Datos guardados.",
+    );
+
+  const cambiar = (campo: keyof DatosNegocio) => (e: { target: { value: string } }) => {
+    // Un "Datos guardados." anterior ya no vale mientras se escribe.
+    setMensaje((m) => (m && !m.error ? null : m));
+    setEstado((s) => ({ ...s, datos: { ...s.datos, [campo]: e.target.value } }));
+  };
 
   if (!cargado) return <p className="text-tenue">Cargando…</p>;
 
@@ -74,10 +88,7 @@ export default function NegocioConfig({ conPin, onGuardado }: { conPin: ConPin; 
           <form
             onSubmit={(e) => {
               e.preventDefault();
-              void ejecutar(
-                () => conPin((pin) => api.guardarNegocio(datos, pin), { accion: "Guardar los datos del negocio" }),
-                "Datos guardados.",
-              );
+              void guardar();
             }}
             className="flex flex-col gap-4"
           >
@@ -108,10 +119,15 @@ export default function NegocioConfig({ conPin, onGuardado }: { conPin: ConPin; 
               <Info size={16} className="mt-0.5 shrink-0" aria-hidden />
               La boleta es un comprobante interno: no reemplaza la boleta del SII.
             </p>
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3">
               <Boton type="submit" variante="primario" disabled={ocupado}>
-                Guardar datos
+                {pendientes ? "Guardar cambios" : "Guardar datos"}
               </Boton>
+              {pendientes && (
+                <span role="status" className="text-aviso">
+                  Tienes cambios sin guardar
+                </span>
+              )}
               {mensaje && (
                 <span role="status" className={mensaje.error ? "text-peligro" : "text-exito"}>
                   {mensaje.texto}
@@ -139,7 +155,11 @@ export default function NegocioConfig({ conPin, onGuardado }: { conPin: ConPin; 
               <Boton
                 disabled={ocupado}
                 onClick={() =>
-                  void ejecutar(() => conPin((pin) => api.elegirLogo(pin), { accion: "Cambiar el logo" }), "Logo cargado.")
+                  void ejecutar(
+                    () => conPin((pin) => api.elegirLogo(pin), { accion: "Cambiar el logo" }),
+                    conLogo,
+                    "Logo cargado.",
+                  )
                 }
               >
                 Elegir logo…
@@ -149,7 +169,11 @@ export default function NegocioConfig({ conPin, onGuardado }: { conPin: ConPin; 
                   variante="terciario"
                   disabled={ocupado}
                   onClick={() =>
-                    void ejecutar(() => conPin((pin) => api.quitarLogo(pin), { accion: "Quitar el logo" }), "Logo quitado.")
+                    void ejecutar(
+                      () => conPin((pin) => api.quitarLogo(pin), { accion: "Quitar el logo" }),
+                      conLogo,
+                      "Logo quitado.",
+                    )
                   }
                 >
                   Quitar logo
@@ -160,6 +184,37 @@ export default function NegocioConfig({ conPin, onGuardado }: { conPin: ConPin; 
           <Tarjeta titulo="Vista previa de la boleta" ayuda="Vista aproximada, con datos de ejemplo: se actualiza mientras escribes.">
             <VistaBoleta datos={datos} logo={logo} />
           </Tarjeta>
+          {salida && (
+            <Dialogo titulo="¿Guardar los cambios?" onCerrar={() => setSalida(null)} ancho="w-[30rem]">
+              <p className="mt-2 text-tenue">Cambiaste los datos del negocio y todavía no los guardas.</p>
+              <div className="mt-6 flex flex-wrap justify-end gap-2">
+                <Boton variante="terciario" onClick={() => setSalida(null)}>
+                  Seguir editando
+                </Boton>
+                <Boton
+                  onClick={() => {
+                    const continuar = salida;
+                    setSalida(null);
+                    setEstado((e) => ({ ...e, datos: e.guardados }));
+                    continuar();
+                  }}
+                >
+                  Descartar
+                </Boton>
+                <Boton
+                  variante="primario"
+                  disabled={ocupado}
+                  onClick={async () => {
+                    const continuar = salida;
+                    setSalida(null);
+                    if (await guardar()) continuar();
+                  }}
+                >
+                  Guardar
+                </Boton>
+              </div>
+            </Dialogo>
+          )}
         </>
       }
     />

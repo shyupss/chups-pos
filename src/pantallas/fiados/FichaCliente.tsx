@@ -1,6 +1,7 @@
 import Boton from "../../componentes/Boton";
 import { FileDown, Pencil, Printer } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
+import { useAtajos } from "../../atajos";
 import { api, textoError, type Config, type FichaCliente as Ficha, type Pago, type VentaFiada } from "../../api";
 import Dialogo from "../../componentes/Dialogo";
 import { esCancelado, useConPin } from "../../componentes/PedirPin";
@@ -50,18 +51,16 @@ export default function FichaCliente({ clienteId, activa, config, onCambio, onEd
   }, [leer]);
 
   const deuda = ficha?.cliente.deuda ?? 0;
-  useEffect(() => {
-    if (!activa) return;
-    const alPresionar = (e: KeyboardEvent) => {
-      if (e.ctrlKey && e.key.toLowerCase() === "p") {
-        // Ctrl+P es "registrar pago", no imprimir la ventana.
-        e.preventDefault();
-        if (!document.querySelector('[role="dialog"]') && deuda > 0) setPagando(true);
-      }
-    };
-    window.addEventListener("keydown", alPresionar);
-    return () => window.removeEventListener("keydown", alPresionar);
-  }, [activa, deuda]);
+  // Ctrl+P es "registrar pago", no imprimir la ventana.
+  useAtajos(
+    "pantalla",
+    {
+      "Ctrl+P": () => {
+        if (deuda > 0) setPagando(true);
+      },
+    },
+    activa,
+  );
 
   /** Imprime en segundo plano y deja el resultado a la vista, con "Reintentar" si falla. */
   const imprimir = useCallback(

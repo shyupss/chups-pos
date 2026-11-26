@@ -1,5 +1,6 @@
 import Boton from "./Boton";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useAtajos } from "../atajos";
 import { api, textoError, type Categoria, type DetalleCompra, type Producto, type Proveedor } from "../api";
 import { aEntero, parseCantidad, pesos, subtotalLinea } from "../formato";
 import Dialogo from "./Dialogo";
@@ -42,6 +43,16 @@ export default function RegistrarCompra({ onRegistrada, onCerrar }: Props) {
   const [enviando, setEnviando] = useState(false);
   const escaner = useRef<HTMLInputElement>(null);
   const cantidades = useRef(new Map<number, HTMLInputElement>());
+  // Línea cuya cantidad se enfoca apenas se dibuja (un setTimeout podía llegar antes que la fila,
+  // por ejemplo al volver de crear un producto nuevo, y el foco quedaba en ninguna parte).
+  const [enfocarCantidad, setEnfocarCantidad] = useState<number | null>(null);
+  useEffect(() => {
+    if (enfocarCantidad === null) return;
+    const campo = cantidades.current.get(enfocarCantidad);
+    if (!campo) return;
+    campo.focus();
+    setEnfocarCantidad(null);
+  }, [enfocarCantidad, lineas]);
 
   useEffect(() => {
     api.listarProveedores("", false, 200, 0).then(setProveedores).catch(() => {});
@@ -58,7 +69,7 @@ export default function RegistrarCompra({ onRegistrada, onCerrar }: Props) {
         : [...ls, { producto: p, cantidad: "", costo: p.costo !== null ? String(p.costo) : "" }],
     );
     // El foco va a la cantidad de esa línea.
-    setTimeout(() => cantidades.current.get(p.id)?.focus(), 0);
+    setEnfocarCantidad(p.id);
   };
 
   const buscar = async () => {
@@ -294,28 +305,48 @@ export default function RegistrarCompra({ onRegistrada, onCerrar }: Props) {
       </div>
 
       {creando !== null && (
-        <div
-          className="fixed inset-0 z-30 flex items-center justify-center bg-velo p-4"
-          onKeyDown={(e) => e.key === "Escape" && e.stopPropagation()}
+        <CapaProductoNuevo
+          onCerrar={() => {
+            setCreando(null);
+            escaner.current?.focus();
+          }}
         >
-          <div role="dialog" aria-modal="true" className="h-[42rem] max-h-full w-[28rem] tarjeta">
-            <FormularioProducto
-              producto={null}
-              codigoInicial={creando}
-              categorias={categorias}
-              categoriaInicial={null}
-              onGuardado={(p) => {
-                setCreando(null);
-                agregar(p);
-              }}
-              onCerrar={() => {
-                setCreando(null);
-                escaner.current?.focus();
-              }}
-            />
-          </div>
-        </div>
+          <FormularioProducto
+            producto={null}
+            origen="compra"
+            codigoInicial={creando}
+            categorias={categorias}
+            categoriaInicial={null}
+            onGuardado={(p) => {
+              setCreando(null);
+              agregar(p);
+            }}
+            onCerrar={() => {
+              setCreando(null);
+              escaner.current?.focus();
+            }}
+          />
+        </CapaProductoNuevo>
       )}
     </Dialogo>
+  );
+}
+
+/**
+ * El formulario de producto nuevo, encima de la compra. Es un diálogo para el despachador de
+ * atajos: Esc lo cierra a él y no a la compra, aunque el foco no esté en el formulario.
+ */
+function CapaProductoNuevo({ onCerrar, children }: { onCerrar: () => void; children: ReactNode }) {
+  useAtajos("dialogo", { Escape: () => onCerrar() });
+  return (
+    <div
+      className="fixed inset-0 z-30 flex items-center justify-center bg-velo p-4"
+      // El Esc del formulario ya lo cerró: no llega al despachador (cerraría otra vez).
+      onKeyDown={(e) => e.key === "Escape" && e.stopPropagation()}
+    >
+      <div role="dialog" aria-modal="true" aria-label="Producto nuevo" className="h-[42rem] max-h-full w-[28rem] tarjeta">
+        {children}
+      </div>
+    </div>
   );
 }

@@ -7,6 +7,11 @@ import Opciones, { type Opcion } from "./Opciones";
 interface Props {
   /** null = producto nuevo */
   producto: Producto | null;
+  /**
+   * Desde dónde se crea. "compra": desde Registrar compra, donde el stock lo suma la compra; no
+   * hay stock inicial (si no, quedaría el doble) y el costo escrito pasa a la línea de la compra.
+   */
+  origen?: "productos" | "compra";
   codigoInicial?: string;
   categorias: Categoria[];
   /** Categoría para un producto nuevo (la del filtro de la lista, si hay una). */
@@ -24,6 +29,7 @@ const UNIDADES: Opcion<Unidad>[] = [
 
 export default function FormularioProducto({
   producto,
+  origen = "productos",
   codigoInicial,
   categorias,
   categoriaInicial,
@@ -32,6 +38,7 @@ export default function FormularioProducto({
   onCerrar,
 }: Props) {
   const nuevo = producto === null;
+  const desdeCompra = nuevo && origen === "compra";
   const [codigo, setCodigo] = useState(producto?.codigoBarras ?? codigoInicial ?? "");
   const [nombre, setNombre] = useState(producto?.nombre ?? "");
   const [categoriaId, setCategoriaId] = useState<number | null>(producto ? producto.categoriaId : categoriaInicial);
@@ -59,7 +66,7 @@ export default function FormularioProducto({
     const precioVenta = aEntero(precio);
     if (precioVenta === null) return setError(porKg ? "Ingresa el precio por kg" : "Ingresa el precio de venta");
     const stockMinimoMil = parseCantidad(stockMinimo || "0", unidad);
-    const stockInicialMil = nuevo ? parseCantidad(stockInicial || "0", unidad) : 0;
+    const stockInicialMil = nuevo && !desdeCompra ? parseCantidad(stockInicial || "0", unidad) : 0;
     if (stockMinimoMil === null || stockInicialMil === null) {
       return setError(
         porKg
@@ -168,7 +175,17 @@ export default function FormularioProducto({
             inputMode="numeric"
           />
         </Campo>
-        <Campo etiqueta={porKg ? "Costo por kg (opcional)" : "Costo (opcional)"}>
+        <Campo
+          etiqueta={
+            desdeCompra
+              ? porKg
+                ? "Costo por kg en esta compra (opcional)"
+                : "Costo unitario en esta compra (opcional)"
+              : porKg
+                ? "Costo por kg (opcional)"
+                : "Costo (opcional)"
+          }
+        >
           <input
             value={costo ? pesos(Number(soloDigitos(costo))) : ""}
             onChange={(e) => setCosto(soloDigitos(e.target.value))}
@@ -176,7 +193,12 @@ export default function FormularioProducto({
             inputMode="numeric"
           />
         </Campo>
-        {nuevo ? (
+        {desdeCompra ? (
+          <div>
+            <span className="text-xs text-tenue">Stock</span>
+            <p className="mt-1 flex min-h-10 items-center rounded-lg bg-info-fondo px-3 text-info">El stock lo suma esta compra.</p>
+          </div>
+        ) : nuevo ? (
           <Campo etiqueta={`Stock inicial${enUnidad}`}>
             <input
               value={stockInicial}
@@ -204,7 +226,7 @@ export default function FormularioProducto({
 
       <div className="mt-auto flex flex-wrap gap-2">
         <Boton type="submit" variante="primario" disabled={guardando} className="flex-1">
-          Guardar
+          {desdeCompra ? "Guardar producto" : "Guardar"}
         </Boton>
         <Boton variante="terciario" onClick={onCerrar}>
           Cerrar

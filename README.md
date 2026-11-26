@@ -340,6 +340,36 @@ contenido. Para agregar una sección: una entrada en `SECCIONES` de `src/pantall
 componente que devuelva `<Columnas izquierda={…} derecha={…} />` con `Tarjeta` (título, ayuda y cuerpo) y
 `Ajuste` (nombre y ayuda a la izquierda, control a la derecha).
 
+## Atajos de teclado
+
+El botón **Atajos**, al pie de la barra lateral, muestra la lista completa.
+
+| Dónde | Atajos |
+| --- | --- |
+| Secciones | F1 Caja · F2 Productos · F3 Inventario · F4 Fiados · F5 Ventas · F6 Reportes · F9 Configuración |
+| Caja | F12 cobrar · F8 poner en espera · F7 ventas en espera · Ctrl+P reimprimir la última boleta · Esc limpiar la búsqueda |
+| Cobro | 1–5 medio de pago (Alt+1–5 mientras escribes un monto) · Enter confirmar · F12 confirmar el fiado · Esc volver |
+| Otras | Ctrl+N nueva compra (Inventario) · Ctrl+E reporte en Excel (Reportes) · Ctrl+P reimprimir (detalle de una venta) o registrar un pago (ficha de fiado) · Esc cierra el diálogo o el detalle abierto |
+
+**¿Las teclas F no responden en un notebook?** Muchos traen las F como teclas de brillo y volumen: aprieta
+**Fn** junto con la tecla, o activa el bloqueo Fn (en muchos equipos, Fn+Esc). La app no puede cambiar eso.
+
+Cómo funciona, para quien programa:
+
+- Un solo despachador en `src/atajos.ts` (las reglas puras están en `src/atajos-nucleo.ts`, con tests). Los
+  componentes registran sus atajos con `useAtajos("global" | "pantalla" | "dialogo", mapa, activo)`; nadie pone
+  su propio `keydown` en `window`.
+- El diálogo de más arriba gana y bloquea los atajos de sección y de pantalla. `Dialogo` ya registra Esc; un
+  diálogo hecho a mano (Cobro) registra el ámbito `dialogo` por su cuenta.
+- Las F y lo que lleva Ctrl/Alt funcionan aunque el foco esté en un campo; las letras y los dígitos sueltos no.
+  Esc, Enter y los caracteres sueltos llegan después de los `onKeyDown` de los campos: si uno ya la atendió
+  (`preventDefault` o `stopPropagation`), el atajo no corre.
+- Las teclas del navegador (F5, Ctrl+R, F3, Ctrl+F, F7, Ctrl+S, Ctrl+P, zoom, Atrás…) están desactivadas en
+  WebView2 (`src-tauri/src/ventana.rs`) y además llevan `preventDefault`. Copiar, pegar, cortar y deshacer
+  siguen funcionando en los campos. El clic derecho solo muestra el menú en los campos de texto.
+- Al volver a la ventana (Alt+Tab, un diálogo de archivo, imprimir), Rust le devuelve el foco del teclado al
+  webview, con una pausa para que el rebote de WebView2 no arme un ciclo de eventos de foco.
+
 ## Licencia
 
 Cada negocio tiene una **licencia permanente**: no vence, no tiene plan y no depende de la versión ni de

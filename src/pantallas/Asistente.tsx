@@ -7,6 +7,7 @@ import DialogoImportar from "../componentes/DialogoImportar";
 import { useConPin } from "../componentes/PedirPin";
 import { avisarCambioStock } from "../eventos";
 import { useConfig } from "../hooks/useConfig";
+import { pedirSalida } from "../salida";
 import { PruebaEscaner } from "./configuracion/Escaner";
 import ImpresoraConfig from "./configuracion/Impresora";
 import LicenciaConfig from "./configuracion/Licencia";
@@ -71,6 +72,10 @@ export default function Asistente({ reabierto, onCambioImpresora, onTerminar }: 
     licencia?.modo === "activa",
   ];
 
+  // Moverse entre pasos o salir pregunta antes si quedaron cambios sin guardar en Negocio.
+  const irAPaso = (n: number) => pedirSalida(() => setPaso(n));
+  const siguiente = () => pedirSalida(() => (paso === PASOS.length - 1 ? setFinal(true) : setPaso(paso + 1)));
+
   const terminar = async (destino: DestinoAsistente) => {
     try {
       await api.terminarAsistente();
@@ -117,7 +122,7 @@ export default function Asistente({ reabierto, onCambioImpresora, onTerminar }: 
             </p>
           </div>
           {reabierto && (
-            <Boton variante="terciario" onClick={() => void terminar("caja")}>
+            <Boton variante="terciario" onClick={() => pedirSalida(() => void terminar("caja"))}>
               Salir del asistente
             </Boton>
           )}
@@ -174,21 +179,21 @@ export default function Asistente({ reabierto, onCambioImpresora, onTerminar }: 
 
         {!final && (
           <footer className="sticky bottom-0 -mx-6 flex flex-wrap items-center gap-2 border-t border-linea bg-fondo px-6 py-3">
-            <Boton variante="terciario" disabled={paso === 0} onClick={() => setPaso(paso - 1)}>
+            <Boton variante="terciario" disabled={paso === 0} onClick={() => irAPaso(paso - 1)}>
               Atrás
             </Boton>
             <span className="flex-1 text-[13px] text-tenue">
               Paso {paso + 1} de {PASOS.length}
             </span>
             {paso > 0 && (
-              <Boton onClick={() => (paso === PASOS.length - 1 ? setFinal(true) : setPaso(paso + 1))}>
+              <Boton onClick={siguiente}>
                 {paso === PASOS.length - 1 ? "Seguir en prueba" : "Omitir"}
               </Boton>
             )}
             <Boton
               variante="primario"
               disabled={!hecho[paso]}
-              onClick={() => (paso === PASOS.length - 1 ? setFinal(true) : setPaso(paso + 1))}
+              onClick={siguiente}
             >
               {paso === PASOS.length - 1 ? "Terminar" : "Siguiente"}
             </Boton>

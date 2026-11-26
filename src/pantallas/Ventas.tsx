@@ -1,6 +1,7 @@
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { Search } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { IMPRIMIBLE, useAtajos } from "../atajos";
 import {
   api,
   textoError,
@@ -198,18 +199,18 @@ export default function Ventas({ activa, onImpresion, folioInicial = null, onFol
     buscador.current?.select();
   };
 
-  // Lo que se escribe (o escanea) con el foco fuera de un campo va al buscador.
-  useEffect(() => {
-    if (!activa) return;
-    const alPresionar = (e: KeyboardEvent) => {
-      const enCampo = e.target instanceof HTMLInputElement || e.target instanceof HTMLSelectElement;
-      if (enCampo || e.ctrlKey || e.altKey || e.metaKey) return;
-      if (document.querySelector('[role="dialog"]')) return;
-      if (/^\d$/.test(e.key)) buscador.current?.focus();
-    };
-    window.addEventListener("keydown", alPresionar);
-    return () => window.removeEventListener("keydown", alPresionar);
-  }, [activa]);
+  // Un dígito (o un folio escaneado) con el foco fuera de un campo va al buscador: lo enfoca y deja
+  // que se escriba ahí (sin preventDefault). Con un diálogo abierto no corre.
+  useAtajos(
+    "pantalla",
+    {
+      [IMPRIMIBLE]: (e) => {
+        if (/^\d$/.test(e.key)) buscador.current?.focus();
+        return false;
+      },
+    },
+    activa,
+  );
 
   const periodo = periodoDe(filtros.desde, filtros.hasta);
   const cambiar = (parcial: Partial<FiltrosVentas>) => setFiltros((f) => ({ ...f, ...parcial }));

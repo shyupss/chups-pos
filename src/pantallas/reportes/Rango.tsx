@@ -1,6 +1,7 @@
 import Boton from "../../componentes/Boton";
 import { FileDown, FileSpreadsheet } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
+import { useAtajos } from "../../atajos";
 import { api, textoError, type FormatoExportacion, type TipoReporte } from "../../api";
 import { diaLocal } from "../../formato";
 
@@ -123,17 +124,7 @@ export function Exportar({
     [tipo, rango, categoria],
   );
   useEffect(() => setResultado(null), [tipo, rango]);
-  useEffect(() => {
-    if (!activa) return;
-    const alPresionar = (e: KeyboardEvent) => {
-      if (e.ctrlKey && e.key.toLowerCase() === "e" && !document.querySelector('[role="dialog"]')) {
-        e.preventDefault();
-        void exportar("excel");
-      }
-    };
-    window.addEventListener("keydown", alPresionar);
-    return () => window.removeEventListener("keydown", alPresionar);
-  }, [activa, exportar]);
+  useAtajos("pantalla", { "Ctrl+E": () => void exportar("excel") }, activa);
 
   return (
     <div className="flex flex-wrap items-center gap-2">

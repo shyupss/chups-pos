@@ -1,9 +1,11 @@
 import Boton from "./Boton";
 import { UserPlus } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
+import { useAtajos, type MapaAtajos } from "../atajos";
 import { api, textoError, type Cliente, type MedioPago, type NuevaVenta, type VentaConfirmada } from "../api";
 import { aEntero, pesos, redondeoEfectivo } from "../formato";
 import { esCancelado, useConPin } from "./PedirPin";
+import Tecla from "./Tecla";
 
 interface Props {
   items: NuevaVenta["items"];
@@ -32,6 +34,7 @@ export default function Cobro({ items, totalEstimado, redondeoActivo, onCancelar
   const [error, setError] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
   const campoRecibido = useRef<HTMLInputElement>(null);
+  const idTitulo = useId();
 
   // Solo para mostrar: el redondeo que vale lo aplica Rust al confirmar, con la misma regla.
   const redondeo = medio === "efectivo" && redondeoActivo ? redondeoEfectivo(totalEstimado) : 0;
@@ -74,32 +77,31 @@ export default function Cobro({ items, totalEstimado, redondeoActivo, onCancelar
     }
   };
 
-  useEffect(() => {
-    const alPresionar = (e: KeyboardEvent) => {
-      // Mientras el PIN u otro diálogo está abierto, sus teclas no son del cobro.
-      if (document.querySelector('[role="dialog"]')) return;
-      const enCliente = e.target instanceof HTMLElement && e.target.dataset.cliente !== undefined;
-      if (e.key === "Escape") return onCancelar();
-      if ((e.key === "Enter" && !enCliente) || e.key === "F12") {
-        e.preventDefault();
-        return void confirmar();
-      }
-      const m = MEDIOS.find((x) => x.tecla === e.key);
-      if (m && !(e.target instanceof HTMLInputElement)) setMedio(m.id);
-      if (m && e.target instanceof HTMLInputElement && e.altKey) {
-        e.preventDefault();
-        setMedio(m.id);
-      }
-    };
-    window.addEventListener("keydown", alPresionar);
-    return () => window.removeEventListener("keydown", alPresionar);
-  });
+  // El cobro es un diálogo: mientras está abierto no corren los atajos de la Caja ni los de
+  // sección, y si se abre el PIN encima, las teclas son del PIN.
+  const atajos: MapaAtajos = {
+    Escape: () => onCancelar(),
+    // Enter en el buscador de clientes elige al cliente, no confirma.
+    Enter: (e) => {
+      if (e.target instanceof HTMLElement && e.target.dataset.cliente !== undefined) return false;
+      void confirmar();
+    },
+    F12: () => void confirmar(),
+  };
+  for (const m of MEDIOS) {
+    // Fuera de un campo basta el número; escribiendo un monto, Alt + número.
+    atajos[m.tecla] = () => setMedio(m.id);
+    atajos[`Alt+${m.tecla}`] = () => setMedio(m.id);
+  }
+  useAtajos("dialogo", atajos);
 
   return (
-    <div className="fixed inset-0 z-20 flex items-center justify-center bg-velo">
-      <div className="w-[34rem] tarjeta p-6 shadow-s3">
+    <div className="fixed inset-0 z-20 flex items-center justify-center bg-velo p-4">
+      <div role="dialog" aria-modal="true" aria-labelledby={idTitulo} className="w-[42rem] max-h-full max-w-full overflow-y-auto tarjeta p-6 shadow-s3">
         <div className="flex items-baseline justify-between">
-          <h2 className="text-lg font-semibold">Cobrar</h2>
+          <h2 id={idTitulo} className="text-lg font-semibold">
+            Cobrar
+          </h2>
           <span className="text-3xl font-semibold tabular-nums">{pesos(aPagar)}</span>
         </div>
         {redondeo !== 0 && (
@@ -118,18 +120,20 @@ export default function Cobro({ items, totalEstimado, redondeoActivo, onCancelar
           </dl>
         )}
 
-        <div className="mt-4 grid grid-cols-5 gap-2">
+        {/* Cada medio mide al menos lo que su nombre: ningún texto toca el borde, con cualquier escala. */}
+        <div className="mt-4 flex gap-2">
           {MEDIOS.map((m) => (
             <Boton
               key={m.id}
               aria-pressed={medio === m.id}
+              aria-keyshortcuts={`${m.tecla} Alt+${m.tecla}`}
               onClick={() => setMedio(m.id)}
-              className={`h-auto flex-col gap-0 px-1 py-2 ${
+              className={`h-auto min-h-14 min-w-max flex-1 basis-0 flex-col gap-1 px-3 py-2 text-[15px] ${
                 medio === m.id ? "border-acento bg-seleccion font-semibold text-acento" : ""
               }`}
             >
               {m.nombre}
-              <div className="text-xs font-normal opacity-70">{medio === "efectivo" || fiado ? `Alt+${m.tecla}` : m.tecla}</div>
+              <Tecla>{medio === "efectivo" || fiado ? `Alt+${m.tecla}` : m.tecla}</Tecla>
             </Boton>
           ))}
         </div>

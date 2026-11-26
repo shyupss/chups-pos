@@ -7,6 +7,7 @@
 mod comandos;
 mod estado;
 mod registro;
+mod ventana;
 
 use std::path::Path;
 use std::time::Instant;
@@ -122,6 +123,8 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .setup(move |app| {
+            // Antes que nada: que el teclado llegue a la app y no haga cosas de navegador.
+            ventana::preparar(app);
             let carpeta = app.path().app_data_dir()?;
             std::fs::create_dir_all(&carpeta)?;
             let ruta_db = carpeta.join(NOMBRE_ARCHIVO_DB);

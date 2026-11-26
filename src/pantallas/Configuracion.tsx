@@ -30,6 +30,7 @@ import NegocioConfig from "./configuracion/Negocio";
 import SeguridadConfig from "./configuracion/Seguridad";
 import { useConfig, type ConfigEditable } from "../hooks/useConfig";
 import { useTema, type Tema } from "../hooks/useTema";
+import { pedirSalida } from "../salida";
 
 interface Props {
   modoBarra: ModoBarra;
@@ -100,9 +101,13 @@ export default function Configuracion({
   const { conPin, olvidar } = useConPinRecordado();
   const cfg = useConfig(conPin);
 
+  // Con cambios sin guardar en Negocio, pregunta antes de cambiar de sección.
   const elegir = (id: IdSeccion) => {
-    ultimaSeccion = id;
-    setSeccionEstado(id);
+    if (id === seccion) return;
+    pedirSalida(() => {
+      ultimaSeccion = id;
+      setSeccionEstado(id);
+    });
   };
 
   const contenido: Record<IdSeccion, ReactNode> = {

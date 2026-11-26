@@ -1,5 +1,7 @@
 import Boton from "./componentes/Boton";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useAtajos } from "./atajos";
+import AyudaAtajos from "./componentes/AyudaAtajos";
 import {
   api,
   escucharActualizacion,
@@ -27,12 +29,21 @@ import Reportes, { type PestanaReportes } from "./pantallas/Reportes";
 import type { FiltroEstadoStock } from "./api";
 import Ventas from "./pantallas/Ventas";
 import { guardarPreferencia, leerPreferencia } from "./preferencias";
+import { pedirSalida } from "./salida";
 import { SECCIONES, type Seccion } from "./secciones";
 
 const CLAVE_BARRA = "chups-pos.barra-lateral";
 
 export default function App() {
-  const [seccion, setSeccion] = useState<Seccion>("caja");
+  const [seccion, setSeccionDirecto] = useState<Seccion>("caja");
+  const seccionActual = useRef(seccion);
+  seccionActual.current = seccion;
+  // Cambiar de sección pregunta antes si hay cambios sin guardar (Configuración > Negocio).
+  const setSeccion = useCallback((s: Seccion) => {
+    if (s === seccionActual.current) return;
+    pedirSalida(() => setSeccionDirecto(s));
+  }, []);
+  const [ayudaAtajos, setAyudaAtajos] = useState(false);
   // Código escaneado en la caja que no existe: se abre Productos con el formulario listo.
   const [codigoNuevo, setCodigoNuevo] = useState<string | null>(null);
   // Ventas en espera: la Caja las informa y la barra lateral las muestra en su ítem.
@@ -117,17 +128,21 @@ export default function App() {
   }, []);
   // Abrir Configuración en Acerca de (desde el aviso de actualización de la barra lateral).
   const irAActualizaciones = useCallback(() => {
-    irASeccionConfig("acerca");
-    setClaveConfig((k) => k + 1);
-    setSeccion("configuracion");
+    pedirSalida(() => {
+      irASeccionConfig("acerca");
+      setClaveConfig((k) => k + 1);
+      setSeccionDirecto("configuracion");
+    });
   }, []);
   // Abrir Configuración en Licencia (desde el aviso, la barra o Abrir caja). La clave la vuelve a
   // montar si ya estaba abierta en otra sección.
   const [claveConfig, setClaveConfig] = useState(0);
   const irALicencia = useCallback(() => {
-    irASeccionConfig("licencia");
-    setClaveConfig((k) => k + 1);
-    setSeccion("configuracion");
+    pedirSalida(() => {
+      irASeccionConfig("licencia");
+      setClaveConfig((k) => k + 1);
+      setSeccionDirecto("configuracion");
+    });
   }, []);
   // Inventario: pestaña, producto filtrado en Movimientos y la insignia de productos bajo el mínimo,
   // que se vuelve a contar cuando alguien avisa que cambió el stock (sin sondeo).
@@ -159,48 +174,62 @@ export default function App() {
     setEstadoStock("bajoMinimo");
     setPestanaInventario("stock");
     setSeccion("inventario");
-  }, []);
-  const verCliente = useCallback((id: number) => {
-    setClienteFiados(id);
-    setSeccion("fiados");
-  }, []);
+  }, [setSeccion]);
+  const verCliente = useCallback(
+    (id: number) => {
+      setClienteFiados(id);
+      setSeccion("fiados");
+    },
+    [setSeccion],
+  );
   // Venta que se abre al llegar a Ventas (enlace desde un movimiento de stock).
   const [folioVentas, setFolioVentas] = useState<number | null>(null);
-  const verMovimientos = useCallback((p: { id: number; nombre: string }) => {
-    setProductoMovimientos(p);
-    setPestanaInventario("movimientos");
-    setSeccion("inventario");
-  }, []);
-  const irAVenta = useCallback((folio: number) => {
-    setFolioVentas(folio);
-    setSeccion("ventas");
-  }, []);
+  const verMovimientos = useCallback(
+    (p: { id: number; nombre: string }) => {
+      setProductoMovimientos(p);
+      setPestanaInventario("movimientos");
+      setSeccion("inventario");
+    },
+    [setSeccion],
+  );
+  const irAVenta = useCallback(
+    (folio: number) => {
+      setFolioVentas(folio);
+      setSeccion("ventas");
+    },
+    [setSeccion],
+  );
   const [modoBarra, setModoBarra] = useState<ModoBarra>(() =>
     leerPreferencia<ModoBarra>(CLAVE_BARRA, ["auto", "expandida", "colapsada"], "auto"),
   );
 
-  // Atajos globales F1–F6 y F9. Con modificadores no se tocan (Alt+F4 debe cerrar la ventana).
-  useEffect(() => {
-    const alPresionar = (e: KeyboardEvent) => {
-      // Ctrl+P no abre el diálogo de impresión del navegador (en la Caja reimprime la boleta).
-      if (e.ctrlKey && e.key.toLowerCase() === "p") e.preventDefault();
-      if (e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
-      const s = SECCIONES.find((x) => x.tecla === e.key);
-      if (s) {
-        e.preventDefault();
-        setSeccion(s.id);
-        // F6 siempre abre Reportes en Hoy.
-        if (s.id === "reportes") setPestanaReportes("hoy");
-      }
-    };
-    window.addEventListener("keydown", alPresionar);
-    return () => window.removeEventListener("keydown", alPresionar);
-  }, []);
+  // Atajos globales F1–F6 y F9, solo sin modificadores (Alt+F4 debe cerrar la ventana). Con un
+  // diálogo abierto no corren: lo decide el despachador (src/atajos.ts).
+  useAtajos(
+    "global",
+    Object.fromEntries(
+      SECCIONES.map((s) => [
+        s.tecla,
+        () =>
+          // F6 siempre abre Reportes en Hoy.
+          s.id === "reportes"
+            ? pedirSalida(() => {
+                setPestanaReportes("hoy");
+                setSeccionDirecto("reportes");
+              })
+            : setSeccion(s.id),
+      ]),
+    ),
+    asistente === false,
+  );
 
-  const crearDesdeCaja = useCallback((codigo: string) => {
-    setCodigoNuevo(codigo);
-    setSeccion("productos");
-  }, []);
+  const crearDesdeCaja = useCallback(
+    (codigo: string) => {
+      setCodigoNuevo(codigo);
+      setSeccion("productos");
+    },
+    [setSeccion],
+  );
 
   const cambiarModoBarra = useCallback((modo: ModoBarra) => {
     setModoBarra(modo);
@@ -216,9 +245,9 @@ export default function App() {
       refrescarLicencia();
       if (destino === "producto-nuevo") {
         setCodigoNuevo("");
-        setSeccion("productos");
+        setSeccionDirecto("productos");
       } else {
-        setSeccion(destino === "productos" ? "productos" : "caja");
+        setSeccionDirecto(destino === "productos" ? "productos" : "caja");
       }
     },
     [refrescarImpresora, refrescarCaja, refrescarLicencia],
@@ -252,6 +281,7 @@ export default function App() {
           onLicencia={irALicencia}
           actualizacion={actualizacion}
           onActualizacion={irAActualizaciones}
+          onAtajos={() => setAyudaAtajos(true)}
           insignias={{
             ...(enEspera > 0
               ? { caja: { valor: enEspera, descripcion: enEspera === 1 ? "1 venta en espera" : `${enEspera} ventas en espera` } }
@@ -325,10 +355,12 @@ export default function App() {
               onCambioImpresora={refrescarImpresora}
               licencia={licencia}
               onCambioLicencia={setLicencia}
-              onAbrirAsistente={() => {
-                setAsistenteReabierto(true);
-                setAsistente(true);
-              }}
+              onAbrirAsistente={() =>
+                pedirSalida(() => {
+                  setAsistenteReabierto(true);
+                  setAsistente(true);
+                })
+              }
               actualizacion={actualizacion}
               onActualizacion={setActualizacion}
               hayTurno={hayTurno}
@@ -338,6 +370,7 @@ export default function App() {
           {pendiente && <Proximamente seccion={pendiente} />}
           </div>
         </main>
+        {ayudaAtajos && <AyudaAtajos onCerrar={() => setAyudaAtajos(false)} />}
         {instalando && (
           <Dialogo titulo="Instalando la actualización" onCerrar={() => {}}>
             <p role="alert" className="mt-2 text-tenue">

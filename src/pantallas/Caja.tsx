@@ -23,6 +23,7 @@ import PonerEnEspera from "../componentes/PonerEnEspera";
 import { cantidad, MAX_KG_MIL, MAX_UNIDADES_MIL, parseKg, pesos, subtotalLinea } from "../formato";
 import { avisarCambioStock } from "../eventos";
 import { useSalidasVenta } from "../hooks/useSalidasVenta";
+import { IMPRIMIBLE, useAtajos } from "../atajos";
 
 interface Linea {
   producto: Producto;
@@ -314,43 +315,33 @@ export default function Caja({
     void imprimir(ultimaVentaId, 1, true);
   }, [ultimaVentaId, aviso, salida, iniciar, imprimir]);
 
-  // Atajos y "foco pegajoso": si el lector escribe mientras el foco está en otro lado,
-  // las teclas van igual al campo de escaneo.
-  useEffect(() => {
-    if (!activa || dialogoAbierto) return;
-    const alPresionar = (e: KeyboardEvent) => {
-      if (e.key === "F12") {
-        e.preventDefault();
+  // Atajos y "foco pegajoso": si el lector escribe mientras el foco está en otro lado, las teclas
+  // van igual al campo de escaneo. Con un diálogo abierto (Cobro, peso, espera, PIN…) no corren:
+  // lo decide el despachador. Con la caja cerrada se muestra "Abrir caja" y tampoco actúan.
+  useAtajos(
+    "pantalla",
+    {
+      F12: () => {
         if (lineas.length > 0) setCobrando(true);
-        return;
-      }
-      if (e.ctrlKey && e.key.toLowerCase() === "p") {
-        e.preventDefault();
-        reimprimirUltima();
-        return;
-      }
-      if (e.key === "F7") {
-        e.preventDefault();
-        abrirListaEspera();
-        return;
-      }
-      if (e.key === "F8") {
-        e.preventDefault();
+      },
+      "Ctrl+P": () => reimprimirUltima(),
+      F7: () => abrirListaEspera(),
+      F8: () => {
         if (lineas.length > 0) setDialogo("poner-espera");
-        return;
-      }
-      if (e.key === "Escape") {
+      },
+      Escape: () => {
         setResultados([]);
         setEntrada("");
         enfocar();
-        return;
-      }
-      const enCampo = e.target instanceof HTMLInputElement;
-      if (!enCampo && e.key.length === 1 && !e.ctrlKey && !e.altKey && !e.metaKey) enfocar();
-    };
-    window.addEventListener("keydown", alPresionar);
-    return () => window.removeEventListener("keydown", alPresionar);
-  }, [activa, dialogoAbierto, lineas.length, enfocar, abrirListaEspera, reimprimirUltima]);
+      },
+      // Enfoca el campo y deja que el carácter se escriba ahí (sin preventDefault).
+      [IMPRIMIBLE]: () => {
+        enfocar();
+        return false;
+      },
+    },
+    activa && !cerrada,
+  );
 
   // La venta ya está guardada: la boleta y el cajón van en segundo plano y nada de eso la deshace.
   const alConfirmar = (venta: VentaConfirmada) => {
