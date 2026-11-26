@@ -133,7 +133,7 @@ export function Exportar({
           <span className="max-w-72 truncate" title={resultado.ruta}>
             Guardado en {resultado.ruta}
           </span>
-          <Boton variante="terciario" tamano="chico" onClick={() => void api.abrirArchivo(resultado.ruta).catch(() => {})}>
+          <Boton variante="enlace" onClick={() => void api.abrirArchivo(resultado.ruta).catch(() => {})}>
             Abrir
           </Boton>
         </span>

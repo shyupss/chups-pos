@@ -35,7 +35,7 @@ export default function BotonExportar({
           <span className="max-w-64 truncate" title={estado.ruta}>
             Guardado
           </span>
-          <Boton variante="terciario" tamano="chico" onClick={() => void api.abrirArchivo(estado.ruta!).catch(() => {})}>
+          <Boton variante="enlace" onClick={() => void api.abrirArchivo(estado.ruta!).catch(() => {})}>
             Abrir
           </Boton>
         </span>

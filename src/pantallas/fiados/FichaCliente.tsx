@@ -268,9 +268,9 @@ export default function FichaCliente({ clienteId, activa, config, onCambio, onEd
           <ul className="mt-2 divide-y divide-linea rounded-lg border border-linea tabular-nums">
             {pagadas.map((v) => (
               <li key={v.ventaId} className="flex items-center gap-4 px-3 py-2">
-                <button type="button" onClick={() => onIrAVenta(v.folio)} className="font-medium text-acento hover:underline">
+                <Boton variante="enlace" onClick={() => onIrAVenta(v.folio)}>
                   {folio(v.folio)}
-                </button>
+                </Boton>
                 <span className="text-tenue">{fechaHora(v.fechaHora)}</span>
                 <span className="flex-1" />
                 <span>{pesos(v.total)}</span>
@@ -345,9 +345,9 @@ function FilaPendiente({
         <input type="checkbox" checked={marcada} onChange={onMarcar} aria-label={`Marcar ${folio(v.folio)}`} />
       </td>
       <td className="py-2">
-        <button type="button" onClick={() => onIrAVenta(v.folio)} className="font-medium text-acento hover:underline">
+        <Boton variante="enlace" onClick={() => onIrAVenta(v.folio)}>
           {folio(v.folio)}
-        </button>
+        </Boton>
       </td>
       <td className="py-2">
         {fechaHora(v.fechaHora)}

@@ -1,5 +1,5 @@
-import { useVirtualizer } from "@tanstack/react-virtual";
-import { useRef, type ReactNode } from "react";
+import { useMemo, type ReactNode } from "react";
+import Tabla from "../../componentes/Tabla";
 
 export interface ColumnaTabla<T> {
   titulo: string;
@@ -7,65 +7,51 @@ export interface ColumnaTabla<T> {
   ancho: string;
   derecha?: boolean;
   celda: (fila: T, i: number) => ReactNode;
+  /** Valor para ordenar al hacer clic en el encabezado; sin esto la columna no se ordena. */
+  orden?: (fila: T) => string | number | null | undefined;
 }
 
-const ALTO_FILA = 36;
-
-/** Tabla con muchas filas: solo se dibujan las que se ven. */
+/**
+ * La tabla común (src/componentes/Tabla.tsx) para los reportes y las vistas previas de importar:
+ * una lista corta que crece hasta `alto` px y luego se desplaza. Solo se dibujan las filas que se ven.
+ */
 export default function TablaVirtual<T>({
   filas,
   columnas,
   clave,
   vacia,
   alto = 420,
+  etiqueta = "Tabla",
 }: {
   filas: T[];
   columnas: ColumnaTabla<T>[];
   clave: (fila: T) => string | number;
   vacia: string;
   alto?: number;
+  etiqueta?: string;
 }) {
-  const contenedor = useRef<HTMLDivElement>(null);
-  const virtual = useVirtualizer({
-    count: filas.length,
-    getScrollElement: () => contenedor.current,
-    estimateSize: () => ALTO_FILA,
-    overscan: 12,
-  });
-  const grid = { gridTemplateColumns: columnas.map((c) => c.ancho).join(" ") };
+  // Cada fila lleva su posición: algunas columnas la usan ("#1", "#2"…).
+  const items = useMemo(() => filas.map((fila, i) => ({ fila, i })), [filas]);
+  const columnasComunes = useMemo(
+    () =>
+      columnas.map((c) => ({
+        id: c.titulo,
+        titulo: c.titulo,
+        ancho: c.ancho,
+        alinear: c.derecha ? ("derecha" as const) : ("izquierda" as const),
+        orden: c.orden ? (x: { fila: T; i: number }) => c.orden!(x.fila) : undefined,
+        celda: (x: { fila: T; i: number }) => c.celda(x.fila, x.i),
+      })),
+    [columnas],
+  );
   return (
-    <div className="overflow-hidden rounded-lg border border-linea">
-      <div style={grid} className="grid gap-3 border-b border-linea bg-suave px-3 py-2 text-xs font-medium text-tenue">
-        {columnas.map((c) => (
-          <span key={c.titulo} className={c.derecha ? "text-right" : ""}>
-            {c.titulo}
-          </span>
-        ))}
-      </div>
-      {filas.length === 0 ? (
-        <p className="p-6 text-center text-tenue">{vacia}</p>
-      ) : (
-        <div ref={contenedor} className="overflow-auto" style={{ maxHeight: alto }}>
-          <div style={{ height: virtual.getTotalSize(), position: "relative" }}>
-            {virtual.getVirtualItems().map((v) => {
-              const f = filas[v.index];
-              return (
-                <div
-                  key={clave(f)}
-                  style={{ ...grid, position: "absolute", top: 0, left: 0, width: "100%", height: ALTO_FILA, transform: `translateY(${v.start}px)` }}
-                  className="grid items-center gap-3 border-b border-linea px-3 tabular-nums"
-                >
-                  {columnas.map((c) => (
-                    <span key={c.titulo} className={`min-w-0 truncate ${c.derecha ? "text-right" : ""}`}>
-                      {c.celda(f, v.index)}
-                    </span>
-                  ))}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-    </div>
+    <Tabla
+      etiqueta={etiqueta}
+      alto={alto}
+      columnas={columnasComunes}
+      filas={items}
+      clave={(x) => clave(x.fila)}
+      vacio={{ texto: vacia }}
+    />
   );
 }

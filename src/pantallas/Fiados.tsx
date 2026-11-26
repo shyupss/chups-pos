@@ -1,13 +1,14 @@
 import Boton from "../componentes/Boton";
 import BotonExportar from "../componentes/BotonExportar";
-import { useVirtualizer } from "@tanstack/react-virtual";
-import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { api, textoError, type Cliente, type Config, type DatosCliente, type Deudor } from "../api";
+import Insignia from "../componentes/Insignia";
+import Tabla, { type ColumnaTabla } from "../componentes/Tabla";
+import { textoConteo } from "../componentes/tabla-nucleo";
 import { aEntero, fechaHora, pesos } from "../formato";
 import FichaCliente, { diasDesde } from "./fiados/FichaCliente";
 
 const POR_PAGINA = 100;
-const ALTO_FILA = 60;
 const claseCampo = "h-11 w-full rounded-lg border border-borde-control bg-superficie px-3 focus:border-acento";
 
 type Panel = { tipo: "ficha"; id: number } | { tipo: "nuevo" } | { tipo: "editar"; cliente: Cliente } | null;
@@ -33,7 +34,6 @@ export default function Fiados({ activa, onIrAVenta, onImpresion, clienteInicial
   const [error, setError] = useState<string | null>(null);
   const cargando = useRef(false);
   const consultaActual = useRef(0);
-  const contenedor = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (activa) api.obtenerConfig().then(setConfig).catch(() => {});
@@ -67,24 +67,61 @@ export default function Fiados({ activa, onIrAVenta, onImpresion, clienteInicial
     if (activa) void cargar(0);
   }, [activa, cargar]);
 
-  const virtual = useVirtualizer({
-    count: filas.length,
-    getScrollElement: () => contenedor.current,
-    estimateSize: () => ALTO_FILA,
-    overscan: 10,
-  });
-  const visibles = virtual.getVirtualItems();
-  const ultimaVisible = visibles.at(-1)?.index ?? 0;
-  useEffect(() => {
-    if (hayMas && !cargando.current && ultimaVisible >= filas.length - 20 && filas.length > 0) void cargar(filas.length);
-  }, [ultimaVisible, filas.length, hayMas, cargar]);
+  const cargarMas = useCallback(() => {
+    if (hayMas && !cargando.current && filas.length > 0) void cargar(filas.length);
+  }, [hayMas, filas.length, cargar]);
 
   const diasAlerta = config?.fiadoDiasAlerta ?? 30;
   const refrescar = useCallback(() => void cargar(0), [cargar]);
 
+  // Cliente · Deuda · Desde cuándo debe: quién es, cuánto debe y si ya se atrasó.
+  const columnas = useMemo<ColumnaTabla<Deudor>[]>(
+    () => [
+      {
+        id: "cliente",
+        titulo: "Cliente",
+        ancho: "minmax(6rem,1fr)",
+        sinPuntos: true,
+        orden: (d) => d.nombre,
+        celda: (d) => (
+          <>
+            <span className="block truncate font-medium">{d.nombre}</span>
+            <span className="block truncate text-xs text-tenue">
+              {d.ultimoPago ? `Último pago ${fechaHora(d.ultimoPago)}` : "Sin pagos"}
+              {d.telefono && ` · ${d.telefono}`}
+            </span>
+          </>
+        ),
+      },
+      {
+        id: "deuda",
+        titulo: "Deuda",
+        ancho: "6.5rem",
+        alinear: "derecha",
+        orden: (d) => d.deuda,
+        clase: (d) => (d.deuda > 0 ? "font-semibold" : "text-tenue"),
+        celda: (d) => (d.deuda > 0 ? pesos(d.deuda) : "Al día"),
+      },
+      {
+        id: "desde",
+        titulo: "Desde",
+        ancho: "7rem",
+        sinPuntos: true,
+        orden: (d) => (d.fiadaMasAntigua ? new Date(d.fiadaMasAntigua).getTime() : null),
+        celda: (d) => {
+          const dias = d.fiadaMasAntigua ? diasDesde(d.fiadaMasAntigua) : null;
+          if (dias === null) return <span className="text-tenue">—</span>;
+          const texto = dias === 0 ? "hoy" : `hace ${dias} ${dias === 1 ? "día" : "días"}`;
+          return dias >= diasAlerta ? <Insignia tono="aviso">{texto}</Insignia> : <span className="text-tenue">{texto}</span>;
+        },
+      },
+    ],
+    [diasAlerta],
+  );
+
   return (
     <div className="flex h-full gap-4 p-6">
-      <section className="flex w-[26rem] shrink-0 flex-col">
+      <section className="flex w-[27rem] shrink-0 flex-col [@media(min-width:1200px)]:w-[30rem]">
         <div className="flex items-baseline justify-between">
           <h1 className="text-xl font-semibold">Fiados</h1>
           {total && (
@@ -114,48 +151,26 @@ export default function Fiados({ activa, onIrAVenta, onImpresion, clienteInicial
           <BotonExportar que="clientes" etiqueta="Exportar clientes y deudas" />
         </div>
         {error && <p className="mt-3 rounded-lg bg-peligro-fondo px-3 py-2 text-peligro">{error}</p>}
-        <div ref={contenedor} className="mt-3 min-h-0 flex-1 overflow-auto tarjeta">
-          {filas.length === 0 ? (
-            <p className="p-8 text-center text-tenue">
-              {busqueda ? "Sin resultados" : todos ? "Todavía no hay clientes." : "Nadie debe nada."}
-            </p>
-          ) : (
-            <div style={{ height: virtual.getTotalSize(), position: "relative" }}>
-              {visibles.map((v) => {
-                const d = filas[v.index];
-                const elegido = panel?.tipo === "ficha" && panel.id === d.id;
-                const dias = d.fiadaMasAntigua ? diasDesde(d.fiadaMasAntigua) : null;
-                const atrasado = dias !== null && dias >= diasAlerta;
-                return (
-                  <button
-                    key={d.id}
-                    onClick={() => setPanel({ tipo: "ficha", id: d.id })}
-                    style={{ position: "absolute", top: 0, left: 0, width: "100%", height: ALTO_FILA, transform: `translateY(${v.start}px)` }}
-                    className={`flex items-center gap-3 border-b border-linea px-4 text-left ${elegido ? "bg-seleccion" : "hover:bg-suave"} ${
-                      d.activo ? "" : "text-tenue"
-                    }`}
-                  >
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate font-medium">{d.nombre}</span>
-                      <span className="block truncate text-xs text-tenue">
-                        {d.ultimoPago ? `Último pago ${fechaHora(d.ultimoPago)}` : "Sin pagos"}
-                        {d.telefono && ` · ${d.telefono}`}
-                      </span>
-                    </span>
-                    <span className="shrink-0 text-right tabular-nums">
-                      <span className="block font-semibold">{d.deuda > 0 ? pesos(d.deuda) : "Al día"}</span>
-                      {dias !== null && (
-                        <span className={`text-xs ${atrasado ? "rounded bg-aviso-fondo px-1.5 font-medium text-aviso" : "text-tenue"}`}>
-                          {dias === 0 ? "desde hoy" : `hace ${dias} ${dias === 1 ? "día" : "días"}`}
-                        </span>
-                      )}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          )}
-        </div>
+        <Tabla
+          etiqueta="Clientes con fiado"
+          className="mt-3 flex-1"
+          columnas={columnas}
+          filas={filas}
+          clave={(d) => d.id}
+          onFila={(d) => setPanel({ tipo: "ficha", id: d.id })}
+          seleccionada={(d) => panel?.tipo === "ficha" && panel.id === d.id}
+          claseFila={(d) => (d.activo ? "" : "text-tenue")}
+          reiniciar={`${busqueda}|${todos}`}
+          onCercaDelFinal={cargarMas}
+          pie={textoConteo(filas.length, "cliente", "clientes", hayMas)}
+          vacio={
+            busqueda
+              ? { texto: "No hay clientes con ese nombre." }
+              : todos
+                ? { texto: "Todavía no hay clientes.", accion: { etiqueta: "Nuevo cliente", onClick: () => setPanel({ tipo: "nuevo" }) } }
+                : { texto: "Nadie debe nada." }
+          }
+        />
       </section>
 
       <section className="min-w-0 flex-1 tarjeta">

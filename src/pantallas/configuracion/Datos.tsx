@@ -62,7 +62,7 @@ export default function ExcelTarjeta() {
           <p className={`flex items-center gap-2 text-sm ${aviso.error ? "text-peligro" : "text-exito"}`}>
             {aviso.texto}
             {aviso.ruta && (
-              <Boton variante="terciario" tamano="chico" onClick={() => void api.abrirArchivo(aviso.ruta!).catch(() => {})}>
+              <Boton variante="enlace" onClick={() => void api.abrirArchivo(aviso.ruta!).catch(() => {})}>
                 Abrir
               </Boton>
             )}

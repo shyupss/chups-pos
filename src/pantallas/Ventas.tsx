@@ -1,4 +1,3 @@
-import { useVirtualizer } from "@tanstack/react-virtual";
 import { Search } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { IMPRIMIBLE, useAtajos } from "../atajos";
@@ -13,6 +12,7 @@ import {
 } from "../api";
 import DetalleVentaPanel from "../componentes/DetalleVentaPanel";
 import InsigniaEstado from "../componentes/InsigniaEstado";
+import Tabla, { type ColumnaTabla } from "../componentes/Tabla";
 import { diaLocal, etiquetaDia, folio, hora, horaODia, NOMBRE_MEDIO, pesos } from "../formato";
 
 interface Props {
@@ -25,31 +25,6 @@ interface Props {
 }
 
 const POR_PAGINA = 100;
-const ALTO_FILA = 40;
-const ALTO_DIA = 34;
-
-/** Lo que muestra la lista virtual: el encabezado de cada día y las ventas de ese día, en orden. */
-type Item = { tipo: "dia"; clave: string; texto: string } | { tipo: "venta"; venta: VentaListada };
-
-/** Intercala un encabezado de día antes de la primera venta de cada día (las ventas ya vienen ordenadas). */
-function agruparPorDia(ventas: VentaListada[]): Item[] {
-  const items: Item[] = [];
-  let ultimoDia = "";
-  for (const venta of ventas) {
-    const dia = diaLocal(new Date(venta.fechaHora));
-    if (dia !== ultimoDia) {
-      items.push({ tipo: "dia", clave: dia, texto: etiquetaDia(venta.fechaHora) });
-      ultimoDia = dia;
-    }
-    items.push({ tipo: "venta", venta });
-  }
-  return items;
-}
-// Columnas según el ancho de la lista (container queries): con el detalle abierto o la ventana
-// angosta se ocultan productos y medio de pago, como en Productos.
-const COLUMNAS =
-  "grid-cols-[5.5rem_minmax(0,1fr)_6.5rem_7.5rem] @2xl:grid-cols-[6rem_minmax(8rem,1fr)_5rem_6.5rem_7rem_7.5rem]";
-const COL_ANCHA = "hidden @2xl:block";
 
 type Periodo = "hoy" | "ayer" | "semana" | "mes" | "todas";
 const PERIODOS: { id: Periodo; nombre: string }[] = [
@@ -111,7 +86,6 @@ export default function Ventas({ activa, onImpresion, folioInicial = null, onFol
   const [abierta, setAbierta] = useState<number | null>(null);
   const cargando = useRef(false);
   const consultaActual = useRef(0);
-  const contenedor = useRef<HTMLDivElement>(null);
   const buscador = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -160,27 +134,45 @@ export default function Ventas({ activa, onImpresion, folioInicial = null, onFol
   );
 
   useEffect(() => {
-    contenedor.current?.scrollTo({ top: 0 });
     void cargar(0);
   }, [cargar]);
 
-  // Los encabezados de día son ítems de la misma lista virtual: nada se carga de más.
-  const items = useMemo(() => agruparPorDia(filas), [filas]);
-  const virtual = useVirtualizer({
-    count: items.length,
-    getScrollElement: () => contenedor.current,
-    estimateSize: (i) => (items[i]?.tipo === "dia" ? ALTO_DIA : ALTO_FILA),
-    overscan: 10,
-  });
-  // Las alturas dependen del tipo de ítem: si la lista cambia, se vuelven a calcular.
-  useEffect(() => virtual.measure(), [items, virtual]);
-  const visibles = virtual.getVirtualItems();
-  const ultimaVisible = visibles.at(-1)?.index ?? 0;
-  useEffect(() => {
-    if (hayMas && !cargando.current && ultimaVisible >= items.length - 20 && filas.length > 0) {
-      void cargar(filas.length);
-    }
-  }, [ultimaVisible, items.length, filas.length, hayMas, cargar]);
+  const cargarMas = useCallback(() => {
+    if (hayMas && !cargando.current && filas.length > 0) void cargar(filas.length);
+  }, [hayMas, filas.length, cargar]);
+
+  // Cada día lleva su encabezado (las ventas ya vienen ordenadas, de la más nueva a la más antigua).
+  const grupoDia = useCallback((v: VentaListada) => ({ clave: diaLocal(new Date(v.fechaHora)), texto: etiquetaDia(v.fechaHora) }), []);
+
+  // Hora/Folio · Total · Medio de pago · Productos · Estado.
+  const columnas = useMemo<ColumnaTabla<VentaListada>[]>(
+    () => [
+      {
+        id: "hora",
+        titulo: "Hora y folio",
+        ancho: "11rem",
+        orden: (v) => v.fechaHora,
+        celda: (v) => (
+          <>
+            <span className="font-medium">{hora(v.fechaHora)}</span> <span className="text-tenue">· {folio(v.folio)}</span>
+          </>
+        ),
+      },
+      {
+        id: "total",
+        titulo: "Total",
+        ancho: "7.5rem",
+        alinear: "derecha",
+        orden: (v) => v.total,
+        clase: (v) => (v.estado === "anulada" ? "line-through text-tenue" : "font-medium"),
+        celda: (v) => pesos(v.total),
+      },
+      { id: "pago", titulo: "Medio de pago", ancho: "9rem", ocultarBajo: 640, orden: (v) => NOMBRE_MEDIO[v.medioPago], celda: (v) => NOMBRE_MEDIO[v.medioPago] },
+      { id: "productos", titulo: "Productos", ancho: "6rem", alinear: "derecha", ocultarBajo: 760, orden: (v) => v.productos, celda: (v) => v.productos },
+      { id: "estado", titulo: "Estado", ancho: "10.5rem", sinPuntos: true, orden: (v) => v.estado, celda: (v) => <InsigniaEstado estado={v.estado} /> },
+    ],
+    [],
+  );
 
   /** Enter en el buscador: el folio escrito o escaneado (CODE128 de la boleta) abre esa venta. */
   const abrirPorFolio = async () => {
@@ -334,81 +326,28 @@ export default function Ventas({ activa, onImpresion, folioInicial = null, onFol
         )}
         {error && <p className="mt-3 rounded-lg bg-peligro-fondo px-3 py-2 text-peligro">{error}</p>}
 
-        <div className={`mt-4 grid ${COLUMNAS} gap-2 px-4 text-xs font-medium text-tenue`}>
-          <span>Folio</span>
-          <span>Hora</span>
-          <span className={`${COL_ANCHA} text-right`}>Productos</span>
-          <span className="text-right">Total</span>
-          <span className={COL_ANCHA}>Pago</span>
-          <span>Estado</span>
-        </div>
-        <div
-          ref={contenedor}
-          className="mt-1 min-h-0 flex-1 overflow-auto tarjeta tabular-nums"
-        >
-          {filas.length === 0 ? (
-            <p className="p-8 text-center text-tenue">
-              {conFolio ? "No hay una venta con ese folio." : "No hay ventas con estos filtros."}
-            </p>
-          ) : (
-            <div style={{ height: virtual.getTotalSize(), position: "relative" }}>
-              {visibles.map((v) => {
-                const item = items[v.index];
-                if (item.tipo === "dia") {
-                  return (
-                    <div
-                      key={`dia-${item.clave}`}
-                      style={{ position: "absolute", top: 0, left: 0, width: "100%", height: ALTO_DIA, transform: `translateY(${v.start}px)` }}
-                      className="flex items-center border-b border-linea bg-suave px-4 text-[13px] font-semibold text-tenue"
-                    >
-                      {item.texto}
-                    </div>
-                  );
-                }
-                const venta = item.venta;
-                const seleccionada = abierta === venta.id;
-                return (
-                  <button
-                    key={venta.id}
-                    onClick={() => setAbierta(venta.id)}
-                    aria-current={seleccionada ? "true" : undefined}
-                    style={{
-                      position: "absolute",
-                      top: 0,
-                      left: 0,
-                      width: "100%",
-                      height: ALTO_FILA,
-                      transform: `translateY(${v.start}px)`,
-                    }}
-                    className={`grid ${COLUMNAS} items-center gap-2 border-b border-linea px-4 text-left ${
-                      seleccionada ? "bg-seleccion" : "hover:bg-suave"
-                    } ${venta.estado === "anulada" ? "text-tenue" : ""}`}
-                  >
-                    <span className="font-medium">{folio(venta.folio)}</span>
-                    <span className="truncate">{hora(venta.fechaHora)}</span>
-                    <span className={`${COL_ANCHA} text-right`}>{venta.productos}</span>
-                    <span className={`text-right ${venta.estado === "anulada" ? "line-through" : ""}`}>
-                      {pesos(venta.total)}
-                    </span>
-                    <span className={`${COL_ANCHA} truncate`}>{NOMBRE_MEDIO[venta.medioPago]}</span>
-                    <span>
-                      <InsigniaEstado estado={venta.estado} />
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          )}
-        </div>
-        <div className="mt-2 flex items-baseline justify-between px-1 tabular-nums">
-          <span className="text-tenue">
-            {totales === null ? "…" : totales.cantidad === 1 ? "1 venta" : `${totales.cantidad} ventas`}
-          </span>
-          <span title="Sin las anuladas y descontando lo devuelto">
-            <span className="text-tenue">Total </span>
-            <span className="text-lg font-semibold">{totales === null ? "…" : pesos(totales.total)}</span>
-          </span>
-        </div>
+        <Tabla
+          etiqueta="Ventas"
+          className="mt-4 flex-1"
+          columnas={columnas}
+          filas={filas}
+          clave={(v) => v.id}
+          onFila={(v) => setAbierta(v.id)}
+          seleccionada={(v) => abierta === v.id}
+          claseFila={(v) => (v.estado === "anulada" ? "text-tenue" : "")}
+          grupo={grupoDia}
+          reiniciar={JSON.stringify(filtros)}
+          onCercaDelFinal={cargarMas}
+          pie={
+            <>
+              <span>{totales === null ? "…" : totales.cantidad === 1 ? "1 venta" : `${totales.cantidad.toLocaleString("es-CL")} ventas`}</span>
+              <span className="ml-auto" title="Sin las anuladas y descontando lo devuelto">
+                Total <span className="text-base font-semibold text-texto">{totales === null ? "…" : pesos(totales.total)}</span>
+              </span>
+            </>
+          }
+          vacio={{ texto: conFolio ? "No hay una venta con ese folio." : "No hay ventas con estos filtros." }}
+        />
       </section>
 
       {abierta !== null && (

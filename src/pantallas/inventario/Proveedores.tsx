@@ -1,11 +1,11 @@
 import Boton from "../../componentes/Boton";
-import { useVirtualizer } from "@tanstack/react-virtual";
-import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { api, textoError, type DatosProveedor, type Proveedor } from "../../api";
+import Tabla, { type ColumnaTabla } from "../../componentes/Tabla";
+import { textoConteo } from "../../componentes/tabla-nucleo";
 import { fechaHora } from "../../formato";
 
 const POR_PAGINA = 100;
-const ALTO_FILA = 44;
 const VACIO: DatosProveedor = { nombre: "", rut: "", telefono: "", contacto: "", nota: "" };
 const claseCampo = "h-11 w-full rounded-lg border border-borde-control bg-superficie px-3 focus:border-acento";
 
@@ -22,7 +22,6 @@ export default function Proveedores({ activa }: { activa: boolean }) {
   const [error, setError] = useState<string | null>(null);
   const cargando = useRef(false);
   const consultaActual = useRef(0);
-  const contenedor = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const t = setTimeout(() => setBusqueda(texto), 150);
@@ -51,17 +50,28 @@ export default function Proveedores({ activa }: { activa: boolean }) {
     if (activa) void cargar(0);
   }, [activa, cargar]);
 
-  const virtual = useVirtualizer({
-    count: filas.length,
-    getScrollElement: () => contenedor.current,
-    estimateSize: () => ALTO_FILA,
-    overscan: 10,
-  });
-  const visibles = virtual.getVirtualItems();
-  const ultimaVisible = visibles.at(-1)?.index ?? 0;
-  useEffect(() => {
-    if (hayMas && !cargando.current && ultimaVisible >= filas.length - 20 && filas.length > 0) void cargar(filas.length);
-  }, [ultimaVisible, filas.length, hayMas, cargar]);
+  const cargarMas = useCallback(() => {
+    if (hayMas && !cargando.current && filas.length > 0) void cargar(filas.length);
+  }, [hayMas, filas.length, cargar]);
+
+  // Nombre · Compras · Última compra · Contacto · Teléfono.
+  const columnas = useMemo<ColumnaTabla<Proveedor>[]>(
+    () => [
+      { id: "nombre", titulo: "Nombre", ancho: "minmax(10rem,24rem)", orden: (p) => p.nombre, celda: (p) => <span title={p.nombre}>{p.nombre}</span> },
+      { id: "compras", titulo: "Compras", ancho: "6rem", alinear: "derecha", orden: (p) => p.compras, celda: (p) => p.compras },
+      {
+        id: "ultima",
+        titulo: "Última compra",
+        ancho: "10rem",
+        orden: (p) => p.ultimaCompra,
+        clase: () => "text-tenue",
+        celda: (p) => (p.ultimaCompra ? fechaHora(p.ultimaCompra) : "sin compras"),
+      },
+      { id: "contacto", titulo: "Contacto", ancho: "minmax(8rem,14rem)", ocultarBajo: 740, orden: (p) => p.contacto, clase: () => "text-tenue", celda: (p) => p.contacto ?? "—" },
+      { id: "telefono", titulo: "Teléfono", ancho: "9.5rem", ocultarBajo: 900, orden: (p) => p.telefono, clase: () => "text-tenue", celda: (p) => p.telefono ?? "—" },
+    ],
+    [],
+  );
 
   const alGuardar = (p: Proveedor) => {
     setPanel({ tipo: "editar", proveedor: p });
@@ -88,38 +98,24 @@ export default function Proveedores({ activa }: { activa: boolean }) {
           </Boton>
         </div>
         {error && <p className="mt-3 rounded-lg bg-peligro-fondo px-3 py-2 text-peligro">{error}</p>}
-        <div ref={contenedor} className="mt-4 min-h-0 flex-1 overflow-auto tarjeta">
-          {filas.length === 0 ? (
-            <p className="p-8 text-center text-tenue">
-              {busqueda ? "Sin resultados" : 'Todavía no hay proveedores. Crea el primero con "Nuevo proveedor".'}
-            </p>
-          ) : (
-            <div style={{ height: virtual.getTotalSize(), position: "relative" }}>
-              {visibles.map((v) => {
-                const p = filas[v.index];
-                const elegido = panel?.tipo === "editar" && panel.proveedor.id === p.id;
-                return (
-                  <button
-                    key={p.id}
-                    onClick={() => setPanel({ tipo: "editar", proveedor: p })}
-                    style={{ position: "absolute", top: 0, left: 0, width: "100%", height: ALTO_FILA, transform: `translateY(${v.start}px)` }}
-                    className={`flex items-center gap-3 border-b border-linea px-4 text-left ${
-                      elegido ? "bg-seleccion" : "hover:bg-suave"
-                    } ${p.activo ? "" : "text-tenue line-through"}`}
-                  >
-                    <span className="min-w-0 flex-1 truncate">
-                      {p.nombre}
-                      {p.contacto && <span className="text-tenue"> · {p.contacto}</span>}
-                    </span>
-                    <span className="text-xs text-tenue tabular-nums">
-                      {p.compras === 0 ? "sin compras" : `${p.compras} compras · última ${fechaHora(p.ultimaCompra!)}`}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          )}
-        </div>
+        <Tabla
+          etiqueta="Proveedores"
+          className="mt-4 flex-1"
+          columnas={columnas}
+          filas={filas}
+          clave={(p) => p.id}
+          onFila={(p) => setPanel({ tipo: "editar", proveedor: p })}
+          seleccionada={(p) => panel?.tipo === "editar" && panel.proveedor.id === p.id}
+          claseFila={(p) => (p.activo ? "" : "text-tenue line-through")}
+          reiniciar={`${busqueda}|${inactivos}`}
+          onCercaDelFinal={cargarMas}
+          pie={textoConteo(filas.length, "proveedor", "proveedores", hayMas)}
+          vacio={
+            busqueda
+              ? { texto: "No hay proveedores con esa búsqueda." }
+              : { texto: "Todavía no hay proveedores.", accion: { etiqueta: "Nuevo proveedor", onClick: () => setPanel({ tipo: "nuevo" }) } }
+          }
+        />
       </section>
       {panel && (
         <aside className="ml-4 w-96 shrink-0 tarjeta">

@@ -1,3 +1,4 @@
+import Boton from "../../componentes/Boton";
 import { ArrowDown, ArrowUp } from "lucide-react";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { api, escucharCambiosDelDia, textoError, type ResumenHoy } from "../../api";
@@ -117,9 +118,11 @@ export default function Hoy({ activa, onVerBajoMinimo, onVerCliente, onVerProduc
           <Lista vacia="Todavía no hay ventas hoy.">
             {hoy.masVendidos.map((p) => (
               <li key={p.productoId} className="flex items-baseline gap-3">
-                <button type="button" onClick={() => onVerProducto({ id: p.productoId, nombre: p.nombre })} className="min-w-0 flex-1 truncate text-left hover:underline">
-                  {p.nombre}
-                </button>
+                <span className="min-w-0 flex-1 truncate">
+                  <Boton variante="enlace" onClick={() => onVerProducto({ id: p.productoId, nombre: p.nombre })} className="whitespace-nowrap" title="Ver movimientos">
+                    {p.nombre}
+                  </Boton>
+                </span>
                 <span className="text-tenue tabular-nums">{cantidad(p.cantidadMil, p.unidad)}</span>
                 <span className="w-20 text-right font-medium tabular-nums">{pesos(p.monto)}</span>
               </li>
@@ -144,9 +147,11 @@ export default function Hoy({ activa, onVerBajoMinimo, onVerCliente, onVerProduc
           <Lista vacia="Nadie tiene deudas atrasadas.">
             {hoy.atrasados.map((c) => (
               <li key={c.id} className="flex items-baseline gap-3">
-                <button type="button" onClick={() => onVerCliente(c.id)} className="min-w-0 flex-1 truncate text-left hover:underline">
-                  {c.nombre}
-                </button>
+                <span className="min-w-0 flex-1 truncate">
+                  <Boton variante="enlace" onClick={() => onVerCliente(c.id)} className="whitespace-nowrap">
+                    {c.nombre}
+                  </Boton>
+                </span>
                 <span className="rounded bg-aviso-fondo px-1.5 text-xs font-medium text-aviso">{c.dias} días</span>
                 <span className="w-20 text-right font-medium tabular-nums">{pesos(c.deuda)}</span>
               </li>
@@ -188,9 +193,9 @@ export function Panel({
       <div className="mb-3 flex items-baseline justify-between gap-3">
         <h2 className="font-semibold">{titulo}</h2>
         {accion && (
-          <button type="button" onClick={accion.alHacer} className="text-sm text-acento hover:underline">
+          <Boton variante="enlace" onClick={accion.alHacer} className="text-sm">
             {accion.texto}
-          </button>
+          </Boton>
         )}
       </div>
       {children}

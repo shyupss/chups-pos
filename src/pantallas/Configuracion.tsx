@@ -162,17 +162,18 @@ export default function Configuracion({
           {SECCIONES.map(({ id, nombre, Icono }) => {
             const activa = seccion === id;
             return (
-              <Boton
+              <button
                 key={id}
-                variante="terciario"
-                bloque
-                icono={Icono}
+                type="button"
                 aria-current={activa ? "page" : undefined}
                 onClick={() => elegir(id)}
-                className={activa ? "bg-seleccion font-semibold text-acento hover:bg-seleccion hover:text-acento" : "text-texto"}
+                className={`flex h-11 w-full items-center gap-3 rounded-lg px-3 text-left ${
+                  activa ? "bg-seleccion font-semibold text-acento" : "text-texto hover:bg-suave"
+                }`}
               >
+                <Icono size={18} aria-hidden className="shrink-0" />
                 {nombre}
-              </Boton>
+              </button>
             );
           })}
         </nav>

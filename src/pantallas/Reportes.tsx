@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { api, type Categoria } from "../api";
+import Pestanas from "../componentes/Pestanas";
 import Hoy from "./reportes/Hoy";
 import { ReporteFiados, ReporteGanancia, ReporteProductos, ReporteTurnos, ReporteVentas } from "./reportes/PorRango";
 import { rangoDe, SelectorRango, type Rango } from "./reportes/Rango";
@@ -35,22 +36,7 @@ export default function Reportes({ activa, pestana, onPestana, onVerBajoMinimo, 
 
   return (
     <div className="flex h-full flex-col overflow-auto p-6">
-      <div role="tablist" aria-label="Reportes" className="mb-4 flex gap-1 border-b border-linea">
-        {PESTANAS.map((p) => (
-          <button
-            key={p.id}
-            type="button"
-            role="tab"
-            aria-selected={pestana === p.id}
-            onClick={() => onPestana(p.id)}
-            className={`h-9 rounded-lg px-4 ${
-              pestana === p.id ? "bg-seleccion font-semibold text-acento" : "font-medium text-tenue hover:bg-suave hover:text-texto"
-            }`}
-          >
-            {p.nombre}
-          </button>
-        ))}
-      </div>
+      <Pestanas etiqueta="Reportes" pestanas={PESTANAS} activa={pestana} onCambiar={onPestana} />
       {pestana === "hoy" ? (
         <Hoy activa={activa} onVerBajoMinimo={onVerBajoMinimo} onVerCliente={onVerCliente} onVerProducto={onVerProducto} />
       ) : (

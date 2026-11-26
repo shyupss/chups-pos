@@ -322,7 +322,15 @@ Todo botón pasa por `src/componentes/Boton.tsx`, con `Tecla` para los atajos:
 
 - **Una sola acción primaria por pantalla o diálogo** (la que el usuario viene a hacer: Cobrar, Guardar,
   Respaldar ahora). Todo lo demás es **secundario**.
-- Lo opcional ("Cancelar" de un diálogo, "Quitar logo", "Cerrar") es **terciario**.
+- Lo opcional ("Cancelar" de un diálogo, "Quitar logo", "Cerrar") es **terciario**: fondo `--suave`, borde
+  `--linea` y texto `--texto`, con un tono más oscuro al pasar el mouse. Tiene caja para que se vea que es un botón.
+- **Enlace** (`variante="enlace"`: texto `--acento` subrayado, sin caja) solo para una acción dentro de una frase
+  ("Abrir" junto a "Guardado en…", el folio de una venta en una lista, el nombre de un producto en un reporte). Una
+  acción de verdad es secundario o terciario.
+- La navegación (secciones de Configuración, líneas de estado de la barra lateral) no usa `Boton`: son
+  `<button>` propios sin caja, con el estado "elegido" en Selección.
+- Todo lo que se puede apretar tiene cursor de mano (regla global en `index.css`), tono al pasar el mouse y
+  contorno de foco de teclado.
 - Lo que descarta o anula (Cancelar venta, Anular, Restaurar) es **peligro**.
 - Tamaños: normal 44 px, chico 36 px, grande 56 px (solo Cobrar) e ícono (un ícono solo, cuadrado de 36 px).
   Los campos de texto miden 44 px y el texto base 15 px; ningún texto baja de 13 px (`text-xs` vale 13 px).
@@ -340,6 +348,33 @@ elegida, en una cuadrícula de dos columnas de tarjetas que pasa a una columna c
 contenido. Para agregar una sección: una entrada en `SECCIONES` de `src/pantallas/Configuracion.tsx` y un
 componente que devuelva `<Columnas izquierda={…} derecha={…} />` con `Tarjeta` (título, ayuda y cuerpo) y
 `Ajuste` (nombre y ayuda a la izquierda, control a la derecha).
+
+### Tablas
+
+Todas las listas usan `src/componentes/Tabla.tsx` (sobre `@tanstack/react-virtual`, solo se dibujan las filas que
+se ven). Una pantalla declara sus columnas y la tabla se encarga del resto:
+
+- Columnas: `id`, `titulo`, `ancho` (pista de grid), `alinear`, `ocultarBajo` (se oculta cuando la tabla mide menos
+  que ese ancho: primero lo secundario, código y categoría), `celda`, `orden` y `clase`. Los números (precio,
+  stock, total, cantidad) van a la derecha y en cifras tabulares; la columna del nombre no pasa de ~28 rem, para
+  que el precio no quede lejos del nombre en pantallas anchas.
+- El encabezado va fijo dentro de la tarjeta (fondo `--suave`, 13 px, peso 600). Las filas miden 48 px, con
+  separador `--linea`, tono al pasar el mouse y `--seleccion` en la elegida. Una fila que se abre (`onFila`) muestra
+  una flecha "›" al final y responde a Enter y espacio.
+- Clic en un encabezado: ascendente, descendente y sin orden. **Ordena solo lo ya cargado**: las listas se
+  piden por páginas de 100 y el backend no ordena por columna (agregarlo pediría consultas nuevas).
+- Pie con el conteo ("1.234 productos", y "(baja para ver más)" si falta cargar) y un estado vacío con una frase
+  útil y el botón de la acción ("Todavía no hay productos." + "Nuevo producto").
+- Los estados usan `Insignia` (fondo de rol: Bajo el mínimo en aviso, Anulada en peligro, Sin costo en aviso), no
+  solo color de texto.
+- `grupo` agrega encabezados (cada día en Ventas). `TablaVirtual` (Reportes y vistas previas de importar) es un
+  adaptador sobre `Tabla`.
+
+Órdenes de columnas (lo que identifica primero, lo que más se mira después y lo secundario al final): Productos:
+Nombre · Precio · Stock · Categoría · Código. Stock: Nombre · Stock · Mínimo · Estado · Costo · Valor. Ventas: Hora
+y folio · Total · Medio de pago · Productos · Estado. Compras: Fecha · Proveedor · Total · Productos · Documento ·
+N°. Movimientos: Fecha · Producto · Cantidad · Stock · Tipo · Origen. Proveedores: Nombre · Compras · Última
+compra · Contacto · Teléfono. Fiados: Cliente · Deuda · Desde.
 
 ### Tamaño de la interfaz
 

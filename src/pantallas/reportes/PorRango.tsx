@@ -2,6 +2,7 @@
 // pide su reporte en una llamada y lo dibuja; la exportación la hace Rust (Excel y PDF).
 
 import { useMemo, useState } from "react";
+import Boton from "../../componentes/Boton";
 import { api, type Categoria, type ProductoVendido } from "../../api";
 import { Barras, Columnas, DIAS, MapaCalor } from "../../componentes/Graficos";
 import Opciones from "../../componentes/Opciones";
@@ -160,19 +161,21 @@ export function ReporteProductos({
                 {
                   titulo: "Producto",
                   ancho: "minmax(0,1fr)",
+                  orden: (p) => p.nombre,
                   celda: (p) => (
-                    <button type="button" onClick={() => onVerProducto({ id: p.productoId, nombre: p.nombre })} className="truncate hover:underline" title="Ver movimientos">
+                    <Boton variante="enlace" onClick={() => onVerProducto({ id: p.productoId, nombre: p.nombre })} className="whitespace-nowrap" title="Ver movimientos">
                       {p.nombre}
-                    </button>
+                    </Boton>
                   ),
                 },
-                { titulo: "Categoría", ancho: "9rem", celda: (p) => <span className="text-tenue">{p.categoria ?? "—"}</span> },
-                { titulo: "Cantidad", ancho: "7rem", derecha: true, celda: (p) => cantidad(p.cantidadMil, p.unidad) },
-                { titulo: "Ventas", ancho: "7rem", derecha: true, celda: (p) => <span className="font-medium">{pesos(p.monto)}</span> },
+                { titulo: "Categoría", ancho: "9rem", orden: (p) => p.categoria, celda: (p) => <span className="text-tenue">{p.categoria ?? "—"}</span> },
+                { titulo: "Cantidad", ancho: "7rem", derecha: true, orden: (p) => p.cantidadMil, celda: (p) => cantidad(p.cantidadMil, p.unidad) },
+                { titulo: "Ventas", ancho: "7rem", derecha: true, orden: (p) => p.monto, celda: (p) => <span className="font-medium">{pesos(p.monto)}</span> },
                 {
                   titulo: "% del total",
                   ancho: "5.5rem",
                   derecha: true,
+                  orden: (p) => p.monto,
                   celda: (p) => <span className="text-tenue">{total ? porcentaje(Math.round((p.monto * 10000) / total)) : "—"}</span>,
                 },
               ]}
@@ -188,14 +191,15 @@ export function ReporteProductos({
                 {
                   titulo: "Producto",
                   ancho: "minmax(0,1fr)",
+                  orden: (p) => p.nombre,
                   celda: (p) => (
-                    <button type="button" onClick={() => onVerProducto({ id: p.productoId, nombre: p.nombre })} className="truncate hover:underline" title="Ver movimientos">
+                    <Boton variante="enlace" onClick={() => onVerProducto({ id: p.productoId, nombre: p.nombre })} className="whitespace-nowrap" title="Ver movimientos">
                       {p.nombre}
-                    </button>
+                    </Boton>
                   ),
                 },
-                { titulo: "Categoría", ancho: "9rem", celda: (p) => <span className="text-tenue">{p.categoria ?? "—"}</span> },
-                { titulo: "Stock", ancho: "7rem", derecha: true, celda: (p) => cantidad(p.stockMil, p.unidad) },
+                { titulo: "Categoría", ancho: "9rem", orden: (p) => p.categoria, celda: (p) => <span className="text-tenue">{p.categoria ?? "—"}</span> },
+                { titulo: "Stock", ancho: "7rem", derecha: true, orden: (p) => p.stockMil, celda: (p) => cantidad(p.stockMil, p.unidad) },
               ]}
             />
           </Panel>
@@ -250,6 +254,7 @@ export function ReporteGanancia({ activa, rango }: { activa: boolean; rango: Ran
               {
                 titulo: "Producto",
                 ancho: "minmax(0,1fr)",
+                orden: (p) => p.nombre,
                 celda: (p) => (
                   <span title={p.costoEstimado ? "Parte del costo es estimada" : undefined}>
                     {p.nombre}
@@ -257,8 +262,8 @@ export function ReporteGanancia({ activa, rango }: { activa: boolean; rango: Ran
                   </span>
                 ),
               },
-              { titulo: "Ventas", ancho: "6.5rem", derecha: true, celda: (p) => pesos(p.montoConCosto) },
-              { titulo: "Costo", ancho: "6.5rem", derecha: true, celda: (p) => <span className="text-tenue">{pesos(p.costo ?? 0)}</span> },
+              { titulo: "Ventas", ancho: "6.5rem", derecha: true, orden: (p) => p.montoConCosto, celda: (p) => pesos(p.montoConCosto) },
+              { titulo: "Costo", ancho: "6.5rem", derecha: true, orden: (p) => p.costo, celda: (p) => <span className="text-tenue">{pesos(p.costo ?? 0)}</span> },
               { titulo: "Ganancia", ancho: "6.5rem", derecha: true, celda: columnaGanancia },
               { titulo: "Margen", ancho: "4.5rem", derecha: true, celda: (p) => (p.margenPb === null ? "—" : porcentaje(p.margenPb)) },
             ]}
@@ -316,15 +321,16 @@ export function ReporteTurnos({ activa, rango }: { activa: boolean; rango: Rango
           clave={(t) => t.id}
           vacia="No se cerraron turnos en este rango."
           columnas={[
-            { titulo: "Turno", ancho: "6rem", celda: (t) => folio(t.id) },
-            { titulo: "Apertura", ancho: "minmax(0,1fr)", celda: (t) => fechaHora(t.abiertoEn) },
-            { titulo: "Cierre", ancho: "minmax(0,1fr)", celda: (t) => fechaHora(t.cerradoEn) },
-            { titulo: "Esperado", ancho: "7rem", derecha: true, celda: (t) => pesos(t.esperado) },
-            { titulo: "Contado", ancho: "7rem", derecha: true, celda: (t) => pesos(t.contado) },
+            { titulo: "Turno", ancho: "6rem", orden: (t) => t.id, celda: (t) => folio(t.id) },
+            { titulo: "Apertura", ancho: "minmax(0,1fr)", orden: (t) => t.abiertoEn, celda: (t) => fechaHora(t.abiertoEn) },
+            { titulo: "Cierre", ancho: "minmax(0,1fr)", orden: (t) => t.cerradoEn, celda: (t) => fechaHora(t.cerradoEn) },
+            { titulo: "Esperado", ancho: "7rem", derecha: true, orden: (t) => t.esperado, celda: (t) => pesos(t.esperado) },
+            { titulo: "Contado", ancho: "7rem", derecha: true, orden: (t) => t.contado, celda: (t) => pesos(t.contado) },
             {
               titulo: "Diferencia",
               ancho: "7rem",
               derecha: true,
+              orden: (t) => t.diferencia,
               celda: (t) => (
                 <span className={`font-medium ${t.diferencia < 0 ? "text-peligro" : t.diferencia > 0 ? "text-aviso" : "text-exito"}`}>
                   {t.diferencia === 0 ? "Cuadrada" : pesosConSigno(t.diferencia)}
@@ -368,9 +374,11 @@ export function ReporteFiados({ activa, rango, onVerCliente }: { activa: boolean
             <ul className="space-y-2">
               {r.deudores.map((d) => (
                 <li key={d.clienteId} className="flex items-baseline gap-3">
-                  <button type="button" onClick={() => onVerCliente(d.clienteId)} className="min-w-0 flex-1 truncate text-left hover:underline">
-                    {d.nombre}
-                  </button>
+                  <span className="min-w-0 flex-1 truncate">
+                    <Boton variante="enlace" onClick={() => onVerCliente(d.clienteId)} className="whitespace-nowrap">
+                      {d.nombre}
+                    </Boton>
+                  </span>
                   <span className="font-medium tabular-nums">{pesos(d.deuda)}</span>
                 </li>
               ))}
