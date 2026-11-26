@@ -8,7 +8,7 @@ import FichaCliente, { diasDesde } from "./fiados/FichaCliente";
 
 const POR_PAGINA = 100;
 const ALTO_FILA = 60;
-const claseCampo = "h-10 w-full rounded-lg border border-borde-control bg-superficie px-3 focus:border-acento";
+const claseCampo = "h-11 w-full rounded-lg border border-borde-control bg-superficie px-3 focus:border-acento";
 
 type Panel = { tipo: "ficha"; id: number } | { tipo: "nuevo" } | { tipo: "editar"; cliente: Cliente } | null;
 
@@ -100,7 +100,7 @@ export default function Fiados({ activa, onIrAVenta, onImpresion, clienteInicial
             onChange={(e) => setTexto(e.target.value)}
             placeholder="Buscar por nombre o teléfono"
             aria-label="Buscar cliente"
-            className="h-10 min-w-0 flex-1 rounded-lg border border-borde-control bg-superficie px-4 focus:border-acento"
+            className="h-11 min-w-0 flex-1 rounded-lg border border-borde-control bg-superficie px-4 focus:border-acento"
           />
           <Boton variante="primario" onClick={() => setPanel({ tipo: "nuevo" })}>
             Nuevo cliente

@@ -96,6 +96,9 @@ export type TablaCaracteres = "cp858" | "cp850" | "wpc1252";
 export type FormatoPdf = "ticket" | "carta";
 export type FormatoBalanza = "peso" | "precio";
 
+/** Tamaño de letra y botones de toda la interfaz: Rust lo aplica como zoom (100 %, 110 % y 125 %). */
+export type EscalaInterfaz = "normal" | "grande" | "masgrande";
+
 /** Configuración tipada de la tabla config (la valida el servicio de Rust). */
 export interface Config {
   redondeoEfectivo: boolean;
@@ -121,6 +124,7 @@ export interface Config {
   /** null = Respaldos junto a los datos de la app. */
   respaldosCarpeta: string | null;
   respaldosConservar: number;
+  escalaInterfaz: EscalaInterfaz;
 }
 
 /** Una venta en espera en la lista. El total usa los precios actuales de los productos activos. */

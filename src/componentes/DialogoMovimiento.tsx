@@ -80,7 +80,7 @@ export default function DialogoMovimiento({ turnoId, onRegistrado, onCerrar }: P
             onChange={(e) => setMotivo(e.target.value)}
             maxLength={200}
             placeholder={tipo === "ingreso" ? "Sencillo del banco" : "Pago al proveedor de pan"}
-            className="mt-1 h-10 w-full rounded-lg border border-borde-control bg-superficie px-3 focus:border-acento"
+            className="mt-1 h-11 w-full rounded-lg border border-borde-control bg-superficie px-3 focus:border-acento"
           />
         </label>
         {esperado !== null && (

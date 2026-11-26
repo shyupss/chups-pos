@@ -324,7 +324,8 @@ Todo botón pasa por `src/componentes/Boton.tsx`, con `Tecla` para los atajos:
   Respaldar ahora). Todo lo demás es **secundario**.
 - Lo opcional ("Cancelar" de un diálogo, "Quitar logo", "Cerrar") es **terciario**.
 - Lo que descarta o anula (Cancelar venta, Anular, Restaurar) es **peligro**.
-- Tamaños: normal 40 px, chico 32 px, grande 56 px (solo Cobrar) e ícono (un ícono solo, cuadrado de 32 px).
+- Tamaños: normal 44 px, chico 36 px, grande 56 px (solo Cobrar) e ícono (un ícono solo, cuadrado de 36 px).
+  Los campos de texto miden 44 px y el texto base 15 px; ningún texto baja de 13 px (`text-xs` vale 13 px).
 - Sin animaciones: solo una transición de color de 100 ms.
 
 Las filas clicables (listas virtuales, resultados de búsqueda), las pestañas y los ítems de la barra lateral son
@@ -339,6 +340,29 @@ elegida, en una cuadrícula de dos columnas de tarjetas que pasa a una columna c
 contenido. Para agregar una sección: una entrada en `SECCIONES` de `src/pantallas/Configuracion.tsx` y un
 componente que devuelva `<Columnas izquierda={…} derecha={…} />` con `Tarjeta` (título, ayuda y cuerpo) y
 `Ajuste` (nombre y ayuda a la izquierda, control a la derecha).
+
+### Tamaño de la interfaz
+
+Configuración > Apariencia > **Tamaño de letra y botones**: Normal (100 %), **Grande (110 %, el valor por
+defecto)** y Más grande (125 %). Se aplica al instante, sin reiniciar, y se recuerda al cerrar la app.
+
+- Es el zoom del webview (`Webview::set_zoom`), una sola operación nativa: escala por igual textos, botones,
+  tablas y el alto de las filas virtualizadas, sin costo de rendimiento ni código en la interfaz. Rust lo aplica
+  al arrancar, apenas lee la configuración (`src-tauri/src/ventana.rs`), y al guardar el ajuste.
+- La ventana nace oculta (`"visible": false` en `tauri.conf.json`) y `ventana.rs` la muestra cuando la escala
+  ya está aplicada y la página terminó de cargar. Sin eso la interfaz se veía al 100 % unos 300 ms y luego saltaba
+  al tamaño elegido, porque la página empieza a cargar antes de que `setup` abra la base y lea la configuración.
+  Si la página no llega a cargar, se muestra igual a los 8 s. `tauri-plugin-window-state` no recuerda la
+  visibilidad (si lo hiciera, mostraría la ventana antes de tiempo).
+- Se guarda en la tabla `config` (clave `escala_interfaz`: `normal`, `grande` o `masgrande`). Una clave
+  ausente o rara vale el valor por defecto, así que las bases anteriores quedan en Grande sin migración.
+- Es el único ajuste que **no pide el PIN**: es accesibilidad, y quien está en el mostrador debe poder agrandar la
+  letra. Si junto con el tamaño cambia otra cosa, sí se pide.
+- El zoom reduce lo que ve el CSS: en una pantalla de 1366 × 768 (unos 1366 × 696 útiles con la ventana
+  maximizada) el área mide 1242 × 633 px con Grande y 1093 × 557 px con Más grande. Por eso el panel derecho de la
+  Caja pasa a un modo compacto cuando el alto es menor de 700 px (`[@media(max-height:700px)]`).
+- Instalaciones nuevas: tema Oscuro y barra lateral Expandida. Un equipo que ya usaba la app conserva lo que veía
+  (sin nada guardado, "Sistema" y "Automática"); lo que alguien eligió manda siempre.
 
 ## Atajos de teclado
 

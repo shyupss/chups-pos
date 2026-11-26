@@ -61,7 +61,7 @@ export default function BarraLateral({
       className={`flex shrink-0 flex-col border-r border-linea bg-superficie ${expandida ? "w-52" : "w-16"}`}
     >
       <div
-        className={`flex h-14 shrink-0 items-center font-semibold ${expandida ? "px-5" : "justify-center"}`}
+        className={`flex h-14 shrink-0 items-center font-semibold [@media(max-height:600px)]:h-11 ${expandida ? "px-5" : "justify-center"}`}
         title="CHUPS POS"
       >
         {expandida ? "CHUPS POS" : "CP"}
@@ -121,7 +121,7 @@ function Item({
       aria-current={activa ? "page" : undefined}
       aria-keyshortcuts={tecla}
       title={expandida ? undefined : `${nombre} (${tecla})${insignia ? ` · ${insignia.descripcion}` : ""}`}
-      className={`relative flex h-10 w-full items-center gap-3 rounded-lg ${expandida ? "px-3" : "justify-center"} ${
+      className={`relative flex h-11 w-full items-center gap-3 rounded-lg ${expandida ? "px-3" : "justify-center"} ${
         activa ? "bg-seleccion font-semibold text-acento" : "text-texto hover:bg-suave"
       }`}
     >
@@ -265,13 +265,13 @@ function Estados({
   }
 
   const linea = (e: { texto: string; nivel: Nivel; detalle: string }, destino: Seccion) => (
-    <Boton key={e.texto} variante="terciario" tamano="chico" bloque onClick={() => onIr(destino)} title={e.detalle} className="text-xs">
+    <Boton key={e.texto} variante="terciario" tamano="chico" bloque onClick={() => onIr(destino)} title={e.detalle} className="px-2 text-xs">
       <span aria-hidden className={`size-2 shrink-0 rounded-full ${PUNTO[e.nivel]}`} />
       <span className="truncate">{e.texto}</span>
     </Boton>
   );
   return (
-    <div className="flex shrink-0 flex-col gap-0.5 border-t border-linea p-2">
+    <div className="flex shrink-0 flex-col gap-0.5 border-t border-linea p-2 [@media(max-height:600px)]:[&_.boton]:h-8">
       {caja && linea(caja, "caja")}
       {imp && linea(imp, "configuracion")}
       {nueva && (
@@ -281,7 +281,7 @@ function Estados({
           bloque
           onClick={() => (onActualizacion ? onActualizacion() : onIr("configuracion"))}
           title={`Hay una versión nueva de CHUPS POS (${nueva.version}). Se instala desde Configuración > Acerca de.`}
-          className="text-xs"
+          className="px-2 text-xs"
         >
           <span aria-hidden className={`size-2 shrink-0 rounded-full ${PUNTO.info}`} />
           <span className="truncate">Actualización {nueva.version}</span>
@@ -294,7 +294,7 @@ function Estados({
           bloque
           onClick={() => (onLicencia ? onLicencia() : onIr("configuracion"))}
           title={lic.detalle}
-          className="text-xs"
+          className="px-2 text-xs"
         >
           <span aria-hidden className={`size-2 shrink-0 rounded-full ${PUNTO[lic.nivel]}`} />
           <span className="truncate">{lic.texto}</span>

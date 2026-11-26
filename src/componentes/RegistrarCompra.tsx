@@ -20,7 +20,7 @@ interface Props {
 }
 
 const PARECE_CODIGO = /^[A-Za-z0-9-]+$/;
-const claseCampo = "h-10 w-full rounded-lg border border-borde-control bg-superficie px-3 focus:border-acento";
+const claseCampo = "h-11 w-full rounded-lg border border-borde-control bg-superficie px-3 focus:border-acento";
 
 /**
  * Registrar una compra: proveedor y documento, y las líneas escaneando o buscando, cada una con
@@ -131,7 +131,7 @@ export default function RegistrarCompra({ onRegistrada, onCerrar }: Props) {
     <Dialogo titulo="Registrar compra" onCerrar={onCerrar} ancho="w-[58rem]">
       <div className="mt-4 grid grid-cols-[1fr_14rem] gap-3">
         <label className="block">
-          <span className="text-xs text-tenue">Proveedor</span>
+          <span className="text-sm text-tenue">Proveedor</span>
           <select value={proveedorId} onChange={(e) => setProveedorId(e.target.value)} className={`mt-1 ${claseCampo}`}>
             <option value="">Sin proveedor</option>
             {proveedores.map((p) => (
@@ -142,7 +142,7 @@ export default function RegistrarCompra({ onRegistrada, onCerrar }: Props) {
           </select>
         </label>
         <label className="block">
-          <span className="text-xs text-tenue">N° de factura o guía (opcional)</span>
+          <span className="text-sm text-tenue">N° de factura o guía (opcional)</span>
           <input value={documento} onChange={(e) => setDocumento(e.target.value)} maxLength={40} className={`mt-1 ${claseCampo}`} />
         </label>
       </div>
@@ -168,7 +168,7 @@ export default function RegistrarCompra({ onRegistrada, onCerrar }: Props) {
           <ul className="absolute z-10 mt-1 w-full overflow-hidden tarjeta shadow-s2">
             {resultados.map((p) => (
               <li key={p.id}>
-                <button type="button" onClick={() => agregar(p)} className="h-10 w-full px-4 text-left hover:bg-suave">
+                <button type="button" onClick={() => agregar(p)} className="h-11 w-full px-4 text-left hover:bg-suave">
                   {p.nombre}
                 </button>
               </li>

@@ -57,8 +57,9 @@ export function Columnas({
   const [ref, ancho] = useAncho<HTMLDivElement>();
   const [marcada, setMarcada] = useState<number | null>(null);
   const max = Math.max(1, ...columnas.map((c) => c.valor));
-  const izq = 48;
-  const abajo = 20;
+  // Las etiquetas miden 13 px (el mínimo de la interfaz): más margen para el eje y para el pie.
+  const izq = 60;
+  const abajo = 26;
   const util = Math.max(0, ancho - izq);
   const paso = columnas.length > 0 ? util / columnas.length : 0;
   const barra = Math.max(1, paso * 0.72);
@@ -72,7 +73,7 @@ export function Columnas({
           {[0, 0.5, 1].map((f) => (
             <g key={f}>
               <line x1={izq} x2={ancho} y1={y(max * f)} y2={y(max * f)} className="stroke-linea" />
-              <text x={izq - 6} y={y(max * f) + 4} textAnchor="end" className="fill-tenue text-[10px]">
+              <text x={izq - 6} y={y(max * f) + 4.5} textAnchor="end" className="fill-tenue text-[13px]">
                 {formatoEje(Math.round(max * f))}
               </text>
             </g>
@@ -93,7 +94,7 @@ export function Columnas({
                   className={marcada === i ? "fill-texto" : "fill-acento"}
                 />
                 {i % etiquetaCada === 0 && (
-                  <text x={x + barra / 2} y={alto - 6} textAnchor="middle" className="fill-tenue text-[10px]">
+                  <text x={x + barra / 2} y={alto - 7} textAnchor="middle" className="fill-tenue text-[13px]">
                     {c.etiqueta}
                   </text>
                 )}
@@ -155,8 +156,8 @@ export function MapaCalor({
   const [ref, ancho] = useAncho<HTMLDivElement>();
   const [marcada, setMarcada] = useState<[number, number] | null>(null);
   const max = Math.max(1, ...celdas.flat().map(valor));
-  const izq = 34;
-  const arriba = 16;
+  const izq = 36;
+  const arriba = 22;
   const lado = Math.max(8, Math.min(28, (ancho - izq) / 24));
   const alto = arriba + lado * 7;
   return (
@@ -165,14 +166,14 @@ export function MapaCalor({
         <svg width={izq + lado * 24} height={alto} role="img" aria-label="Ventas por día de la semana y hora" className="block">
           {Array.from({ length: 24 }, (_, h) =>
             h % 3 === 0 ? (
-              <text key={h} x={izq + h * lado + lado / 2} y={11} textAnchor="middle" className="fill-tenue text-[10px]">
+              <text key={h} x={izq + h * lado + lado / 2} y={15} textAnchor="middle" className="fill-tenue text-[13px]">
                 {h}
               </text>
             ) : null,
           )}
           {celdas.map((fila, d) => (
             <g key={d}>
-              <text x={izq - 6} y={arriba + d * lado + lado / 2 + 4} textAnchor="end" className="fill-tenue text-[10px]">
+              <text x={izq - 6} y={arriba + d * lado + lado / 2 + 4.5} textAnchor="end" className="fill-tenue text-[13px]">
                 {DIAS[d].slice(0, 2)}
               </text>
               {fila.map((c, h) => {

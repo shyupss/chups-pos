@@ -185,7 +185,7 @@ export default function AcercaDe({ actualizacion, onActualizacion, hayTurno, onI
                   {hayTurno && <Boton onClick={() => void instalarAlCerrar(true)}>Instalar al cerrar el turno</Boton>}
                 </div>
               )}
-              <p className="text-[12.5px] text-tenue">
+              <p className="text-xs text-tenue">
                 Al instalar, CHUPS POS se cierra y vuelve a abrirse. Tus datos no se tocan.
               </p>
             </div>

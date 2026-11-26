@@ -161,7 +161,7 @@ export default function FormularioProducto({
         </select>
       </Campo>
       <div>
-        <span className="text-xs text-tenue">Se vende por</span>
+        <span className="text-sm text-tenue">Se vende por</span>
         <div className="mt-1">
           <Opciones nombre="unidad" etiqueta="Se vende por" opciones={UNIDADES} valor={unidad} onCambiar={setUnidad} />
         </div>
@@ -195,8 +195,8 @@ export default function FormularioProducto({
         </Campo>
         {desdeCompra ? (
           <div>
-            <span className="text-xs text-tenue">Stock</span>
-            <p className="mt-1 flex min-h-10 items-center rounded-lg bg-info-fondo px-3 text-info">El stock lo suma esta compra.</p>
+            <span className="text-sm text-tenue">Stock</span>
+            <p className="mt-1 flex min-h-11 items-center rounded-lg bg-info-fondo px-3 text-info">El stock lo suma esta compra.</p>
           </div>
         ) : nuevo ? (
           <Campo etiqueta={`Stock inicial${enUnidad}`}>
@@ -209,7 +209,7 @@ export default function FormularioProducto({
           </Campo>
         ) : (
           <Campo etiqueta="Stock actual">
-            <div className="flex h-10 items-center tabular-nums">{cantidad(producto.stockMil, unidad)}</div>
+            <div className="flex h-11 items-center tabular-nums">{cantidad(producto.stockMil, unidad)}</div>
           </Campo>
         )}
         <Campo etiqueta={`Avisar con stock menor o igual a${enUnidad}`}>
@@ -247,12 +247,12 @@ export default function FormularioProducto({
 }
 
 const claseCampo =
-  "h-10 w-full rounded-lg border border-borde-control bg-superficie px-3 tabular-nums focus:border-acento";
+  "h-11 w-full rounded-lg border border-borde-control bg-superficie px-3 tabular-nums focus:border-acento";
 
 function Campo({ etiqueta, children }: { etiqueta: string; children: React.ReactNode }) {
   return (
     <label className="block">
-      <span className="text-xs text-tenue">{etiqueta}</span>
+      <span className="text-sm text-tenue">{etiqueta}</span>
       <div className="mt-1">{children}</div>
     </label>
   );

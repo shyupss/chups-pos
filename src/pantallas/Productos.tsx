@@ -140,14 +140,14 @@ export default function Productos({ codigoNuevo, onCodigoUsado, onVerMovimientos
             value={texto}
             onChange={(e) => setTexto(e.target.value)}
             placeholder="Buscar por nombre o código"
-            className="h-10 min-w-48 flex-1 rounded-lg border border-borde-control bg-superficie px-4 focus:border-acento"
+            className="h-11 min-w-64 flex-1 rounded-lg border border-borde-control bg-superficie px-4 focus:border-acento"
             autoFocus
           />
           <select
             value={String(filtro)}
             onChange={(e) => setFiltro(aFiltro(e.target.value))}
             aria-label="Filtrar por categoría"
-            className="h-10 max-w-48 rounded-lg border border-borde-control bg-superficie px-3 focus:border-acento"
+            className="h-11 max-w-48 rounded-lg border border-borde-control bg-superficie px-3 focus:border-acento"
           >
             <option value="todas">Todas las categorías</option>
             {categorias.map((c) => (

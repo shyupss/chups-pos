@@ -7,7 +7,7 @@ import { fechaHora } from "../../formato";
 const POR_PAGINA = 100;
 const ALTO_FILA = 44;
 const VACIO: DatosProveedor = { nombre: "", rut: "", telefono: "", contacto: "", nota: "" };
-const claseCampo = "h-10 w-full rounded-lg border border-borde-control bg-superficie px-3 focus:border-acento";
+const claseCampo = "h-11 w-full rounded-lg border border-borde-control bg-superficie px-3 focus:border-acento";
 
 type Panel = { tipo: "nuevo" } | { tipo: "editar"; proveedor: Proveedor } | null;
 
@@ -77,7 +77,7 @@ export default function Proveedores({ activa }: { activa: boolean }) {
             onChange={(e) => setTexto(e.target.value)}
             placeholder="Buscar por nombre, contacto o RUT"
             aria-label="Buscar proveedor"
-            className="h-10 min-w-48 flex-1 rounded-lg border border-borde-control bg-superficie px-4 focus:border-acento"
+            className="h-11 min-w-64 flex-1 rounded-lg border border-borde-control bg-superficie px-4 focus:border-acento"
           />
           <label className="flex items-center gap-2 text-tenue">
             <input type="checkbox" checked={inactivos} onChange={(e) => setInactivos(e.target.checked)} />
@@ -222,7 +222,7 @@ function FormularioProveedor({
 function Campo({ etiqueta, children }: { etiqueta: string; children: ReactNode }) {
   return (
     <label className="block">
-      <span className="text-xs text-tenue">{etiqueta}</span>
+      <span className="text-sm text-tenue">{etiqueta}</span>
       <div className="mt-1">{children}</div>
     </label>
   );

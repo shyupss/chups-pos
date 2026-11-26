@@ -37,7 +37,7 @@ const ACCIONES: { clave: keyof AccionesProtegidas; nombre: string; ayuda: string
 ];
 
 const claseCampo =
-  "h-10 w-full rounded-lg border border-borde-control bg-superficie px-3 text-center text-lg tracking-[0.4em] tabular-nums [-webkit-text-security:disc] focus:border-acento";
+  "h-11 w-full rounded-lg border border-borde-control bg-superficie px-3 text-center text-lg tracking-[0.4em] tabular-nums [-webkit-text-security:disc] focus:border-acento";
 
 
 const digitos = (texto: string) => texto.replace(/\D/g, "").slice(0, 6);
@@ -201,7 +201,7 @@ function CampoPin({
 }) {
   return (
     <label className="block">
-      <span className="text-xs text-tenue">{etiqueta}</span>
+      <span className="text-sm text-tenue">{etiqueta}</span>
       <input
         autoFocus={autoFocus}
         value={valor}
@@ -361,7 +361,7 @@ function RecuperarPin({ onCancelar, onRecuperado }: { onCancelar: () => void; on
     <FormularioDialogo titulo="Olvidé el PIN" onCancelar={onCancelar} onEnviar={() => void enviar()}>
       <p className="text-tenue">Escribe el código de recuperación que anotaste al crear el PIN.</p>
       <label className="block">
-        <span className="text-xs text-tenue">Código de recuperación</span>
+        <span className="text-sm text-tenue">Código de recuperación</span>
         <input
           autoFocus
           value={codigo}
@@ -369,7 +369,7 @@ function RecuperarPin({ onCancelar, onRecuperado }: { onCancelar: () => void; on
           placeholder="ABCDE-12345"
           autoComplete="off"
           spellCheck={false}
-          className="mt-1 h-10 w-full rounded-lg border border-borde-control bg-superficie px-3 text-center font-mono text-lg tracking-widest focus:border-acento"
+          className="mt-1 h-11 w-full rounded-lg border border-borde-control bg-superficie px-3 text-center font-mono text-lg tracking-widest focus:border-acento"
         />
       </label>
       <CampoPin etiqueta="PIN nuevo (4 a 6 dígitos)" valor={p.nuevo} onCambiar={p.setNuevo} />

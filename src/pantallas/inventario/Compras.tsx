@@ -87,7 +87,7 @@ export default function Compras({ activa, elegida, onElegir, onNueva, version }:
             value={proveedorId}
             onChange={(e) => setProveedorId(e.target.value)}
             aria-label="Proveedor"
-            className="h-10 max-w-64 rounded-lg border border-borde-control bg-superficie px-3 focus:border-acento"
+            className="h-11 max-w-64 rounded-lg border border-borde-control bg-superficie px-3 focus:border-acento"
           >
             <option value="">Todos los proveedores</option>
             {proveedores.map((p) => (
@@ -104,7 +104,7 @@ export default function Compras({ activa, elegida, onElegir, onNueva, version }:
               value={desde}
               max={hasta || undefined}
               onChange={(e) => setDesde(e.target.value)}
-              className="h-10 rounded-lg border border-borde-control bg-superficie px-3 text-texto focus:border-acento"
+              className="h-11 rounded-lg border border-borde-control bg-superficie px-3 text-texto focus:border-acento"
             />
           </label>
           <label className="flex items-center gap-2 text-tenue">
@@ -114,7 +114,7 @@ export default function Compras({ activa, elegida, onElegir, onNueva, version }:
               value={hasta}
               min={desde || undefined}
               onChange={(e) => setHasta(e.target.value)}
-              className="h-10 rounded-lg border border-borde-control bg-superficie px-3 text-texto focus:border-acento"
+              className="h-11 rounded-lg border border-borde-control bg-superficie px-3 text-texto focus:border-acento"
             />
           </label>
           <Boton variante="primario" icono={Plus} atajo="Ctrl N" onClick={onNueva} aria-keyshortcuts="Control+N" className="ml-auto">
@@ -284,7 +284,7 @@ function DetalleCompraPanel({ id, onCerrar, onAnulada }: { id: number; onCerrar:
               maxLength={200}
               placeholder="Motivo (obligatorio)"
               aria-label="Motivo de la anulación"
-              className="h-10 w-full rounded-lg border border-borde-control bg-superficie px-3 focus:border-acento"
+              className="h-11 w-full rounded-lg border border-borde-control bg-superficie px-3 focus:border-acento"
             />
             {error && <p className="rounded-lg bg-peligro-fondo px-3 py-2 text-peligro">{error}</p>}
             <div className="flex gap-2">

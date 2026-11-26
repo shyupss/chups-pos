@@ -26,7 +26,7 @@ export default function ExcelTarjeta() {
   return (
     <Tarjeta titulo="Excel" ayuda="Exporta tus datos o impórtalos desde una planilla .xlsx, .xls, .ods o .csv.">
       <div className="flex flex-col gap-2">
-        <h3 className="text-[12.5px] font-semibold text-tenue">Exportar</h3>
+        <h3 className="text-xs font-semibold text-tenue">Exportar</h3>
         <div className="flex flex-wrap gap-2">
           <BotonExportar que="productos" etiqueta="Productos" />
           <BotonExportar que="stock" etiqueta="Stock y valorización" />
@@ -44,7 +44,7 @@ export default function ExcelTarjeta() {
       </div>
 
       <div className="flex flex-col gap-2 border-t border-linea pt-4">
-        <h3 className="text-[12.5px] font-semibold text-tenue">Importar</h3>
+        <h3 className="text-xs font-semibold text-tenue">Importar</h3>
         <p className="text-[13px] text-tenue">
           Antes de guardar se ve qué filas son nuevas, cuáles actualizan y cuáles tienen errores.
         </p>

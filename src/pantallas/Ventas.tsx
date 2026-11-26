@@ -91,7 +91,7 @@ const periodoDe = (desde: string | null, hasta: string | null): Periodo | null =
     return r.desde === desde && r.hasta === hasta;
   })?.id ?? null;
 
-const claseCampo = "h-10 rounded-lg border border-borde-control bg-superficie px-3 focus:border-acento";
+const claseCampo = "h-11 rounded-lg border border-borde-control bg-superficie px-3 focus:border-acento";
 
 /** Ventas (F5): historial con filtros, detalle, reimpresión, anulación y devoluciones. */
 export default function Ventas({ activa, onImpresion, folioInicial = null, onFolioUsado }: Props) {

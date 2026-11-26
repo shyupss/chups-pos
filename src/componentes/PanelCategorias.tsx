@@ -9,7 +9,7 @@ interface Props {
   onCerrar: () => void;
 }
 
-const claseCampo = "h-10 min-w-0 flex-1 rounded-lg border border-borde-control bg-superficie px-3 focus:border-acento";
+const claseCampo = "h-11 min-w-0 flex-1 rounded-lg border border-borde-control bg-superficie px-3 focus:border-acento";
 
 /** Crear, renombrar y eliminar categorías. Vive en el panel derecho de Productos. */
 export default function PanelCategorias({ categorias, onCambio, onCerrar }: Props) {

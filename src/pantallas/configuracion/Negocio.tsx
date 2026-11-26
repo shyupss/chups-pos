@@ -9,7 +9,7 @@ import { pesos } from "../../formato";
 import { useGuardiaSalida } from "../../salida";
 import { conLogo, DATOS_VACIOS, desdeGuardado, hayCambios, type EstadoNegocio } from "./negocio-estado";
 
-const claseCampo = "h-10 w-full rounded-lg border border-borde-control px-3 focus:border-acento";
+const claseCampo = "h-11 w-full rounded-lg border border-borde-control px-3 focus:border-acento";
 
 /** Las tres líneas de ejemplo de la vista previa: fijas, no salen de la base. */
 const EJEMPLO: [string, number][] = [
@@ -228,7 +228,7 @@ function VistaBoleta({ datos, logo }: { datos: DatosNegocio; logo: string | null
     <div
       role="img"
       aria-label="Vista aproximada de la boleta"
-      className="mx-auto w-full max-w-[280px] bg-papel px-4 py-5 font-mono text-[11.5px] leading-snug text-tinta shadow-s2"
+      className="mx-auto w-full max-w-[280px] bg-papel px-4 py-5 font-mono text-[13px] leading-snug text-tinta shadow-s2"
     >
       <div className="text-center">
         {logo && (
@@ -261,7 +261,7 @@ function VistaBoleta({ datos, logo }: { datos: DatosNegocio; logo: string | null
 function Campo({ etiqueta, children }: { etiqueta: string; children: ReactNode }) {
   return (
     <label className="block">
-      <span className="text-xs text-tenue">{etiqueta}</span>
+      <span className="text-sm text-tenue">{etiqueta}</span>
       <div className="mt-1">{children}</div>
     </label>
   );

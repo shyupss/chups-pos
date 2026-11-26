@@ -14,7 +14,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { useState, type ReactNode } from "react";
-import type { EstadoActualizacion, EstadoLicencia } from "../api";
+import type { EscalaInterfaz, EstadoActualizacion, EstadoLicencia } from "../api";
 import { Ajuste, Columnas, Tarjeta } from "../componentes/Ajustes";
 import type { ModoBarra } from "../componentes/BarraLateral";
 import Boton from "../componentes/Boton";
@@ -77,6 +77,12 @@ const TEMAS: { id: Tema; nombre: string; Icono: LucideIcon }[] = [
   { id: "sistema", nombre: "Sistema", Icono: Monitor },
 ];
 
+const ESCALAS: Opcion<EscalaInterfaz>[] = [
+  { id: "normal", nombre: "Normal · 100 %" },
+  { id: "grande", nombre: "Grande · 110 %" },
+  { id: "masgrande", nombre: "Más grande · 125 %" },
+];
+
 const MODOS_BARRA: Opcion<ModoBarra>[] = [
   { id: "auto", nombre: "Automática" },
   { id: "expandida", nombre: "Expandida" },
@@ -112,7 +118,7 @@ export default function Configuracion({
 
   const contenido: Record<IdSeccion, ReactNode> = {
     negocio: <NegocioConfig conPin={conPin} />,
-    apariencia: <Apariencia tema={tema} onTema={setTema} modoBarra={modoBarra} onModoBarra={onModoBarra} />,
+    apariencia: <Apariencia tema={tema} onTema={setTema} modoBarra={modoBarra} onModoBarra={onModoBarra} cfg={cfg} />,
     caja: <CajaYFiados cfg={cfg} />,
     impresora: (
       <ImpresoraConfig
@@ -185,11 +191,13 @@ function Apariencia({
   onTema,
   modoBarra,
   onModoBarra,
+  cfg,
 }: {
   tema: Tema;
   onTema: (t: Tema) => void;
   modoBarra: ModoBarra;
   onModoBarra: (m: ModoBarra) => void;
+  cfg: ConfigEditable;
 }) {
   return (
     <Columnas
@@ -219,11 +227,29 @@ function Apariencia({
         </Tarjeta>
       }
       derecha={
-        <Tarjeta titulo="Barra lateral">
-          <Ajuste etiqueta="Modo" ayuda="Automática: se colapsa en la Caja y se expande en las demás secciones.">
-            <Opciones nombre="barra" etiqueta="Barra lateral" opciones={MODOS_BARRA} valor={modoBarra} onCambiar={onModoBarra} />
-          </Ajuste>
-        </Tarjeta>
+        <>
+          <Tarjeta
+            titulo="Tamaño de letra y botones"
+            ayuda="Cambia el tamaño de todo: letras, botones y tablas. Se aplica al instante y no pide el PIN."
+          >
+            {cfg.config === null ? (
+              <p className="text-tenue">Cargando…</p>
+            ) : (
+              <Opciones
+                nombre="escala"
+                etiqueta="Tamaño de letra y botones"
+                opciones={ESCALAS}
+                valor={cfg.config.escalaInterfaz}
+                onCambiar={(v) => void cfg.cambiar({ escalaInterfaz: v })}
+              />
+            )}
+          </Tarjeta>
+          <Tarjeta titulo="Barra lateral">
+            <Ajuste etiqueta="Modo" ayuda="Automática: se colapsa en la Caja y se expande en las demás secciones.">
+              <Opciones nombre="barra" etiqueta="Barra lateral" opciones={MODOS_BARRA} valor={modoBarra} onCambiar={onModoBarra} />
+            </Ajuste>
+          </Tarjeta>
+        </>
       }
     />
   );

@@ -28,7 +28,7 @@ export default function Opciones<T extends string>({
       {opciones.map(({ id, nombre: texto, Icono }) => (
         <label
           key={id}
-          className="relative flex h-8 cursor-pointer items-center gap-2 rounded-md px-3 text-tenue hover:text-texto has-checked:bg-seleccion has-checked:font-semibold has-checked:text-acento has-checked:shadow-s1 has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-acento"
+          className="relative flex h-9 cursor-pointer items-center gap-2 rounded-md px-3 text-tenue hover:text-texto has-checked:bg-seleccion has-checked:font-semibold has-checked:text-acento has-checked:shadow-s1 has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-acento"
         >
           <input
             type="radio"
@@ -38,7 +38,7 @@ export default function Opciones<T extends string>({
             onChange={() => onCambiar(id)}
             className="sr-only"
           />
-          {Icono && <Icono size={16} aria-hidden />}
+          {Icono && <Icono size={18} aria-hidden />}
           {texto}
         </label>
       ))}

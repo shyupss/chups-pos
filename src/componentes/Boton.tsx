@@ -8,7 +8,7 @@ export type TamanoBoton = "normal" | "chico" | "grande" | "icono";
 interface Props extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, "className"> {
   /** Una sola acción primaria por pantalla o diálogo; lo opcional es terciario; lo que descarta, peligro. */
   variante?: VarianteBoton;
-  /** normal 40 px, chico 32 px, grande 56 px (solo Cobrar), icono 32 px cuadrado (un ícono solo). */
+  /** normal 44 px, chico 36 px, grande 56 px (solo Cobrar), icono 36 px cuadrado (un ícono solo). */
   tamano?: TamanoBoton;
   icono?: LucideIcon;
   /** Atajo de teclado, a la derecha como una tecla. */
@@ -43,7 +43,7 @@ export default function Boton({
   ];
   return (
     <button type={type} className={clases.filter(Boolean).join(" ")} {...resto}>
-      {Icono && <Icono size={tamano === "grande" ? 20 : 16} aria-hidden />}
+      {Icono && <Icono size={tamano === "grande" ? 22 : 18} aria-hidden />}
       {children}
       {atajo && <Tecla>{atajo}</Tecla>}
     </button>

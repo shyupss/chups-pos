@@ -283,7 +283,7 @@ function ElegirCliente({ cliente, onElegir, aPagar }: { cliente: Cliente | null;
           onKeyDown={(e) => e.key === "Enter" && void crear()}
           placeholder="Nombre"
           maxLength={80}
-          className="h-10 w-full rounded-lg border border-borde-control bg-superficie px-3 focus:border-acento"
+          className="h-11 w-full rounded-lg border border-borde-control bg-superficie px-3 focus:border-acento"
         />
         <input
           data-cliente
@@ -292,7 +292,7 @@ function ElegirCliente({ cliente, onElegir, aPagar }: { cliente: Cliente | null;
           onKeyDown={(e) => e.key === "Enter" && void crear()}
           placeholder="Teléfono (opcional)"
           maxLength={30}
-          className="h-10 w-full rounded-lg border border-borde-control bg-superficie px-3 focus:border-acento"
+          className="h-11 w-full rounded-lg border border-borde-control bg-superficie px-3 focus:border-acento"
         />
         {error && <p className="text-peligro">{error}</p>}
         <div className="flex gap-2">
@@ -327,7 +327,7 @@ function ElegirCliente({ cliente, onElegir, aPagar }: { cliente: Cliente | null;
         </Boton>
       </div>
       {error && <p className="mt-2 text-peligro">{error}</p>}
-      <ul className="mt-2 max-h-48 overflow-auto rounded-lg border border-linea">
+      <ul className="mt-2 max-h-[min(12rem,25vh)] overflow-auto rounded-lg border border-linea">
         {resultados.length === 0 ? (
           <li className="p-3 text-center text-tenue">{texto ? "No hay clientes con ese nombre" : "Todavía no hay clientes"}</li>
         ) : (
@@ -336,7 +336,7 @@ function ElegirCliente({ cliente, onElegir, aPagar }: { cliente: Cliente | null;
               <button
                 type="button"
                 onClick={() => onElegir(c)}
-                className={`flex h-10 w-full items-center justify-between gap-3 px-3 text-left hover:bg-suave ${i === 0 ? "bg-suave" : ""}`}
+                className={`flex h-11 w-full items-center justify-between gap-3 px-3 text-left hover:bg-suave ${i === 0 ? "bg-suave" : ""}`}
               >
                 <span className="min-w-0 truncate">
                   {c.nombre}

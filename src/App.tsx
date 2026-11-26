@@ -28,11 +28,14 @@ import Proximamente from "./pantallas/Proximamente";
 import Reportes, { type PestanaReportes } from "./pantallas/Reportes";
 import type { FiltroEstadoStock } from "./api";
 import Ventas from "./pantallas/Ventas";
-import { guardarPreferencia, leerPreferencia } from "./preferencias";
+import { cambiarTema, hayTemaGuardado } from "./hooks/useTema";
+import { guardarPreferencia, hayPreferencia, leerPreferencia } from "./preferencias";
+import { defectosParaInstalacionNueva } from "./preferencias-nucleo";
 import { pedirSalida } from "./salida";
 import { SECCIONES, type Seccion } from "./secciones";
 
 const CLAVE_BARRA = "chups-pos.barra-lateral";
+const MODOS_BARRA: readonly ModoBarra[] = ["auto", "expandida", "colapsada"];
 
 export default function App() {
   const [seccion, setSeccionDirecto] = useState<Seccion>("caja");
@@ -200,8 +203,26 @@ export default function App() {
     [setSeccion],
   );
   const [modoBarra, setModoBarra] = useState<ModoBarra>(() =>
-    leerPreferencia<ModoBarra>(CLAVE_BARRA, ["auto", "expandida", "colapsada"], "auto"),
+    leerPreferencia<ModoBarra>(CLAVE_BARRA, MODOS_BARRA, "auto"),
   );
+
+  // Instalación nueva (base vacía, asistente pendiente): tema Oscuro y barra Expandida, salvo que ya
+  // haya algo guardado. Un equipo que ya usaba la app conserva lo que veía. Se decide una sola vez.
+  const defectosAplicados = useRef(false);
+  useEffect(() => {
+    if (asistente === null || defectosAplicados.current) return;
+    defectosAplicados.current = true;
+    const defectos = defectosParaInstalacionNueva({
+      instalacionNueva: asistente,
+      hayTema: hayTemaGuardado(),
+      hayBarra: hayPreferencia(CLAVE_BARRA, MODOS_BARRA),
+    });
+    if (defectos.tema) cambiarTema(defectos.tema);
+    if (defectos.barra) {
+      setModoBarra(defectos.barra);
+      guardarPreferencia(CLAVE_BARRA, defectos.barra);
+    }
+  }, [asistente]);
 
   // Atajos globales F1–F6 y F9, solo sin modificadores (Alt+F4 debe cerrar la ventana). Con un
   // diálogo abierto no corren: lo decide el despachador (src/atajos.ts).

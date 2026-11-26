@@ -114,7 +114,7 @@ export default function Movimientos({ activa, producto, onProducto, onIrAVenta, 
     <section className="@container flex min-h-0 flex-1 flex-col">
       <div className="flex flex-wrap items-center gap-3">
         {producto ? (
-          <span className="flex h-10 items-center gap-2 rounded-lg bg-seleccion pr-1 pl-3 font-medium text-acento">
+          <span className="flex h-11 items-center gap-2 rounded-lg bg-seleccion pr-1 pl-3 font-medium text-acento">
             {producto.nombre}
             <Boton variante="terciario" tamano="icono" onClick={() => onProducto(null)} aria-label="Ver todos los productos" className="size-7">
               <X size={16} aria-hidden />
@@ -136,7 +136,7 @@ export default function Movimientos({ activa, producto, onProducto, onIrAVenta, 
               }}
               placeholder="Filtrar por producto (nombre o código) y Enter"
               aria-label="Filtrar por producto"
-              className="h-10 w-full rounded-lg border border-borde-control bg-superficie px-4 focus:border-acento"
+              className="h-11 w-full rounded-lg border border-borde-control bg-superficie px-4 focus:border-acento"
             />
             {sugeridos.length > 0 && (
               <ul className="absolute z-10 mt-1 w-full overflow-hidden tarjeta shadow-s2">
@@ -149,7 +149,7 @@ export default function Movimientos({ activa, producto, onProducto, onIrAVenta, 
                         setSugeridos([]);
                         setBuscar("");
                       }}
-                      className="h-10 w-full px-4 text-left hover:bg-suave"
+                      className="h-11 w-full px-4 text-left hover:bg-suave"
                     >
                       {p.nombre}
                     </button>
@@ -163,7 +163,7 @@ export default function Movimientos({ activa, producto, onProducto, onIrAVenta, 
           value={tipo}
           onChange={(e) => setTipo(e.target.value as TipoMovimientoStock | "")}
           aria-label="Tipo de movimiento"
-          className="h-10 rounded-lg border border-borde-control bg-superficie px-3 focus:border-acento"
+          className="h-11 rounded-lg border border-borde-control bg-superficie px-3 focus:border-acento"
         >
           <option value="">Todos los tipos</option>
           {TIPOS.map((t) => (
@@ -179,7 +179,7 @@ export default function Movimientos({ activa, producto, onProducto, onIrAVenta, 
             value={desde}
             max={hasta || undefined}
             onChange={(e) => setDesde(e.target.value)}
-            className="h-10 rounded-lg border border-borde-control bg-superficie px-3 text-texto focus:border-acento"
+            className="h-11 rounded-lg border border-borde-control bg-superficie px-3 text-texto focus:border-acento"
           />
         </label>
         <label className="flex items-center gap-2 text-tenue">
@@ -189,7 +189,7 @@ export default function Movimientos({ activa, producto, onProducto, onIrAVenta, 
             value={hasta}
             min={desde || undefined}
             onChange={(e) => setHasta(e.target.value)}
-            className="h-10 rounded-lg border border-borde-control bg-superficie px-3 text-texto focus:border-acento"
+            className="h-11 rounded-lg border border-borde-control bg-superficie px-3 text-texto focus:border-acento"
           />
         </label>
       </div>

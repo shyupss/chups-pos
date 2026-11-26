@@ -109,6 +109,8 @@ pub fn run() {
     let inicio = Instant::now();
 
     tauri::Builder::default()
+        // El tamaño de la interfaz (zoom) se reaplica cada vez que la página empieza o termina de cargar.
+        .on_page_load(|webview, payload| ventana::al_cargar_pagina(webview, payload.event()))
         // Una sola instancia: abrir la app dos veces enfoca la ventana que ya está abierta. Va primero.
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
             if let Some(ventana) = app.get_webview_window("main") {
@@ -118,7 +120,16 @@ pub fn run() {
             }
         }))
         // Recuerda el tamaño, la posición y si estaba maximizada (la primera vez arranca maximizada).
-        .plugin(tauri_plugin_window_state::Builder::default().build())
+        // La visibilidad no se recuerda ni se restaura: la ventana nace oculta y la muestra ventana.rs
+        // cuando el tamaño de la interfaz ya está aplicado.
+        .plugin(
+            tauri_plugin_window_state::Builder::default()
+                .with_state_flags(
+                    tauri_plugin_window_state::StateFlags::all()
+                        - tauri_plugin_window_state::StateFlags::VISIBLE,
+                )
+                .build(),
+        )
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
@@ -162,6 +173,14 @@ pub fn run() {
                 }
             }
             let lectura = tauri::async_runtime::block_on(pos_core::db::abrir_lectura(&ruta_db))?;
+            // El tamaño de la interfaz se aplica ya, antes de que la ventana pinte la página.
+            if let Some(principal) = app.get_webview_window("main") {
+                let escala =
+                    tauri::async_runtime::block_on(pos_core::servicios::config::obtener(&pool))
+                        .map(|c| c.escala_interfaz)
+                        .unwrap_or_default();
+                ventana::aplicar_escala(&principal, escala);
+            }
             let aviso = carpeta.join(ARCHIVO_RESTAURACION_FALLIDA);
             let restauracion_fallida = std::fs::read_to_string(&aviso).ok();
             let _ = std::fs::remove_file(&aviso);
