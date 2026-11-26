@@ -1,5 +1,5 @@
 import { BadgeCheck, Clock, Copy, FileKey, Info, TriangleAlert } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { api, textoError, type EstadoLicencia } from "../../api";
 import { Columnas, Tarjeta } from "../../componentes/Ajustes";
 import Boton from "../../componentes/Boton";
@@ -38,6 +38,14 @@ export default function LicenciaConfig({
   const [mensaje, setMensaje] = useState<{ error: boolean; texto: string } | null>(null);
   const [ocupado, setOcupado] = useState(false);
   const [copiado, setCopiado] = useState(false);
+  // El nombre que sale en las boletas (Configuración > Negocio): puede ser distinto del de la licencia.
+  const [nombreBoleta, setNombreBoleta] = useState<string | null>(null);
+  useEffect(() => {
+    api
+      .obtenerNegocio()
+      .then((n) => setNombreBoleta(n.nombre))
+      .catch(() => {});
+  }, []);
 
   if (!estado) return <p className="text-tenue">Cargando…</p>;
 
@@ -79,9 +87,16 @@ export default function LicenciaConfig({
           <Tarjeta titulo="Estado de la licencia" ayuda="La licencia es permanente: no vence ni deja de valer con las actualizaciones.">
             <InsigniaLicencia estado={estado} />
             {activa && lic ? (
+              <>
               <dl className="grid grid-cols-[10rem_1fr] gap-x-4 gap-y-2">
-                <dt className="text-tenue">Negocio</dt>
+                <dt className="text-tenue">Emitida a</dt>
                 <dd className="min-w-0 break-words">{lic.negocio}</dd>
+                {nombreBoleta !== null && nombreBoleta.trim() !== "" && nombreBoleta.trim() !== lic.negocio.trim() && (
+                  <>
+                    <dt className="text-tenue">Nombre en las boletas</dt>
+                    <dd className="min-w-0 break-words">{nombreBoleta}</dd>
+                  </>
+                )}
                 <dt className="text-tenue">RUT</dt>
                 <dd>{lic.rut ?? "—"}</dd>
                 <dt className="text-tenue">Activada el</dt>
@@ -93,6 +108,14 @@ export default function LicenciaConfig({
                 <dt className="text-tenue">N° de licencia</dt>
                 <dd className="font-mono text-[13px] select-text">{lic.id}</dd>
               </dl>
+              <p className="text-[13px] text-tenue">
+                Este nombre quedó grabado al emitir la licencia. Cambiar los datos del negocio en Configuración &gt; Negocio solo cambia la
+                boleta; la licencia sigue valiendo.
+              </p>
+              <p className="text-[13px] text-tenue">
+                ¿Cambió el dueño o la razón social? Pide al vendedor una licencia nueva con el código de solicitud.
+              </p>
+              </>
             ) : (
               <dl className="grid grid-cols-[10rem_1fr] gap-x-4 gap-y-2">
                 <dt className="text-tenue">Inicio de la prueba</dt>

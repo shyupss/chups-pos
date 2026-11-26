@@ -480,6 +480,12 @@ archivo `.chups-licencia` con ese mismo texto). La app solo trae la clave **púb
 (`crates/pos-licencia/clave-publica.txt`, incrustada al compilar; también se puede fijar con la variable
 `CHUPS_CLAVE_PUBLICA`). La privada nunca entra al repositorio.
 
+**El nombre de la licencia y el de la boleta son cosas distintas.** El nombre y el RUT van dentro de la licencia firmada, y
+cambiarlos invalidaría la firma: la licencia es del negocio y del equipo, no del texto de la boleta. Por eso editar
+Configuración > Negocio solo cambia la boleta y la licencia sigue valiendo. Configuración > Licencia lo dice: muestra "Emitida a"
+con el nombre grabado al emitirla y, si el de las boletas es otro, también "Nombre en las boletas"; y avisa que, si cambió el
+dueño o la razón social, hay que pedir al vendedor una licencia nueva con el código de solicitud.
+
 **Estados** (los decide Rust, en `abrir_turno` y `confirmar_venta`; la vista solo los muestra):
 
 | Estado | Cuándo | Qué se puede |
