@@ -44,7 +44,7 @@ export function Ajuste({ etiqueta, ayuda, children }: { etiqueta: string; ayuda?
         <div className="text-sm font-medium">{etiqueta}</div>
         {ayuda && <div className="text-xs text-tenue">{ayuda}</div>}
       </div>
-      <div className="shrink-0">{children}</div>
+      <div className="max-w-full shrink-0">{children}</div>
     </div>
   );
 }

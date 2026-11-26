@@ -89,7 +89,7 @@ export default function Cobro({ items, totalEstimado, redondeoActivo, onCancelar
     F12: () => void confirmar(),
   };
   for (const m of MEDIOS) {
-    // Fuera de un campo basta el número; escribiendo un monto, Alt + número.
+    // Fuera de un campo basta el número; escribiendo un monto, Alt + número. La etiqueta siempre dice Alt+N.
     atajos[m.tecla] = () => setMedio(m.id);
     atajos[`Alt+${m.tecla}`] = () => setMedio(m.id);
   }
@@ -133,7 +133,7 @@ export default function Cobro({ items, totalEstimado, redondeoActivo, onCancelar
               }`}
             >
               {m.nombre}
-              <Tecla>{medio === "efectivo" || fiado ? `Alt+${m.tecla}` : m.tecla}</Tecla>
+              <Tecla>{`Alt+${m.tecla}`}</Tecla>
             </Boton>
           ))}
         </div>
