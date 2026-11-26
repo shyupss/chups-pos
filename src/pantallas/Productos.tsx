@@ -156,6 +156,7 @@ export default function Productos({ codigoNuevo, onCodigoUsado, onVerMovimientos
   return (
     <div className="flex h-full">
       <section className="@container flex min-w-0 flex-1 flex-col p-6">
+        {/* Los dos botones de acción van juntos y a la derecha; si la fila no alcanza, bajan juntos. */}
         <div className="flex flex-wrap items-center gap-3">
           <input
             value={texto}
@@ -183,10 +184,12 @@ export default function Productos({ codigoNuevo, onCodigoUsado, onVerMovimientos
             <input type="checkbox" checked={inactivos} onChange={(e) => setInactivos(e.target.checked)} />
             Ver desactivados
           </label>
-          <Boton variante="primario" onClick={() => setPanel({ tipo: "nuevo" })}>
-            Nuevo producto
-          </Boton>
-          <BotonExportar que="productos" />
+          <div className="ml-auto flex flex-wrap items-center justify-end gap-3">
+            <BotonExportar que="productos" />
+            <Boton variante="primario" onClick={() => setPanel({ tipo: "nuevo" })}>
+              Nuevo producto
+            </Boton>
+          </div>
         </div>
 
         {error && <p className="mt-3 rounded-lg bg-peligro-fondo px-3 py-2 text-peligro">{error}</p>}
