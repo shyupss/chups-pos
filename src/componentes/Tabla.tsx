@@ -48,6 +48,8 @@ interface Props<T> {
   grupo?: (fila: T) => { clave: string; texto: string };
   /** Cuando cambia, la tabla vuelve arriba (una búsqueda o un filtro nuevos). */
   reiniciar?: unknown;
+  /** Cuando cambia, la tabla baja hasta la última fila (se agregó una línea al final de una lista que se edita). */
+  irAlFinal?: unknown;
   altoFila?: number;
   /** Una tabla corta que crece hasta este alto (px) y luego se desplaza, en vez de llenar el espacio que le dan. */
   alto?: number;
@@ -92,6 +94,7 @@ export default function Tabla<T>({
   onCercaDelFinal,
   grupo,
   reiniciar,
+  irAlFinal,
   altoFila = ALTO_FILA,
   alto,
   className = "",
@@ -139,6 +142,11 @@ export default function Tabla<T>({
   });
   // Las alturas dependen del tipo de ítem: si la lista cambia, se vuelven a calcular.
   useEffect(() => virtual.measure(), [items, virtual]);
+  useEffect(() => {
+    if (irAlFinal !== undefined && items.length > 0) virtual.scrollToIndex(items.length - 1);
+    // Solo cuando `irAlFinal` cambia: no cada vez que cambian las filas.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [irAlFinal]);
   const dibujadas = virtual.getVirtualItems();
   const ultima = dibujadas.at(-1)?.index ?? 0;
   useEffect(() => {

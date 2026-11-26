@@ -13,6 +13,8 @@ interface Props {
    */
   origen?: "productos" | "compra";
   codigoInicial?: string;
+  /** Un nombre que ya se escribió (por ejemplo, el que no se encontró al armar una compra). */
+  nombreInicial?: string;
   categorias: Categoria[];
   /** Categoría para un producto nuevo (la del filtro de la lista, si hay una). */
   categoriaInicial: number | null;
@@ -31,6 +33,7 @@ export default function FormularioProducto({
   producto,
   origen = "productos",
   codigoInicial,
+  nombreInicial,
   categorias,
   categoriaInicial,
   onGuardado,
@@ -40,7 +43,7 @@ export default function FormularioProducto({
   const nuevo = producto === null;
   const desdeCompra = nuevo && origen === "compra";
   const [codigo, setCodigo] = useState(producto?.codigoBarras ?? codigoInicial ?? "");
-  const [nombre, setNombre] = useState(producto?.nombre ?? "");
+  const [nombre, setNombre] = useState(producto?.nombre ?? nombreInicial ?? "");
   const [categoriaId, setCategoriaId] = useState<number | null>(producto ? producto.categoriaId : categoriaInicial);
   const [unidad, setUnidad] = useState<Unidad>(producto?.unidad ?? "unidad");
   const [precio, setPrecio] = useState(producto ? String(producto.precioVenta) : "");

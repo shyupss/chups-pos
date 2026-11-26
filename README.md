@@ -102,10 +102,20 @@ otro). Ambos piden el PIN si "Ajustar inventario" está protegida (sí por defec
 
 ## Compras y proveedores
 
-**Registrar compra** (Ctrl+N en Inventario): proveedor (opcional), número de factura o guía, productos con
-cantidad y costo unitario (por kg en productos por peso). Suma el stock, deja en cada producto el último
-costo y, si se marca "Pagada con efectivo de la caja", registra el retiro en el turno abierto (con el PIN de retiros).
-El historial de compras filtra por proveedor y fechas. **Anular** una compra no la borra: la compensa con
+**Registrar compra** (Ctrl+N en Inventario) ocupa casi toda la pantalla y va en tres pasos, de arriba hacia abajo:
+
+1. **¿A quién le compraste?** El proveedor se busca escribiendo (sin distinguir tildes ni mayúsculas) y, al final de
+   la lista, ofrece **+ Agregar proveedor «texto»**, que pide solo el nombre (y el teléfono, si quieres) en el mismo
+   lugar: el resto de sus datos se completa después en Inventario > Proveedores. Sin proveedor también vale. Más el
+   número de factura o guía y una nota, opcionales.
+2. **Escanea o busca los productos que llegaron.** Cada línea lleva cantidad y costo unitario (por kg en productos por
+   peso), en la tabla común, con campos de 44 px y un botón "Quitar" a la vista. Si el código o el nombre no existe,
+   ofrece **Crear producto** con lo escrito ya puesto. Ese formulario no pide stock inicial (lo suma la compra) y el
+   costo que escribas pasa a la línea; al guardar, el producto queda como línea con el foco en su cantidad.
+3. **¿Cómo se pagó?** "Con plata de la caja" (sale del turno abierto, como un retiro, con el PIN de retiros) o "De otra
+   forma" (no toca la caja). Sin turno abierto, la primera opción aparece desactivada y dice el motivo.
+
+Suma el stock y deja en cada producto el último costo. El historial de compras filtra por proveedor y fechas. **Anular** una compra no la borra: la compensa con
 movimientos negativos (avisa antes si algún producto quedaría con stock negativo) y, si se pagó con la caja,
 devuelve el dinero al turno actual. Pide el PIN de "Ajustar inventario". Los proveedores se crean, editan y
 desactivan; nunca se borran.
