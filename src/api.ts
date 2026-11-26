@@ -96,6 +96,9 @@ export type TablaCaracteres = "cp858" | "cp850" | "wpc1252";
 export type FormatoPdf = "ticket" | "carta";
 export type FormatoBalanza = "peso" | "precio";
 
+/** Cuándo se hacen copias de seguridad automáticas: al cerrar la caja (lo de siempre), una vez al día, a la semana o nunca. */
+export type FrecuenciaRespaldos = "alCerrarCaja" | "unaVezAlDia" | "unaVezALaSemana" | "soloManual";
+
 /** Tamaño de letra y botones de toda la interfaz: Rust lo aplica como zoom (100 %, 110 % y 125 %). */
 export type EscalaInterfaz = "normal" | "grande" | "masgrande";
 
@@ -124,6 +127,8 @@ export interface Config {
   /** null = Respaldos junto a los datos de la app. */
   respaldosCarpeta: string | null;
   respaldosConservar: number;
+  /** Cuándo se hacen copias de seguridad solas. */
+  respaldosFrecuencia: FrecuenciaRespaldos;
   escalaInterfaz: EscalaInterfaz;
 }
 
@@ -843,7 +848,7 @@ export type FormatoExportacion = "excel" | "pdf";
 export type CampoProducto = "codigo" | "nombre" | "categoria" | "unidad" | "precio" | "costo" | "stock" | "stockMinimo";
 export type CampoCliente = "nombre" | "telefono" | "rut" | "direccion" | "nota" | "limite";
 export type TipoImportacion = "productos" | "clientes";
-export type Exportacion = "productos" | "stock" | "ventas" | "movimientos" | "compras" | "clientes";
+export type Exportacion = "productos" | "stock" | "ventas" | "movimientos" | "compras" | "clientes" | "todo";
 
 /** La planilla elegida y lo que se detectó en cada columna. */
 export interface Apertura {

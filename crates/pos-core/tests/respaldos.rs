@@ -251,3 +251,141 @@ async fn restaura_un_respaldo_antiguo_que_luego_migra() {
             .unwrap();
     assert_eq!(costo, (Some(700), true));
 }
+
+// --- Parte 6: cuándo toca una copia, la copia a un archivo y el formato .chups.
+
+fn hace(horas: i64) -> Option<chrono::DateTime<Utc>> {
+    Some(Utc::now() - Duration::hours(horas))
+}
+
+#[test]
+fn la_frecuencia_decide_cuando_toca_una_copia() {
+    use pos_core::servicios::config::FrecuenciaRespaldos::{
+        AlCerrarCaja, SoloManual, UnaVezALaSemana, UnaVezAlDia,
+    };
+    use pos_core::servicios::respaldos::{
+        toca,
+        Momento::{Arranque, CierreDeCaja},
+    };
+    let ahora = Utc::now();
+
+    // Al cerrar la caja (lo de siempre): al cerrar el turno siempre; al abrir, si pasaron más de 24 horas.
+    assert!(toca(AlCerrarCaja, CierreDeCaja, hace(1), ahora));
+    assert!(toca(AlCerrarCaja, CierreDeCaja, None, ahora));
+    assert!(!toca(AlCerrarCaja, Arranque, hace(23), ahora));
+    assert!(toca(AlCerrarCaja, Arranque, hace(25), ahora));
+    assert!(toca(AlCerrarCaja, Arranque, None, ahora));
+
+    // Una vez al día: al abrir o al cerrar, solo si el último tiene más de 24 horas.
+    assert!(!toca(UnaVezAlDia, CierreDeCaja, hace(5), ahora));
+    assert!(!toca(UnaVezAlDia, Arranque, hace(23), ahora));
+    assert!(toca(UnaVezAlDia, CierreDeCaja, hace(25), ahora));
+    assert!(toca(UnaVezAlDia, Arranque, None, ahora));
+
+    // Una vez a la semana.
+    assert!(!toca(UnaVezALaSemana, Arranque, hace(24 * 6), ahora));
+    assert!(!toca(UnaVezALaSemana, CierreDeCaja, hace(24 * 6), ahora));
+    assert!(toca(UnaVezALaSemana, Arranque, hace(24 * 8), ahora));
+    assert!(toca(UnaVezALaSemana, CierreDeCaja, None, ahora));
+
+    // Solo manual: nunca, ni sin ninguna copia.
+    for momento in [Arranque, CierreDeCaja] {
+        assert!(!toca(SoloManual, momento, None, ahora));
+        assert!(!toca(SoloManual, momento, hace(24 * 365), ahora));
+    }
+}
+
+#[tokio::test]
+async fn el_comportamiento_de_siempre_al_abrir_no_cambia() {
+    let dir = tempfile::tempdir().unwrap();
+    let carpeta = dir.path().join("Respaldos");
+    // Sin copias: toca. Con una de hace un momento: no. Con una de hace dos días: sí.
+    assert!(respaldos::toca_automatico(&carpeta, Utc::now()));
+    let pool = db::abrir(&dir.path().join("chups-pos.db")).await.unwrap();
+    respaldos::respaldar(&pool, &carpeta, &ZonaLocal, Utc::now(), None)
+        .await
+        .unwrap();
+    assert!(!respaldos::toca_automatico(&carpeta, Utc::now()));
+    assert!(respaldos::toca_automatico(
+        &carpeta,
+        Utc::now() + Duration::hours(49)
+    ));
+    assert!(respaldos::fecha_del_ultimo(&carpeta).is_some());
+}
+
+#[tokio::test]
+async fn una_copia_chups_se_importa_igual_que_una_db() {
+    let dir = tempfile::tempdir().unwrap();
+    let pool = db::abrir(&dir.path().join("chups-pos.db")).await.unwrap();
+    comun::crear(&pool, "A", "Leche", 1190, 10).await;
+    comun::crear(&pool, "B", "Pan", 1500, 5).await;
+
+    // La copia que se lleva a otro computador: el nombre propuesto lleva la extensión .chups.
+    let nombre = respaldos::nombre_de_copia(&ZonaLocal, Utc::now());
+    assert!(
+        nombre.starts_with("chups-respaldo-") && nombre.ends_with(".chups"),
+        "{nombre}"
+    );
+    let destino = dir.path().join("pendrive").join(&nombre);
+    let r = respaldos::exportar_copia(&pool, &destino, Utc::now())
+        .await
+        .unwrap();
+    assert!(r.bytes > 0 && std::path::Path::new(&r.ruta).exists());
+    // Sin temporales a medias.
+    let sobrantes: Vec<_> = std::fs::read_dir(destino.parent().unwrap())
+        .unwrap()
+        .filter_map(Result::ok)
+        .map(|e| e.file_name().to_string_lossy().into_owned())
+        .collect();
+    assert_eq!(sobrantes, std::slice::from_ref(&nombre));
+
+    // Lo mismo, con la extensión .db (el respaldo automático de siempre).
+    let como_db = dir.path().join("pendrive").join("copia.db");
+    std::fs::copy(&destino, &como_db).unwrap();
+    let con_chups = respaldos::inspeccionar(&destino).await.unwrap();
+    let con_db = respaldos::inspeccionar(&como_db).await.unwrap();
+    assert_eq!((con_chups.productos, con_chups.ventas), (2, 0));
+    assert_eq!(
+        (
+            con_chups.productos,
+            con_chups.ventas,
+            con_chups.version_esquema
+        ),
+        (con_db.productos, con_db.ventas, con_db.version_esquema)
+    );
+
+    // Y se restaura: la base de destino queda con los mismos datos.
+    for origen in [&destino, &como_db] {
+        let base = dir.path().join(format!(
+            "restaurada-{}.db",
+            origen.extension().unwrap().to_string_lossy()
+        ));
+        std::fs::write(&base, b"otra cosa").unwrap();
+        respaldos::reemplazar_base(&base, origen).unwrap();
+        let abierta = db::abrir(&base).await.unwrap();
+        let total: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM productos")
+            .fetch_one(&abierta)
+            .await
+            .unwrap();
+        assert_eq!(total, 2);
+        abierta.close().await;
+    }
+
+    // Una copia .chups dentro de la carpeta de respaldos también se lista (y se rota con las demás).
+    let carpeta = dir.path().join("Respaldos");
+    std::fs::create_dir_all(&carpeta).unwrap();
+    std::fs::copy(&destino, carpeta.join(&nombre)).unwrap();
+    assert_eq!(respaldos::listar(&carpeta).unwrap().len(), 1);
+}
+
+#[tokio::test]
+async fn una_copia_a_un_archivo_reemplaza_la_que_ya_estaba() {
+    let dir = tempfile::tempdir().unwrap();
+    let pool = db::abrir(&dir.path().join("chups-pos.db")).await.unwrap();
+    let destino = dir.path().join("mi-copia.chups");
+    std::fs::write(&destino, b"vieja").unwrap();
+    respaldos::exportar_copia(&pool, &destino, Utc::now())
+        .await
+        .unwrap();
+    assert!(respaldos::inspeccionar(&destino).await.is_ok());
+}

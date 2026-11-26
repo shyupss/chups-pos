@@ -127,3 +127,57 @@ async fn cambiar_la_escala_junto_con_otro_ajuste_si_pide_el_pin() {
     assert_eq!(guardada.escala_interfaz, EscalaInterfaz::Normal);
     assert_eq!(guardada.copias, 2);
 }
+
+// --- Parte 6: la frecuencia de las copias automáticas.
+
+#[tokio::test]
+async fn la_frecuencia_de_las_copias_mantiene_lo_de_siempre_por_defecto() {
+    use pos_core::servicios::config::FrecuenciaRespaldos;
+    let pool = db::abrir_en_memoria().await.unwrap();
+    let control = ControlPin::new();
+    assert_eq!(
+        config::obtener(&pool).await.unwrap().respaldos_frecuencia,
+        FrecuenciaRespaldos::AlCerrarCaja
+    );
+    // Se guarda y se lee cada una.
+    for f in [
+        FrecuenciaRespaldos::SoloManual,
+        FrecuenciaRespaldos::UnaVezALaSemana,
+        FrecuenciaRespaldos::UnaVezAlDia,
+        FrecuenciaRespaldos::AlCerrarCaja,
+    ] {
+        let c = Config {
+            respaldos_frecuencia: f,
+            ..config::obtener(&pool).await.unwrap()
+        };
+        assert_eq!(
+            config::guardar(&pool, &control, None, &c)
+                .await
+                .unwrap()
+                .respaldos_frecuencia,
+            f
+        );
+        assert_eq!(
+            config::obtener(&pool).await.unwrap().respaldos_frecuencia,
+            f
+        );
+    }
+    // Un valor raro en la tabla vale el de siempre.
+    sqlx::query(
+        "INSERT OR REPLACE INTO config (clave, valor) VALUES ('respaldos_frecuencia', 'cada-minuto')",
+    )
+    .execute(&pool)
+    .await
+    .unwrap();
+    assert_eq!(
+        config::obtener(&pool).await.unwrap().respaldos_frecuencia,
+        FrecuenciaRespaldos::AlCerrarCaja
+    );
+    // Viaja a la vista con nombres claros.
+    let json = serde_json::to_value(Config {
+        respaldos_frecuencia: FrecuenciaRespaldos::UnaVezALaSemana,
+        ..Config::default()
+    })
+    .unwrap();
+    assert_eq!(json["respaldosFrecuencia"], "unaVezALaSemana");
+}

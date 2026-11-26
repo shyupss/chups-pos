@@ -235,7 +235,10 @@ pub fn run() {
             let app_respaldo = app.handle().clone();
             tauri::async_runtime::spawn(async move {
                 tokio::time::sleep(ESPERA_RESPALDO_AL_ABRIR).await;
-                comandos::respaldos::automatico(&app_respaldo, false);
+                comandos::respaldos::automatico(
+                    &app_respaldo,
+                    pos_core::servicios::respaldos::Momento::Arranque,
+                );
             });
             Ok(())
         })

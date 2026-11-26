@@ -223,25 +223,39 @@ números (se pueden sumar) y las fechas en hora local.
 "Descargar planilla de ejemplo" deja una planilla con los encabezados correctos y dos filas. Una
 exportación de productos o clientes se puede volver a importar tal cual.
 
-## Respaldos
+## Copias de seguridad
 
-Un respaldo es una copia completa de la base hecha con `VACUUM INTO` (consistente aunque la caja
-esté vendiendo), verificada con `PRAGMA integrity_check`, con nombre
-`chups-respaldo-AAAA-MM-DD-HHMM.db`.
+Configuración > **Datos y respaldos** tiene tres tarjetas.
 
-- **Automáticos**: al abrir la app si el último tiene más de 24 horas, y al cerrar cada turno. Van
-  a la carpeta `Respaldos` junto a los datos de la app (o la que se elija en Configuración > Datos)
-  y se conservan los últimos 14 (configurable). Corren en segundo plano: la caja nunca espera, y
-  solo se avisa si fallan.
-- **Manuales**: "Respaldar ahora" y "Respaldar en…" para otra carpeta, por ejemplo un pendrive.
-- Configuración > Datos muestra la ruta y el tamaño de la base, el último respaldo (con aviso si
-  tiene más de 3 días) y la lista de respaldos.
+**1. Copia de seguridad.** Arriba dice en grande cómo va la última copia: "Tu última copia es de hoy a las 13:05" en verde, o
+en aviso si tiene más de 3 días o no hay ninguna. `Hacer una copia ahora` pregunta el formato: **copia completa** (se puede
+importar) o **planilla Excel con todos los datos** (para ver o guardar; no se puede importar como copia).
 
-**Restaurar**: Configuración > Datos > "Restaurar un respaldo…", elegir el archivo y revisar su
-fecha, versión de la base, productos y última venta. Se rechazan los archivos que no son una base
-de CHUPS POS y los de una versión más nueva de la app. Siempre pide el PIN (si hay uno). Antes de
-reemplazar se respalda la base actual (queda como `…-antes-de-restaurar.db`); después la app se
-reinicia y, si el respaldo es de una versión anterior, las migraciones lo ponen al día.
+- **Copias automáticas**, siempre completas y en segundo plano (la caja nunca espera; solo se avisa si fallan):
+  *Al cerrar la caja* (el valor por defecto: al cerrar cada turno y, al abrir la app, si la última tiene más de 24 horas),
+  *Una vez al día*, *Una vez a la semana* o *Solo manual*. Con "una vez al día" o "a la semana" la copia sale al abrir la
+  app o al cerrar el turno, si la última ya venció. La regla está en `respaldos::toca` (pos-core), con tests; la
+  frecuencia se guarda en `config` (`respaldos_frecuencia`).
+- **Cuántas copias guardar** (7, 14, 30 o 60): las más viejas se borran al hacer una nueva.
+- **La carpeta** (la de siempre, `Respaldos` junto a los datos de la app, o la que se elija) con "Cambiar carpeta" y "Abrir
+  carpeta". `Ver copias guardadas` (plegada) lista las que hay.
+- Una copia completa es el archivo SQLite que deja `VACUUM INTO` (consistente aunque la caja esté vendiendo), verificado con
+  `PRAGMA integrity_check`: `chups-respaldo-AAAA-MM-DD-HHMM.db`.
+
+**2. Llevar tus datos a otro computador.** `Exportar una copia a un archivo…` guarda una copia completa donde elijas (un
+pendrive), con el nombre `chups-respaldo-AAAA-MM-DD-HHMM.chups` (sigue siendo SQLite; la extensión es para reconocerla al
+moverla). `Importar una copia…` acepta `.chups` y `.db`: muestra de qué fecha es, cuántos productos y ventas trae y avisa
+que **reemplaza todos los datos de este computador**. Siempre pide el PIN (si hay uno); antes se hace una copia de lo que
+hay ahora (queda como `…-antes-de-restaurar.db`), y después la app se reinicia y, si la copia es de una versión anterior,
+las migraciones la ponen al día. Se rechazan los archivos que no son una base de CHUPS POS y los de una versión más
+nueva de la app. El asistente de primer arranque ofrece lo mismo en su primer paso ("¿Vienes de otro computador?
+Importar una copia").
+
+**3. Planillas Excel.** Exportar (productos, stock y valorización, clientes y deudas, y ventas, movimientos y compras de un
+período) y `Exportar todo a Excel`: un solo libro con una hoja por tabla importante y todo el historial, escrito en segundo
+plano. Importar productos y clientes, con una planilla de ejemplo cada uno (los clientes no cargan deudas).
+
+La ruta y el tamaño de la base de datos están en Configuración > Acerca de > Información para soporte.
 
 ## PIN de administrador
 
@@ -558,17 +572,17 @@ Todo vive en `%APPDATA%\cl.chups.pos\` (por ejemplo `C:\Users\<usuario>\AppData\
 | Qué | Dónde |
 | --- | --- |
 | La base de datos | `chups-pos.db` (con `-wal` y `-shm` mientras la app está abierta) |
-| Respaldos automáticos y manuales | `Respaldos\` (o la carpeta elegida en Configuración > Datos y respaldos) |
+| Copias de seguridad automáticas y manuales | `Respaldos\` (o la carpeta elegida en Configuración > Datos y respaldos) |
 | Inicio de la prueba | `prueba.dat` |
 | Registro de errores | `Registros\` |
 | Boletas y reportes en PDF o Excel | `Documentos\CHUPS POS\` |
 
 **Cambiar a otro PC** (o reinstalar Windows): 1) en el computador viejo, Configuración > Datos y respaldos >
-"Respaldar ahora" (o "Respaldar en…" a un pendrive); 2) instala CHUPS POS en el nuevo; 3) pídele al vendedor
-una **licencia nueva** para ese equipo con su código de solicitud (la licencia está atada al computador: la
-base copiada no activa la licencia del otro); 4) en el nuevo, Configuración > Datos y respaldos >
-"Restaurar un respaldo…" y elige el archivo (pide el PIN si hay uno). El asistente de primer arranque no
-aparece en un equipo que ya tiene datos restaurados.
+"Exportar una copia a un archivo…" (a un pendrive); 2) instala CHUPS POS en el nuevo y, en el primer paso del
+asistente, elige "Importar una copia" (o después, en Configuración > Datos y respaldos > "Importar una copia…"; pide el PIN
+si hay uno); 3) pídele al vendedor una **licencia nueva** para ese equipo con su código de solicitud (la licencia está
+atada al computador: la base copiada no activa la licencia del otro). El asistente de primer arranque no aparece en un
+equipo que ya tiene datos importados.
 
 ## Desarrollo
 

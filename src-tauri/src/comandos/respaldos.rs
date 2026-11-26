@@ -1,12 +1,13 @@
-//! Respaldos: automáticos (al abrir la app si el último tiene más de 24 horas, y al cerrar un
-//! turno), manuales ("Respaldar ahora" y "Respaldar en…") y restaurar. Nunca bloquean la caja:
-//! corren en segundo plano y solo avisan si fallan (evento "respaldo-fallido").
+//! Copias de seguridad: automáticas (según lo elegido en Configuración: al cerrar la caja, una vez al día,
+//! una vez a la semana o solo a mano), manuales ("Hacer una copia ahora" y "Exportar una copia a un
+//! archivo…") y restaurar ("Importar una copia…"). Nunca bloquean la caja: corren en segundo plano y solo
+//! avisan si fallan (evento "respaldo-fallido").
 
 use std::path::PathBuf;
 
 use chrono::Utc;
 use pos_core::servicios::config;
-use pos_core::servicios::respaldos::{self as srv, InfoRespaldo, Respaldo};
+use pos_core::servicios::respaldos::{self as srv, InfoRespaldo, Momento, Respaldo};
 use pos_core::servicios::seguridad::{self, Accion};
 use pos_core::zona::ZonaLocal;
 use serde::Serialize;
@@ -52,18 +53,23 @@ pub(crate) async fn respaldar_antes_de_actualizar(estado: &EstadoApp) -> Result<
         .map_err(|e| format!("No se instaló la actualización porque falló el respaldo previo: {e}"))
 }
 
-/// Respaldo automático en segundo plano. `siempre`: aunque el último sea reciente (al cerrar un
-/// turno). Si falla, lo guarda para Configuración > Datos y avisa a la vista.
-pub(crate) fn automatico(app: &AppHandle, siempre: bool) {
+/// Respaldo automático en segundo plano, si toca según la frecuencia elegida y el `momento` (al abrir la app
+/// o al cerrar un turno). Si falla, lo guarda para Configuración > Datos y avisa a la vista.
+pub(crate) fn automatico(app: &AppHandle, momento: Momento) {
     let app = app.clone();
     tauri::async_runtime::spawn(async move {
         let estado = app.state::<EstadoApp>();
         let resultado = async {
-            if !siempre {
-                let (c, _) = carpeta(&estado).await?;
-                if !srv::toca_automatico(&c, Utc::now()) {
-                    return Ok(());
-                }
+            let (c, _) = carpeta(&estado).await?;
+            let frecuencia = config::obtener(&estado.pool)
+                .await
+                .map_err(a_texto)?
+                .respaldos_frecuencia;
+            let ultimo = tauri::async_runtime::spawn_blocking(move || srv::fecha_del_ultimo(&c))
+                .await
+                .map_err(|e| e.to_string())?;
+            if !srv::toca(frecuencia, momento, ultimo, Utc::now()) {
+                return Ok(());
             }
             respaldar_y_rotar(&estado).await.map(|_| ())
         }
@@ -123,17 +129,39 @@ pub async fn respaldar_ahora(estado: State<'_, EstadoApp>) -> ResultadoComando<R
     Ok(r)
 }
 
-/// Respalda en otra carpeta (un pendrive). Ahí no se borra nada. `None` si se cancela.
+/// "Exportar una copia a un archivo…": una copia completa en el archivo que se elija (un pendrive), con el
+/// nombre `chups-respaldo-AAAA-MM-DD-HHMM.chups`. Ahí no se borra nada. `None` si se cancela.
 #[tauri::command]
 pub async fn respaldar_en(
     app: AppHandle,
     estado: State<'_, EstadoApp>,
 ) -> ResultadoComando<Option<Respaldo>> {
-    let Some(c) = elegir_carpeta(&app, "Carpeta para el respaldo").await? else {
+    let ahora = Utc::now();
+    let propuesto = srv::nombre_de_copia(&ZonaLocal, ahora);
+    let elegido = tauri::async_runtime::spawn_blocking(move || {
+        app.dialog()
+            .file()
+            .set_title("Guardar la copia de CHUPS POS")
+            .set_file_name(propuesto)
+            .add_filter("Copia de CHUPS POS", &[srv::EXTENSION_COPIA])
+            .blocking_save_file()
+    })
+    .await
+    .map_err(|e| e.to_string())?;
+    let Some(destino) = elegido.and_then(|r| r.into_path().ok()) else {
         return Ok(None);
     };
+    // Sin extensión, o con otra, igual queda como .chups: así se reconoce al moverla.
+    let destino = if destino
+        .extension()
+        .is_some_and(|e| e == srv::EXTENSION_COPIA)
+    {
+        destino
+    } else {
+        destino.with_extension(srv::EXTENSION_COPIA)
+    };
     Ok(Some(
-        srv::respaldar(&estado.pool, &c, &ZonaLocal, Utc::now(), None)
+        srv::exportar_copia(&estado.pool, &destino, ahora)
             .await
             .map_err(a_texto)?,
     ))
@@ -182,9 +210,9 @@ pub async fn elegir_respaldo(
     let elegida = tauri::async_runtime::spawn_blocking(move || {
         app.dialog()
             .file()
-            .set_title("Respaldo para restaurar")
+            .set_title("Copia de CHUPS POS para importar")
             .set_directory(c)
-            .add_filter("Respaldo de CHUPS POS", &["db"])
+            .add_filter("Copia de CHUPS POS", &[srv::EXTENSION_COPIA, "db"])
             .blocking_pick_file()
     })
     .await

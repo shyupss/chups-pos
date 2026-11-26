@@ -2,6 +2,7 @@ import { Copy, Download, FolderOpen, RefreshCw } from "lucide-react";
 import { useEffect, useState } from "react";
 import { api, textoError, type EstadoActualizacion, type EstadoSistema } from "../../api";
 import { Columnas, Tarjeta } from "../../componentes/Ajustes";
+import { tamanoArchivo } from "../../formato";
 import Boton from "../../componentes/Boton";
 import registroDeCambios from "../../../CHANGELOG.md?raw";
 
@@ -62,8 +63,10 @@ export default function AcercaDe({ actualizacion, onActualizacion, hayTurno, onI
   const [mensaje, setMensaje] = useState<{ error: boolean; texto: string } | null>(null);
   const [soporte, setSoporte] = useState<{ error: boolean; texto: string } | null>(null);
 
+  const [bytesBase, setBytesBase] = useState<number | null>(null);
   useEffect(() => {
     api.estadoSistema().then(setEstado).catch((e) => setError(String(e)));
+    api.estadoRespaldos().then((r) => setBytesBase(r.bytesBase)).catch(() => {});
   }, []);
 
   const buscar = async () => {
@@ -125,7 +128,8 @@ export default function AcercaDe({ actualizacion, onActualizacion, hayTurno, onI
         ["Esquema de base de datos", `v${estado.versionEsquema}`],
         ["Arranque del backend", `${estado.msInicio} ms`],
         ["Productos", estado.totalProductos],
-        ["Archivo de datos", estado.rutaBaseDatos],
+        ["Base de datos (archivo)", estado.rutaBaseDatos],
+        ["Tamaño de la base de datos", bytesBase === null ? "…" : tamanoArchivo(bytesBase)],
       ]
     : [];
   const nueva = actualizacion?.disponible ?? null;
@@ -194,7 +198,7 @@ export default function AcercaDe({ actualizacion, onActualizacion, hayTurno, onI
       }
       derecha={
         <>
-          <Tarjeta titulo="Acerca de" ayuda="Datos del sistema, para cuando pidas ayuda.">
+          <Tarjeta titulo="Información para soporte" ayuda="Datos del sistema, para cuando pidas ayuda.">
             {error ? (
               <p className="text-peligro">No se pudo leer el estado del sistema: {error}</p>
             ) : !estado ? (

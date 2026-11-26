@@ -24,7 +24,7 @@ export default function Opciones<T extends string>({
   onCambiar: (valor: T) => void;
 }) {
   return (
-    <div role="radiogroup" aria-label={etiqueta} className="inline-flex rounded-lg border border-borde-control bg-suave p-0.5">
+    <div role="radiogroup" aria-label={etiqueta} className="inline-flex max-w-full flex-wrap rounded-lg border border-borde-control bg-suave p-0.5">
       {opciones.map(({ id, nombre: texto, Icono }) => (
         <label
           key={id}

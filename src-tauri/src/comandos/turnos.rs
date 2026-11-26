@@ -51,8 +51,6 @@ pub async fn registrar_movimiento_caja(
     )
     .await?;
     super::avisar_cambios(&app);
-    // Respaldo al cerrar el turno, en segundo plano: el cierre no espera.
-    super::respaldos::automatico(&app, true);
     Ok(r)
 }
 
@@ -84,6 +82,9 @@ pub async fn cerrar_turno(
     )
     .await?;
     super::avisar_cambios(&app);
+    // Copia al cerrar el turno (si así se eligió en Configuración), en segundo plano: el cierre no espera.
+    // Estaba por error en los ingresos y retiros de caja, así que el cierre nunca la hacía.
+    super::respaldos::automatico(&app, pos_core::servicios::respaldos::Momento::CierreDeCaja);
     Ok(r)
 }
 

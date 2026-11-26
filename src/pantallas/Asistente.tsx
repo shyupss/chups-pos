@@ -4,6 +4,7 @@ import { api, textoError, type EstadoLicencia, type EstadoSeguridad } from "../a
 import { Tarjeta } from "../componentes/Ajustes";
 import Boton from "../componentes/Boton";
 import DialogoImportar from "../componentes/DialogoImportar";
+import ImportarCopia from "../componentes/ImportarCopia";
 import { useConPin } from "../componentes/PedirPin";
 import { avisarCambioStock } from "../eventos";
 import { useConfig } from "../hooks/useConfig";
@@ -86,7 +87,19 @@ export default function Asistente({ reabierto, onCambioImpresora, onTerminar }: 
   };
 
   const contenido = [
-    <NegocioConfig key="negocio" conPin={conPin} onGuardado={(n) => setNegocioListo(n.nombre.trim() !== "")} />,
+    <div key="negocio" className="flex flex-col gap-4">
+      {/* Quien cambia de computador no parte de cero: importa su copia y sigue donde quedó. */}
+      {!reabierto && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-panel border border-linea bg-superficie px-4 py-3">
+          <div>
+            <div className="font-medium">¿Vienes de otro computador?</div>
+            <div className="text-sm text-tenue">Si ya usabas CHUPS POS en otro equipo, importa tu copia y sigue donde quedaste.</div>
+          </div>
+          <ImportarCopia etiqueta="Importar una copia" />
+        </div>
+      )}
+      <NegocioConfig conPin={conPin} onGuardado={(n) => setNegocioListo(n.nombre.trim() !== "")} />
+    </div>,
     <ImpresoraConfig key="impresora" cfg={cfg} onCambioImpresora={onCambioImpresora} soloImpresora />,
     <Tarjeta
       key="escaner"
