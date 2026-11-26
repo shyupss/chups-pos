@@ -97,7 +97,7 @@ export type FormatoPdf = "ticket" | "carta";
 export type FormatoBalanza = "peso" | "precio";
 
 /** Cuándo se hacen copias de seguridad automáticas: al cerrar la caja (lo de siempre), una vez al día, a la semana o nunca. */
-export type FrecuenciaRespaldos = "alCerrarCaja" | "unaVezAlDia" | "unaVezALaSemana" | "soloManual";
+export type FrecuenciaRespaldos = "cadaHora" | "alCerrarCaja" | "unaVezAlDia" | "unaVezALaSemana" | "soloManual";
 
 /** Tamaño de letra y botones de toda la interfaz: Rust lo aplica como zoom (100 %, 110 % y 125 %). */
 export type EscalaInterfaz = "normal" | "grande" | "masgrande";

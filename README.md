@@ -233,10 +233,14 @@ importar) o **planilla Excel con todos los datos** (para ver o guardar; no se pu
 
 - **Copias automáticas**, siempre completas y en segundo plano (la caja nunca espera; solo se avisa si fallan):
   *Al cerrar la caja* (el valor por defecto: al cerrar cada turno y, al abrir la app, si la última tiene más de 24 horas),
-  *Una vez al día*, *Una vez a la semana* o *Solo manual*. Con "una vez al día" o "a la semana" la copia sale al abrir la
-  app o al cerrar el turno, si la última ya venció. La regla está en `respaldos::toca` (pos-core), con tests; la
+  *Cada hora*, *Una vez al día*, *Una vez a la semana* o *Solo manual* (una lista vertical, con una frase por opción).
+  Con "una vez al día" o "a la semana" la copia sale al abrir la app o al cerrar el turno, si la última ya venció. Con
+  *Cada hora*, además, un temporizador mira cada 5 minutos con la app abierta y hace la copia si la última tiene más de
+  una hora (si falla, el aviso sale una sola vez, no cada 5 minutos). La regla está en `respaldos::toca` (pos-core), con tests; la
   frecuencia se guarda en `config` (`respaldos_frecuencia`).
-- **Cuántas copias guardar** (7, 14, 30 o 60): las más viejas se borran al hacer una nueva.
+- **Cuántas copias guardar**: un número que se escribe (de 1 a 365; 14 por defecto). Se guardan las últimas de toda la
+  carpeta y las más viejas se borran al hacer una nueva. Con *Cada hora* la pantalla dice cuánto abarcan ("5 copias cubren
+  las últimas 5 horas"). Las copias `…-antes-de-restaurar` que se hacen antes de importar otra no cuentan ni se borran.
 - **La carpeta** (la de siempre, `Respaldos` junto a los datos de la app, o la que se elija) con "Cambiar carpeta" y "Abrir
   carpeta". `Ver copias guardadas` (plegada) lista las que hay.
 - Una copia completa es el archivo SQLite que deja `VACUUM INTO` (consistente aunque la caja esté vendiendo), verificado con

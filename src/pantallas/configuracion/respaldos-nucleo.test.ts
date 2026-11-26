@@ -1,7 +1,7 @@
 // npm test: el estado de la última copia (src/pantallas/configuracion/respaldos-nucleo.ts).
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { diasDeCalendario, estadoDeLaCopia } from "./respaldos-nucleo.ts";
+import { alcanceHorario, copiasAGuardar, diasDeCalendario, estadoDeLaCopia } from "./respaldos-nucleo.ts";
 
 // Jueves 26 de noviembre de 2026, 15:30 (hora local del equipo que corre el test).
 const AHORA = new Date(2026, 10, 26, 15, 30);
@@ -35,4 +35,16 @@ test("los días se cuentan por calendario, no por horas", () => {
   assert.equal(diasDeCalendario(new Date(2026, 10, 25, 23, 59), new Date(2026, 10, 26, 0, 1)), 1);
   assert.equal(diasDeCalendario(new Date(2026, 10, 26, 0, 1), new Date(2026, 10, 26, 23, 59)), 0);
   assert.equal(diasDeCalendario(new Date(2026, 9, 31, 12), new Date(2026, 10, 2, 12)), 2);
+});
+
+test("cuántas copias guardar: solo enteros de 1 a 365", () => {
+  assert.equal(copiasAGuardar("5"), 5);
+  assert.equal(copiasAGuardar(" 14 "), 14);
+  assert.equal(copiasAGuardar("365"), 365);
+  for (const malo of ["", "0", "366", "-1", "2,5", "abc", "1e2", "00000"]) assert.equal(copiasAGuardar(malo), null, malo);
+});
+
+test("con una copia por hora, el alcance son tantas horas como copias", () => {
+  assert.equal(alcanceHorario(5), "las últimas 5 horas");
+  assert.equal(alcanceHorario(1), "la última hora");
 });

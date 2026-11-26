@@ -5,21 +5,46 @@ import { Ajuste, Columnas, Tarjeta } from "../../componentes/Ajustes";
 import Boton from "../../componentes/Boton";
 import DialogoFormatoCopia, { type FormatoCopia } from "../../componentes/DialogoFormatoCopia";
 import ImportarCopia from "../../componentes/ImportarCopia";
-import Opciones, { type Opcion } from "../../componentes/Opciones";
+import OpcionesLista, { type OpcionConDetalle } from "../../componentes/OpcionesLista";
 import { esCancelado } from "../../componentes/PedirPin";
 import type { ConfigEditable } from "../../hooks/useConfig";
 import { carpetaDe, fechaHora, tamanoArchivo } from "../../formato";
 import TablaVirtual, { type ColumnaTabla } from "../reportes/TablaVirtual";
 import PlanillasExcel from "./Datos";
-import { estadoDeLaCopia } from "./respaldos-nucleo";
+import { alcanceHorario, copiasAGuardar, estadoDeLaCopia, MAX_COPIAS, MIN_COPIAS } from "./respaldos-nucleo";
 
-const CONSERVAR: Opcion<string>[] = ["7", "14", "30", "60"].map((n) => ({ id: n, nombre: n }));
-const FRECUENCIAS: Opcion<FrecuenciaRespaldos>[] = [
-  { id: "alCerrarCaja", nombre: "Al cerrar la caja (recomendado)" },
-  { id: "unaVezAlDia", nombre: "Una vez al día" },
-  { id: "unaVezALaSemana", nombre: "Una vez a la semana" },
-  { id: "soloManual", nombre: "Solo manual" },
+const FRECUENCIAS: OpcionConDetalle<FrecuenciaRespaldos>[] = [
+  { id: "cadaHora", nombre: "Cada hora", detalle: "Una copia por hora mientras CHUPS POS está abierto." },
+  { id: "alCerrarCaja", nombre: "Al cerrar la caja (recomendado)", detalle: "Al cerrar cada turno y, al abrir la app, si ya pasó un día." },
+  { id: "unaVezAlDia", nombre: "Una vez al día", detalle: "Al abrir la app o al cerrar la caja, si ya pasó un día." },
+  { id: "unaVezALaSemana", nombre: "Una vez a la semana", detalle: "Al abrir la app o al cerrar la caja, si ya pasó una semana." },
+  { id: "soloManual", nombre: "Solo manual", detalle: "Solo cuando tú aprietas «Hacer una copia ahora»." },
 ];
+
+/** "Cuántas copias guardar": un número que se escribe; se guarda al salir del campo o con Enter. */
+function CampoCopias({ valor, onCambiar }: { valor: number; onCambiar: (n: number) => void }) {
+  const [texto, setTexto] = useState(String(valor));
+  useEffect(() => setTexto(String(valor)), [valor]);
+  const confirmar = () => {
+    const n = copiasAGuardar(texto);
+    if (n === null) setTexto(String(valor));
+    else if (n !== valor) onCambiar(n);
+  };
+  return (
+    <label className="flex items-center gap-2">
+      <input
+        inputMode="numeric"
+        value={texto}
+        onChange={(e) => setTexto(e.target.value.replace(/\D/g, "").slice(0, 3))}
+        onBlur={confirmar}
+        onKeyDown={(e) => e.key === "Enter" && confirmar()}
+        aria-label={`Cuántas copias guardar (de ${MIN_COPIAS} a ${MAX_COPIAS})`}
+        className="h-11 w-24 rounded-lg border border-borde-control bg-superficie px-3 text-right focus:border-acento"
+      />
+      <span className="text-tenue">copias</span>
+    </label>
+  );
+}
 
 type Dialogo = "ahora" | "archivo" | null;
 type Aviso = { texto: string; error?: boolean; ruta?: string } | null;
@@ -40,7 +65,7 @@ export default function Respaldos({ cfg }: { cfg: ConfigEditable }) {
   // Al cambiar la carpeta o cuántas copias se guardan, la lista se vuelve a leer.
   useEffect(leer, [leer, cfg.config?.respaldosCarpeta, cfg.config?.respaldosConservar]);
 
-  const conservar = String(cfg.config?.respaldosConservar ?? 14);
+  const conservar = cfg.config?.respaldosConservar ?? 14;
   const frecuencia = cfg.config?.respaldosFrecuencia ?? "alCerrarCaja";
 
   /** Hace la copia en el formato elegido: completa (en la carpeta de copias o en un archivo) o planilla Excel. */
@@ -103,24 +128,31 @@ export default function Respaldos({ cfg }: { cfg: ConfigEditable }) {
               </Boton>
             </div>
             {aviso && <Resultado aviso={aviso} />}
-            <Ajuste etiqueta="Copias automáticas" ayuda="CHUPS POS las hace solo, sin detener la caja. Siempre son copias completas.">
-              <Opciones
+            <div>
+              <div className="text-sm font-medium">Copias automáticas</div>
+              <div className="mb-2 text-xs text-tenue">CHUPS POS las hace solo, sin detener la caja. Siempre son copias completas.</div>
+              <OpcionesLista
                 nombre="respaldos-frecuencia"
                 etiqueta="Cuándo hacer copias automáticas"
                 opciones={FRECUENCIAS}
                 valor={frecuencia}
                 onCambiar={(v) => void cfg.cambiar({ respaldosFrecuencia: v })}
               />
-            </Ajuste>
-            <Ajuste etiqueta="Cuántas copias guardar" ayuda="Cuando hay más, se borran las más viejas.">
-              <Opciones
-                nombre="respaldos-conservar"
+            </div>
+            <div className="border-t border-linea pt-4">
+              <Ajuste
                 etiqueta="Cuántas copias guardar"
-                opciones={CONSERVAR.some((o) => o.id === conservar) ? CONSERVAR : [...CONSERVAR, { id: conservar, nombre: conservar }]}
-                valor={conservar}
-                onCambiar={(v) => void cfg.cambiar({ respaldosConservar: Number(v) })}
-              />
-            </Ajuste>
+                ayuda="Se guardan las últimas; cuando hay más, se borran las más viejas. Las copias hechas antes de importar otra no se borran."
+              >
+                <CampoCopias valor={conservar} onCambiar={(n) => void cfg.cambiar({ respaldosConservar: n })} />
+              </Ajuste>
+              {frecuencia === "cadaHora" && (
+                <p className="mt-2 rounded-lg bg-info-fondo px-3 py-2 text-[13px] text-info">
+                  Con una copia por hora, {conservar} {conservar === 1 ? "copia cubre" : "copias cubren"} {alcanceHorario(conservar)}. Si quieres
+                  poder volver más atrás, guarda más copias.
+                </p>
+              )}
+            </div>
             <div className="border-t border-linea pt-4">
               <div className="text-sm font-medium">Las copias se guardan en esta carpeta</div>
               <p className="mt-1 text-sm break-all text-tenue select-text">{estado.carpeta}</p>

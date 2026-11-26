@@ -261,11 +261,11 @@ fn hace(horas: i64) -> Option<chrono::DateTime<Utc>> {
 #[test]
 fn la_frecuencia_decide_cuando_toca_una_copia() {
     use pos_core::servicios::config::FrecuenciaRespaldos::{
-        AlCerrarCaja, SoloManual, UnaVezALaSemana, UnaVezAlDia,
+        AlCerrarCaja, CadaHora, SoloManual, UnaVezALaSemana, UnaVezAlDia,
     };
     use pos_core::servicios::respaldos::{
         toca,
-        Momento::{Arranque, CierreDeCaja},
+        Momento::{Arranque, CierreDeCaja, Periodico},
     };
     let ahora = Utc::now();
 
@@ -289,10 +289,63 @@ fn la_frecuencia_decide_cuando_toca_una_copia() {
     assert!(toca(UnaVezALaSemana, CierreDeCaja, None, ahora));
 
     // Solo manual: nunca, ni sin ninguna copia.
-    for momento in [Arranque, CierreDeCaja] {
+    for momento in [Arranque, CierreDeCaja, Periodico] {
         assert!(!toca(SoloManual, momento, None, ahora));
         assert!(!toca(SoloManual, momento, hace(24 * 365), ahora));
     }
+
+    // Cada hora: en cualquier momento, si la última tiene más de una hora (o no hay ninguna).
+    for momento in [Arranque, CierreDeCaja, Periodico] {
+        assert!(!toca(
+            CadaHora,
+            momento,
+            Some(ahora - Duration::minutes(59)),
+            ahora
+        ));
+        assert!(toca(
+            CadaHora,
+            momento,
+            Some(ahora - Duration::minutes(61)),
+            ahora
+        ));
+        assert!(toca(CadaHora, momento, None, ahora));
+    }
+
+    // El temporizador no hace copias con las otras frecuencias, por viejas que sean las copias.
+    for f in [AlCerrarCaja, UnaVezAlDia, UnaVezALaSemana] {
+        assert!(!toca(f, Periodico, None, ahora));
+        assert!(!toca(f, Periodico, hace(24 * 365), ahora));
+    }
+}
+
+#[test]
+fn la_rotacion_no_borra_las_copias_de_antes_de_restaurar() {
+    let dir = tempfile::tempdir().unwrap();
+    let base = std::time::SystemTime::now() - std::time::Duration::from_secs(86_400 * 10);
+    // Una copia de antes de restaurar, la más vieja de todas, y siete copias por hora.
+    let mut nombres = vec!["chups-respaldo-2026-11-01-0900-antes-de-restaurar.db".to_string()];
+    nombres.extend((1..=7).map(|h| format!("chups-respaldo-2026-11-02-{h:02}00.db")));
+    for (i, n) in nombres.iter().enumerate() {
+        let ruta = dir.path().join(n);
+        std::fs::write(&ruta, b"x").unwrap();
+        std::fs::File::options()
+            .write(true)
+            .open(&ruta)
+            .unwrap()
+            .set_modified(base + std::time::Duration::from_secs(3_600 * i as u64))
+            .unwrap();
+    }
+    // Se conservan las 5 últimas y se borran 2; la de antes de restaurar queda, y no cuenta entre las 5.
+    assert_eq!(respaldos::rotar(dir.path(), 5).unwrap(), 2);
+    let quedan: Vec<String> = respaldos::listar(dir.path())
+        .unwrap()
+        .into_iter()
+        .map(|r| r.nombre)
+        .collect();
+    assert_eq!(quedan.len(), 6);
+    assert!(quedan.contains(&"chups-respaldo-2026-11-01-0900-antes-de-restaurar.db".to_string()));
+    assert!(quedan.contains(&"chups-respaldo-2026-11-02-0700.db".to_string()));
+    assert!(!quedan.contains(&"chups-respaldo-2026-11-02-0100.db".to_string()));
 }
 
 #[tokio::test]

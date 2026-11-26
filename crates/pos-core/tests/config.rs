@@ -141,6 +141,7 @@ async fn la_frecuencia_de_las_copias_mantiene_lo_de_siempre_por_defecto() {
     );
     // Se guarda y se lee cada una.
     for f in [
+        FrecuenciaRespaldos::CadaHora,
         FrecuenciaRespaldos::SoloManual,
         FrecuenciaRespaldos::UnaVezALaSemana,
         FrecuenciaRespaldos::UnaVezAlDia,

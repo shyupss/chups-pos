@@ -38,6 +38,8 @@ const CONTACTO_VENDEDOR: &str = match option_env!("CHUPS_CONTACTO_VENDEDOR") {
 pub(crate) const ARCHIVO_RESTAURACION_FALLIDA: &str = "restauracion-fallida.txt";
 /// El respaldo automático al abrir espera un poco: el arranque y la primera venta van primero.
 const ESPERA_RESPALDO_AL_ABRIR: std::time::Duration = std::time::Duration::from_secs(20);
+/// Cada cuánto se mira si toca una copia "cada hora".
+const REVISION_PERIODICA_RESPALDOS: std::time::Duration = std::time::Duration::from_secs(5 * 60);
 
 /// Abre la base. Si no se puede (dañada de verdad), ofrece restaurar el último respaldo sano antes
 /// de rendirse: la caja no puede quedar sin poder abrir.
@@ -239,6 +241,15 @@ pub fn run() {
                     &app_respaldo,
                     pos_core::servicios::respaldos::Momento::Arranque,
                 );
+                // Con "cada hora" hace falta mirar el reloj con la app abierta. Es una lectura de la
+                // configuración y de la carpeta cada pocos minutos: no pesa.
+                loop {
+                    tokio::time::sleep(REVISION_PERIODICA_RESPALDOS).await;
+                    comandos::respaldos::automatico(
+                        &app_respaldo,
+                        pos_core::servicios::respaldos::Momento::Periodico,
+                    );
+                }
             });
             Ok(())
         })

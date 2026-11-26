@@ -26,6 +26,11 @@ pub const EXTENSION_COPIA: &str = "chups";
 pub const CADA_HORAS_SEMANAL: i64 = 24 * 7;
 /// Un respaldo automático se hace si el último tiene más de esto.
 pub const CADA_HORAS: i64 = 24;
+/// Con la frecuencia "cada hora", una copia se hace si la última tiene más de esto.
+pub const CADA_HORAS_HORARIO: i64 = 1;
+/// Las copias que se hacen antes de importar otra son la red de seguridad de esa importación: la rotación
+/// no las borra (si no, una copia por hora las borraría en unas horas).
+const SUFIJO_ANTES_DE_RESTAURAR: &str = "antes-de-restaurar";
 
 #[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
@@ -83,10 +88,14 @@ pub fn listar(carpeta: &Path) -> Resultado<Vec<Respaldo>> {
     Ok(v)
 }
 
-/// Borra los respaldos más antiguos y deja los `conservar` más nuevos. Devuelve cuántos borró.
+/// Borra los respaldos más antiguos y deja los `conservar` más nuevos. Devuelve cuántos borró. No cuenta ni
+/// borra las copias "antes de restaurar".
 pub fn rotar(carpeta: &Path, conservar: usize) -> Resultado<usize> {
     let mut borrados = 0;
-    for r in listar(carpeta)?.into_iter().skip(conservar.max(1)) {
+    let por_rotar = listar(carpeta)?
+        .into_iter()
+        .filter(|r| !r.nombre.contains(SUFIJO_ANTES_DE_RESTAURAR));
+    for r in por_rotar.skip(conservar.max(1)) {
         std::fs::remove_file(&r.ruta)
             .map_err(|e| io("No se pudo borrar un respaldo antiguo", e))?;
         borrados += 1;
@@ -101,6 +110,8 @@ pub enum Momento {
     Arranque,
     /// Se acaba de cerrar un turno de caja.
     CierreDeCaja,
+    /// El temporizador (cada pocos minutos con la app abierta): solo la frecuencia "cada hora" hace copias aquí.
+    Periodico,
 }
 
 /// Cuándo se hizo el último respaldo de la carpeta (UTC); `None` si no hay ninguno.
@@ -113,6 +124,7 @@ pub fn fecha_del_ultimo(carpeta: &Path) -> Option<DateTime<Utc>> {
  * ¿Toca un respaldo automático? Depende de lo que se eligió en Configuración:
  * - al cerrar la caja (lo de siempre): al cerrar el turno, siempre; al abrir la app, si no hay ninguno o el
  *   último tiene más de 24 horas;
+ * - cada hora: al abrir la app, al cerrar el turno y con el temporizador, si el último tiene más de una hora;
  * - una vez al día: al abrir la app o al cerrar el turno, si el último tiene más de 24 horas;
  * - una vez a la semana: lo mismo con 7 días;
  * - solo manual: nunca.
@@ -126,6 +138,9 @@ pub fn toca(
     let vencido = |horas: i64| ultimo.is_none_or(|f| ahora - f > Duration::hours(horas));
     match (frecuencia, momento) {
         (FrecuenciaRespaldos::SoloManual, _) => false,
+        (FrecuenciaRespaldos::CadaHora, _) => vencido(CADA_HORAS_HORARIO),
+        // El temporizador solo sirve a "cada hora": las demás frecuencias se evalúan al abrir y al cerrar la caja.
+        (_, Momento::Periodico) => false,
         (FrecuenciaRespaldos::AlCerrarCaja, Momento::CierreDeCaja) => true,
         (FrecuenciaRespaldos::AlCerrarCaja, Momento::Arranque)
         | (FrecuenciaRespaldos::UnaVezAlDia, _) => vencido(CADA_HORAS),

@@ -80,8 +80,12 @@ pub(crate) fn automatico(app: &AppHandle, momento: Momento) {
             Err(e) => {
                 tracing::error!("el respaldo automático falló: {e}");
                 let mensaje = format!("No se pudo hacer la copia de seguridad automática: {e}. Revisa que haya espacio en el disco y que la carpeta de copias exista.");
+                // Con el temporizador el mismo fallo se repetiría cada pocos minutos: se avisa una sola vez.
+                let repetido = momento == Momento::Periodico && error.as_deref() == Some(&mensaje);
                 *error = Some(mensaje.clone());
-                let _ = app.emit(EVENTO_FALLO, mensaje);
+                if !repetido {
+                    let _ = app.emit(EVENTO_FALLO, mensaje);
+                }
             }
         }
     });

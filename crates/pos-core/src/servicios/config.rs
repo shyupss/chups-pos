@@ -46,6 +46,8 @@ pub enum FormatoBalanza {
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum FrecuenciaRespaldos {
+    /// Cada hora mientras la app está abierta (también al abrirla y al cerrar la caja, si la última tiene más de una hora).
+    CadaHora,
     /// Al cerrar la caja y, como siempre, al abrir la app si la última copia tiene más de 24 horas.
     #[default]
     AlCerrarCaja,
@@ -99,7 +101,7 @@ macro_rules! enum_de_texto {
 enum_de_texto!(TablaCaracteres { Cp858 => "cp858", Cp850 => "cp850", Wpc1252 => "wpc1252" });
 enum_de_texto!(FormatoPdf { Ticket => "ticket", Carta => "carta" });
 enum_de_texto!(FormatoBalanza { Peso => "peso", Precio => "precio" });
-enum_de_texto!(FrecuenciaRespaldos { AlCerrarCaja => "cierre", UnaVezAlDia => "dia", UnaVezALaSemana => "semana", SoloManual => "manual" });
+enum_de_texto!(FrecuenciaRespaldos { CadaHora => "hora", AlCerrarCaja => "cierre", UnaVezAlDia => "dia", UnaVezALaSemana => "semana", SoloManual => "manual" });
 enum_de_texto!(EscalaInterfaz { Normal => "normal", Grande => "grande", MasGrande => "masgrande" });
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
